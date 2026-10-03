@@ -104,7 +104,7 @@ int main(int argc,char **argv)
         palette[i][2]=(unsigned char)(128+127*sin(i*6.2831853/256.0+4.189));
     }
     SetMode(Input(),1);
-    write_text("\033[2J\033[H\033[?25l\033[1mAROS XTerm: Kitty plasma 320x200\033[0m  q or Ctrl-C ends");
+    write_text("\033[2J\033[H\033[?25l\033[1mLimpet: Kitty plasma 320x200\033[0m  q or Ctrl-C ends");
     DateStamp(&start);
     while(!stop && !term_failed) {
         char c;

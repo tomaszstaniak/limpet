@@ -81,7 +81,7 @@ int main(void)
     ok=read_reply(answer,sizeof answer);
     printable(answer,shown,sizeof shown);
     /* A known layout: clear, then absolute rows (the terminal has no DECSC). */
-    put("\033[2J\033[H\033[1mAROS XTerm: Kitty graphics, static image\033[0m\r\n");
+    put("\033[2J\033[H\033[1mLimpet: Kitty graphics, static image\033[0m\r\n");
     put("Support query: ");put(ok?"supported":"no answer / not supported");
     put(" (reply ");put(shown);put(")\r\n");
     if(!ok) { SetMode(Input(),0);return RETURN_WARN; }
@@ -93,7 +93,7 @@ int main(void)
     put("\033[4;30H\033[1mKitty image beside text\033[0m");
     put("\033[5;30H192 x 128 RGB, 24 bit");
     put("\033[6;30Hsent as base64 in 4 KiB chunks");
-    put("\033[7;30Hdrawn by the AROS XTerm frontend");
+    put("\033[7;30Hdrawn by Limpet");
     put("\033[9;30H\033[36mcyan\033[0m \033[33myellow\033[0m \033[35mmagenta\033[0m text");
     put("\033[11;30Htransmit reply: ");put(image_shown[0]?image_shown:"none");
     put("\033[13;1H");

@@ -3,6 +3,8 @@
 A terminal for the AROS Shell, written for AROS. It is not a port of X11
 xterm.
 
+![Limpet showing an animated plasma drawn with the Kitty graphics protocol](doc/screenshots/kitty-plasma.png)
+
 Limpet opens an Intuition window and runs a real AROS Shell in it, drawn
 with FreeType and HarfBuzz:
 
@@ -19,6 +21,10 @@ with FreeType and HarfBuzz:
 Version 0.1 is for **AROS ABIv11** (AROS One, 2026.09 and later, x86_64).
 It does not replace the system console: programs that open `CON:`
 themselves still get the system console window.
+
+| apkg in Limpet, dark theme | Inline image beside coloured text |
+| --- | --- |
+| ![apkg show](doc/screenshots/apkg-show-dark.png) | ![Kitty image](doc/screenshots/kitty-image.png) |
 
 ## Install
 
