@@ -1,0 +1,11 @@
+; Optional personal profile for aros-xterm. This file is never installed in S:.
+; From the unpacked package: aros-xterm --shell --from examples/Shell-Startup
+; Preserve system aliases/settings, then replace its native-pen prompt locally.
+If EXISTS S:Shell-Startup
+    Execute S:Shell-Startup
+EndIf
+; [] forwards the arguments supplied after the alias name.
+Alias ndg "Echo Hello from my alias: []"
+Set XTProfile active
+Prompt "*E[0mXTerm *E[36m%S*E[0m> "
+Echo "Personal profile loaded. Try: ndg world"

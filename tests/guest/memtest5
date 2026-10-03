@@ -1,0 +1,53 @@
+.key tag
+; Which C-runtime library keeps memory per opener (release-resources-20260929).
+Failat 21
+RAM:x/ctl-open stdc.library
+RAM:x/ctl-open stdcio.library
+RAM:x/ctl-open posixc.library
+RAM:x/ctl-open stdc.library stdcio.library posixc.library
+RAM:x/ctl-stdio
+Avail FLUSH >RESULTS:mem5-<tag>-00-start.txt
+Avail FLUSH >RESULTS:mem5-<tag>-01-idle.txt
+RAM:x/ctl-open stdc.library
+RAM:x/ctl-open stdc.library
+RAM:x/ctl-open stdc.library
+RAM:x/ctl-open stdc.library
+RAM:x/ctl-open stdc.library
+Avail FLUSH >RESULTS:mem5-<tag>-02-open-stdc.txt
+RAM:x/ctl-open stdcio.library
+RAM:x/ctl-open stdcio.library
+RAM:x/ctl-open stdcio.library
+RAM:x/ctl-open stdcio.library
+RAM:x/ctl-open stdcio.library
+Avail FLUSH >RESULTS:mem5-<tag>-03-open-stdcio.txt
+RAM:x/ctl-open posixc.library
+RAM:x/ctl-open posixc.library
+RAM:x/ctl-open posixc.library
+RAM:x/ctl-open posixc.library
+RAM:x/ctl-open posixc.library
+Avail FLUSH >RESULTS:mem5-<tag>-04-open-posixc.txt
+RAM:x/ctl-open stdc.library stdcio.library posixc.library
+RAM:x/ctl-open stdc.library stdcio.library posixc.library
+RAM:x/ctl-open stdc.library stdcio.library posixc.library
+RAM:x/ctl-open stdc.library stdcio.library posixc.library
+RAM:x/ctl-open stdc.library stdcio.library posixc.library
+Avail FLUSH >RESULTS:mem5-<tag>-05-open-all.txt
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+Avail FLUSH >RESULTS:mem5-<tag>-06-ctl-stdio.txt
+RAM:x/term --bogus
+RAM:x/term --bogus
+RAM:x/term --bogus
+RAM:x/term --bogus
+RAM:x/term --bogus
+Avail FLUSH >RESULTS:mem5-<tag>-07-term-usage.txt
+RAM:x/ctl-min
+RAM:x/ctl-min
+RAM:x/ctl-min
+RAM:x/ctl-min
+RAM:x/ctl-min
+Avail FLUSH >RESULTS:mem5-<tag>-08-ctl-min.txt
+Echo >RESULTS:mem5-<tag>-done.txt MEMTEST5 DONE

@@ -1,0 +1,22 @@
+# Light: explicit ANSI white/black remain independent of default text/background.
+foreground=#202830
+background=#f5f5f0
+cursor=#202830
+selection_fg=#ffffff
+selection_bg=#285a85
+ansi0=#101820
+ansi1=#a82030
+ansi2=#286020
+ansi3=#785000
+ansi4=#1858a0
+ansi5=#803080
+ansi6=#006070
+ansi7=#b0b0b0
+ansi8=#606060
+ansi9=#c03040
+ansi10=#307028
+ansi11=#886000
+ansi12=#2868b0
+ansi13=#904090
+ansi14=#007080
+ansi15=#ffffff

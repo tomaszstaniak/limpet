@@ -1,0 +1,6 @@
+# Dark: partial overrides inherit the built-in ANSI palette.
+foreground=#abb2bf
+background=#101820
+cursor=#f4f6fa
+selection_fg=#ffffff
+selection_bg=#355879

@@ -1,0 +1,103 @@
+.key tag
+; Small per-run residues: stdio printing, FreeType, terminal stages.
+; Groups of ten; the posixc quantum (167552 B) is taken out afterwards.
+Failat 21
+RAM:x/ctl-printf
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-ft
+SetEnv XTERM_DIAG_EXIT_STAGE 1
+RAM:x/termdiag --command RAM:x/ctl-min
+SetEnv XTERM_DIAG_EXIT_STAGE 2
+RAM:x/termdiag --command RAM:x/ctl-min
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem6-<tag>-00-start.txt
+Avail FLUSH >RESULTS:mem6-<tag>-01-idle.txt
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem6-<tag>-02-ctl-stdio.txt
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+RAM:x/ctl-printf
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem6-<tag>-03-ctl-printf.txt
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+RAM:x/ctl-open freetype2.library
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem6-<tag>-04-open-freetype.txt
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+RAM:x/ctl-ft
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem6-<tag>-05-ctl-ft.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 1
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem6-<tag>-06-stage1.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 2
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem6-<tag>-07-stage2.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 2
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+RAM:x/termdiag >NIL: --command RAM:x/ctl-min
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem6-<tag>-08-stage2-nil.txt
+UnSetEnv XTERM_DIAG_EXIT_STAGE
+Echo >RESULTS:mem6-<tag>-done.txt MEMTEST6 DONE

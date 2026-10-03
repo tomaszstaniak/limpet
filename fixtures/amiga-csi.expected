@@ -1,0 +1,6 @@
+{
+  "events": [
+    "cursor-up",
+    "cursor-down"
+  ]
+}

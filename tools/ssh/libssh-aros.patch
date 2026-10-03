@@ -1,0 +1,13 @@
+--- a/src/misc.c
++++ b/src/misc.c
+@@ -307,6 +307,10 @@
+     char buf[NSS_BUFLEN_PASSWD] = {0};
+     int rc;
+ 
++    /* AROS does not require a Unix account database or HOME variable. */
++#ifdef __AROS__
++    return xt_ssh_home_dir();
++#endif
+     rc = getpwuid_r(getuid(), &pwd, buf, NSS_BUFLEN_PASSWD, &pwdbuf);
+     if (rc != 0 || pwdbuf == NULL ) {
+         szPath = getenv("HOME");

@@ -1,0 +1,60 @@
+.key tag
+; Memory per program run: controls, a system command and the terminal's
+; earliest exits (docs/release-resources-20260929.md). Five runs per group
+; between two 'Avail FLUSH'. Run twice: Execute RAM:x/memtest4 A, then B.
+Failat 21
+RAM:x/ctl-min
+RAM:x/ctl-stdio
+RAM:x/ctl-posix
+C:List >NIL: RAM:
+SetEnv XTERM_DIAG_EXIT_STAGE 1
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/term --bogus >NIL:
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem4-<tag>-00-start.txt
+Avail FLUSH >RESULTS:mem4-<tag>-01-idle.txt
+RAM:x/ctl-min
+RAM:x/ctl-min
+RAM:x/ctl-min
+RAM:x/ctl-min
+RAM:x/ctl-min
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem4-<tag>-02-ctl-min.txt
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+RAM:x/ctl-stdio
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem4-<tag>-03-ctl-stdio.txt
+RAM:x/ctl-posix
+RAM:x/ctl-posix
+RAM:x/ctl-posix
+RAM:x/ctl-posix
+RAM:x/ctl-posix
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem4-<tag>-04-ctl-posix.txt
+C:List >NIL: RAM:
+C:List >NIL: RAM:
+C:List >NIL: RAM:
+C:List >NIL: RAM:
+C:List >NIL: RAM:
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem4-<tag>-05-sys-list.txt
+RAM:x/term --bogus >NIL:
+RAM:x/term --bogus >NIL:
+RAM:x/term --bogus >NIL:
+RAM:x/term --bogus >NIL:
+RAM:x/term --bogus >NIL:
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem4-<tag>-06-term-usage.txt
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+RAM:x/termdiag --command RAM:x/ctl-min
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem4-<tag>-07-term-stage1.txt
+Avail FLUSH >RESULTS:mem4-<tag>-08-idle-end.txt
+UnSetEnv XTERM_DIAG_EXIT_STAGE
+Echo >RESULTS:mem4-<tag>-done.txt MEMTEST4 DONE

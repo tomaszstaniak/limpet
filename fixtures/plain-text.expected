@@ -1,0 +1,12 @@
+{
+  "lines": [
+    "Hello, AROS XTerm!      ",
+    "                        ",
+    "                        "
+  ],
+  "cells": [{"row":0,"column":6,"cluster":" "},{"row":0,"column":11,"cluster":" "}],
+  "cursor": [
+    1,
+    0
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "lines": [
+    "red     ",
+    "        "
+  ],
+  "cursor": [
+    0,
+    3
+  ],
+  "cells": [
+    {
+      "row": 0,
+      "column": 0,
+      "fg": 1
+    },
+    {
+      "row": 0,
+      "column": 1,
+      "fg": 1
+    },
+    {
+      "row": 0,
+      "column": 2,
+      "fg": 1
+    }
+  ]
+}

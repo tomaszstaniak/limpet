@@ -1,0 +1,38 @@
+# Only what is listed here is part of the published project. Everything
+# else in this folder (working notes, evidence, builds, release staging)
+# stays local.
+/*
+!/.gitignore
+!/README.md
+!/LICENSE.txt
+!/Makefile
+!/src/
+!/tests/
+!/vendor/
+!/assets/
+!/themes/
+!/data/
+!/fixtures/
+!/doc/
+!/tools/
+/vendor/doomgeneric/
+/assets/icon/limpet-1254.png
+/tools/release/
+/tools/doom-bench/
+/tools/doom_kitty.c
+/tools/build_posixc_experiment.py
+/tools/leak_*.c
+/tools/__pycache__/
+__pycache__/
+*.pyc
+.DS_Store
+/tools/rust-tty/
+/tools/libc-tty/
+/tools/test_libc_*.sh
+/tests/libc_terminal/
+/tests/libc_tty/
+!/examples/
+/examples/*
+!/examples/ssh/
+!/examples/Shell-Startup
+/tests/test_doom_bench_driver.py

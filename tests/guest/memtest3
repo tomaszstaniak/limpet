@@ -1,0 +1,80 @@
+.key tag
+; Memory per run, by stage (docs/release-resources-20260929.md).
+; Each group: five runs between two 'Avail FLUSH'. The diagnostic build's
+; log in RAM: is deleted before every measurement, since RAM: files count
+; as memory in use. Run twice: Execute RAM:x/memtest3 A, then B.
+Failat 21
+; Warm-up: one of each, so libraries and fonts are loaded before counting.
+RAM:x/leakctl
+SetEnv XTERM_DIAG_EXIT_STAGE 1
+RAM:x/termdiag --command RAM:x/m-exit
+SetEnv XTERM_DIAG_EXIT_STAGE 2
+RAM:x/termdiag --command RAM:x/m-exit
+SetEnv XTERM_DIAG_EXIT_STAGE 3
+RAM:x/termdiag --command RAM:x/m-exit
+SetEnv XTERM_DIAG_EXIT_STAGE 0
+RAM:x/termdiag --command RAM:x/does-not-exist
+RAM:x/term --command RAM:x/does-not-exist
+SetEnv XTERM_DIAG_EXIT_STAGE 4
+RAM:x/termdiag --command RAM:x/m-exit
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem3-<tag>-00-start.txt
+Avail FLUSH >RESULTS:mem3-<tag>-01-idle.txt
+RAM:x/leakctl
+RAM:x/leakctl
+RAM:x/leakctl
+RAM:x/leakctl
+RAM:x/leakctl
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem3-<tag>-02-control.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 1
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem3-<tag>-03-stage1.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 2
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem3-<tag>-04-stage2-fonts.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 3
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem3-<tag>-05-stage3-window.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 0
+RAM:x/termdiag --command RAM:x/does-not-exist
+RAM:x/termdiag --command RAM:x/does-not-exist
+RAM:x/termdiag --command RAM:x/does-not-exist
+RAM:x/termdiag --command RAM:x/does-not-exist
+RAM:x/termdiag --command RAM:x/does-not-exist
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem3-<tag>-06-diag-missing.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 0
+RAM:x/term --command RAM:x/does-not-exist
+RAM:x/term --command RAM:x/does-not-exist
+RAM:x/term --command RAM:x/does-not-exist
+RAM:x/term --command RAM:x/does-not-exist
+RAM:x/term --command RAM:x/does-not-exist
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem3-<tag>-07-product-missing.txt
+SetEnv XTERM_DIAG_EXIT_STAGE 4
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+RAM:x/termdiag --command RAM:x/m-exit
+Delete >NIL: RAM:pty-diag.txt QUIET
+Avail FLUSH >RESULTS:mem3-<tag>-08-diag-session.txt
+Avail FLUSH >RESULTS:mem3-<tag>-09-idle-end.txt
+UnSetEnv XTERM_DIAG_EXIT_STAGE
+Echo >RESULTS:mem3-<tag>-done.txt MEMTEST3 DONE
