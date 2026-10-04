@@ -28,7 +28,7 @@ Fallback order is Vera Mono -> Open Sans -> Noto Emoji -> Unifont. The first two
 are existing required mainline system fonts. New optional faces can be omitted;
 then unsupported characters use the existing missing-glyph fallback. Font metrics
 do not override terminal column widths. Coverage is not grapheme composition.
-# M2d colour addition
+## Noto Color Emoji
 
 `NotoColorEmoji.ttf` is the unmodified v2.051 font from
 https://raw.githubusercontent.com/googlefonts/noto-emoji/v2.051/fonts/NotoColorEmoji.ttf
@@ -36,4 +36,4 @@ https://raw.githubusercontent.com/googlefonts/noto-emoji/v2.051/fonts/NotoColorE
 Its original OFL license is `NotoColorEmoji-LICENSE.txt`. It is optional and
 application-local. HarfBuzz shapes clusters before FreeType loads the bitmap
 strike; the application downsamples into bounded cell rasters. No global font
-installation is performed. The earlier M2c choices below remain historical.
+installation is performed.

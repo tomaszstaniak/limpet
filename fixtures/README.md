@@ -125,11 +125,8 @@ U+10FFFF. Noncharacters are valid scalar values and are retained. Invalid cases
 cover overlong forms, encoded surrogates, out-of-range scalars and recovery into
 ASCII/SGR. Native visual evidence is tracked separately from parser snapshots.
 
-The original four byte streams and SHA-256 values are preserved. Their prose
-expectations have become structured JSON. The UTF-8 expectation now correctly
-preserves column 12 after LF; the original claim that LF returned to column 1
-was incorrect. Alternate screen and measurements of mainline CON remain future
-work.
+LF preserves the cursor column. Alternate-screen behaviour is covered by
+separate screen-model tests rather than this replay corpus.
 
 The Python integration test deliberately supplies a wrong glyph, cursor, colour,
 width or cluster suffix and confirms that the compiled C runner rejects each. This prevents a

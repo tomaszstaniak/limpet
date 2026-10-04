@@ -1,7 +1,6 @@
 # Hyperlinks
 
-Limpet supports HTTP/HTTPS hyperlinks independently of PTY,
-SSH transport, SDL and terminal graphics protocols.
+Limpet supports explicit OSC 8 hyperlinks and plain HTTP/HTTPS URLs.
 
 - Hover a link to underline it and see its actual target in the window title.
 - **Ctrl+left-click** hands the target to optional `openurl.library`.
@@ -65,4 +64,4 @@ final close, but does not synchronously block the GUI event loop.
 
 Long target previews are abbreviated in the title (and may be visually clipped
 by narrow windows). Copy provides the complete target; no launch confirmation
-dialog or persistent status bar is implemented in this step.
+dialog or persistent status bar is provided.

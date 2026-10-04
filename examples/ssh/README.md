@@ -3,7 +3,8 @@
 This is a mainline x86_64 experiment, not a production SSH distribution.
 `client.c` derives from AROS `workbench/network/sshd/ssh.c` (copyright notice
 retained). The client uses normal DOS input/output handles plus the optional
-[XTerm status query](../../docs/ssh-stream-contract.md) for EOF and geometry.
+terminal queries for EOF and geometry. The query implementation is in
+[`term_query.c`](term_query.c).
 libssh supplies SSH, and the remote server supplies the PTY.
 This does **not** implement a local AROS POSIX PTY.
 
@@ -93,8 +94,6 @@ The remote application may subsequently change its own PTY modes normally.
 - SCP code is inherited, untested and outside this terminal acceptance.
 - No claims for DNS/IPv6, remote full-screen editors, multiple concurrent SSH
   sessions, aarch64 or distribution compatibility from the x86_64 demo.
-
-See `docs/ssh-feasibility.md` for recorded runtime evidence.
 
 ## Exact-byte transfer regression
 

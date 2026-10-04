@@ -1,12 +1,28 @@
 # Limpet
 
-A terminal for the AROS Shell, written for AROS. It is not a port of X11
-xterm.
+I wanted a modern terminal on AROS, so I started building Limpet.
+
+It runs the AROS Shell with Unicode, scrollback, copy and paste, clickable
+links and inline images. Text and history reflow when you resize the window.
+
+The goal is to replace `CON:`: keep compatibility with existing AROS
+software and support modern command-line tools, full-screen applications
+and remote work over SSH.
+
+## Why Limpet?
+
+A limpet is a mollusc. It has a shell and attaches itself to a surface.
+That's where the name comes from.
 
 ![Limpet showing an animated plasma drawn with the Kitty graphics protocol](doc/screenshots/kitty-plasma.png)
 
-Limpet opens an Intuition window and runs a real AROS Shell in it, drawn
-with FreeType and HarfBuzz:
+## What you can use today
+
+Use Limpet for everyday Shell work: reading long command output, copying
+commands and paths, following links, and running tools such as apkg with
+colours and progress updates.
+
+Version 0.1 includes:
 
 - Unicode: CJK, emoji (monochrome), combining clusters;
 - 16-colour, 256-colour and 24-bit colour, themes (dark, light, high
@@ -19,8 +35,8 @@ with FreeType and HarfBuzz:
 - OSC 8 hyperlinks (Ctrl+click opens them through OpenURL when installed).
 
 Version 0.1 is for **AROS ABIv11** (AROS One, 2026.09 and later, x86_64).
-It does not replace the system console: programs that open `CON:`
-themselves still get the system console window.
+It runs alongside the system console for now. Programs that explicitly
+open `CON:` still use the existing console handler.
 
 | apkg in Limpet, dark theme | Inline image beside coloured text |
 | --- | --- |
