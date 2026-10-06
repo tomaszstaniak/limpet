@@ -66,11 +66,12 @@ There are three separate ways, and most capabilities have only one of them:
 | [Keyboard input, cooked and raw](#keyboard-input) | programs | none | Verified |
 | [Ctrl-C](#ctrl-c) | everyone | none | Verified, with limits |
 | [Mouse reporting](#mouse-reporting) | raw-mode programs | none | Released, host-tested |
+| [Bracketed paste](#bracketed-paste) | raw-mode programs | query, input known bit | Experimental |
 | [Scrollback, reflow, selection, clipboard](#user-interface-features) | users | not visible to programs | Verified |
 | [Themes](#user-interface-features) | users | not visible to programs | Verified |
 | [termios, PTY, TTY control operations](#terminal-settings-termios-and-pty) | POSIX programs | `XTY_CAPS` on a PTY | Experimental |
 | [SSH client](#ssh) | users | none | Experimental |
-| Window title (OSC 0/2), save cursor (DECSC), bracketed paste, any-motion mouse, resize events | | | Not supported |
+| Window title (OSC 0/2), save cursor (DECSC), any-motion mouse, resize events | | | Not supported |
 
 The rest of this page has one section per row.
 
@@ -507,6 +508,25 @@ coordinates are not supported.
 **Status.** Released, host-tested (`tests/test_mouse.c`,
 `tests/test_mouse_release.c`); used by a Ratatui program on a mainline
 development build. Not checked on ABIv11.
+
+## Bracketed paste
+
+In raw mode a program may send `CSI ? 2004 h`. A paste then arrives framed
+as `CSI 200 ~` text `CSI 201 ~`, and Limpet does not ask for the multi-line
+confirmation: the program decides what a newline in a paste means (a
+coding agent keeps it as text instead of sending the line). The text never
+contains ESC or C1 controls, because Limpet rejects such a clipboard
+before pasting, so it cannot end the frame early. A paste cancelled with
+Esc still gets its end marker. `CSI ? 2004 l` turns the mode off, and the
+end of a PTY session turns it off for the next program.
+
+Detection: the presentation query's known bit 32 (`XTY_PRESENT_KNOWN_INPUT`)
+with `XTY_INPUT_BRACKETED_PASTE` in `LimpetPresentation.input`. Limpet
+0.1.0 has neither and pastes unframed, with the confirmation.
+
+**Status.** Experimental: host-tested (`tests/test_bracketed_paste.c`, the
+framing cases in `tests/test_paste.c`, `sdk/tests/test_sdk_compat.sh`);
+on AROS, see hardcode's demonstration 1 evidence. Not in a release.
 
 ---
 

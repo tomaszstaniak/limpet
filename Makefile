@@ -272,6 +272,10 @@ test: build/test_profile_prompt
 test: build/test_theme
 test: build/test_geometry_reply
 test: build/test_mouse
+test: test-bracketed-paste
+.PHONY: test-bracketed-paste
+test-bracketed-paste: build/test_bracketed_paste
+	./build/test_bracketed_paste
 test: build/test_boxdraw
 test: build/test_mouse_release
 test: build/test_ssh_pump build/test_hyperlink build/test_link_gesture
@@ -296,6 +300,10 @@ $(OUT): src/boxdraw.h
 
 build/test_boxdraw: tests/test_boxdraw.c src/boxdraw.h
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $< -o $@
+
+build/test_bracketed_paste: tests/test_bracketed_paste.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h src/session_reset.h $(UNICODE_SRC)
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
 
 build/test_mouse: tests/test_mouse.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
@@ -1111,6 +1119,7 @@ test: test-sdk
 test-sdk: build/test_sdk
 	./build/test_sdk
 	$(MAKE) -C sdk host-check
+	sh sdk/tests/test_sdk_compat.sh
 build/test_sdk: sdk/tests/test_sdk.c $(SDK_SRC) $(SDK_HEADERS) src/xterm_presentation.h
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all \

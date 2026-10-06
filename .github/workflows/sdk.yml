@@ -17,6 +17,9 @@ jobs:
         run: make test-sdk
       - name: Full host test suite
         run: make test
-      - name: Protocol header is the one Limpet 0.1.0 was built from
+      # The pin changes only with a deliberate protocol change. Limpet 0.1.0
+      # was built from 921bc72d...; the presentation input bit (DEC 2004,
+      # 2048) extended it. Older clients are checked by test_sdk_compat.sh.
+      - name: Protocol header is the reviewed one
         run: |
-          echo "921bc72d2e4c94ff937e22eacdf51d0da88995c30b7e56b9006e829fbb72cdf1  sdk/include/limpet/tty_control.h" | sha256sum -c -
+          echo "967fee529713658fdd00e4180204d263ef88c266db3363c21fe9078bd9aebdb9  sdk/include/limpet/tty_control.h" | sha256sum -c -

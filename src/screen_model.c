@@ -467,6 +467,7 @@ static void execute_csi(XTermScreen *s, unsigned char command)
                     if(sgr!=s->mouse_sgr) ++s->mouse_generation;
                     s->mouse_sgr=sgr;
                 }
+                else if(s->params[i]==2004) s->bracketed_paste=command=='h';
             }
         }
         return;

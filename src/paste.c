@@ -41,3 +41,36 @@ void paste_consume(XPaste *p,size_t n)
     p->offset+=n<left?n:left;
     if(p->offset==p->length) paste_cancel(p);
 }
+
+static void frame_set(XPasteFrame *f, const char *marker)
+{
+    memcpy(f->marker, marker, 6);
+    f->length = 6; f->offset = 0;
+}
+
+void paste_frame_begin(XPasteFrame *f, int bracketed)
+{
+    memset(f, 0, sizeof *f);
+    if (!bracketed) return;
+    frame_set(f, "\033[200~");
+    f->open = 1;
+}
+
+void paste_frame_end(XPasteFrame *f)
+{
+    if (!f->open) return;
+    frame_set(f, "\033[201~");
+    f->open = 0;
+}
+
+size_t paste_frame_peek(const XPasteFrame *f, const unsigned char **bytes)
+{
+    *bytes = f->marker + f->offset;
+    return f->length - f->offset;
+}
+
+void paste_frame_consume(XPasteFrame *f, size_t n)
+{
+    if (n > f->length - f->offset) n = f->length - f->offset;
+    f->offset += n;
+}

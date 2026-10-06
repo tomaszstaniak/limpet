@@ -36,7 +36,8 @@ LimpetStatus limpet_presentation_decode(const XtyControl *reply,
     if (known & XTY_PRESENT_KNOWN_LINES) p.lines = reply->values[3];
     if (known & XTY_PRESENT_KNOWN_GEOMETRY) { p.rows = reply->values[4]; p.columns = reply->values[5]; }
     if (known & XTY_PRESENT_KNOWN_INTERPRETATION) p.interpretation = reply->values[6];
-    /* values[7..11] are reserved for later fields: ignored, not rejected,
+    if (known & XTY_PRESENT_KNOWN_INPUT) p.input = reply->values[7];
+    /* values[8..11] are reserved for later fields: ignored, not rejected,
        so a newer terminal keeps working with this client. */
     *out = p;
     return LIMPET_OK;

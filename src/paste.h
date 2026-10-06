@@ -17,4 +17,17 @@ void paste_confirm(XPaste *);
  * consuming each complete returned batch makes cancellation scalar-safe. */
 size_t paste_peek(const XPaste *, const unsigned char **, size_t maximum);
 void paste_consume(XPaste *, size_t);
+/* Bracketed paste (DEC 2004): ESC[200~ before the text and ESC[201~ after,
+ * queued so a session that takes part of a marker gets the rest next time.
+ * paste_prepare already rejects ESC and C1 in the text, so a paste cannot
+ * contain a marker of its own. */
+typedef struct {
+    unsigned char marker[8];
+    size_t length, offset;
+    int open;                       /* a start marker went out, the end has not */
+} XPasteFrame;
+void paste_frame_begin(XPasteFrame *, int bracketed);
+void paste_frame_end(XPasteFrame *);
+size_t paste_frame_peek(const XPasteFrame *, const unsigned char **);
+void paste_frame_consume(XPasteFrame *, size_t);
 #endif

@@ -46,7 +46,7 @@ SIPTR DoPkt(void *port, LONG action, SIPTR a1, SIPTR a2, SIPTR a3, SIPTR a4, SIP
         last_error = ERROR_OBJECT_IN_USE; return DOSTRUE;
     case FUTURE_REPLY:
         xterm_presentation_reply(block, (size_t)a3, rows, columns, pens);
-        block->values[0] |= 0x80000000u | 32u;  /* known bits from the future */
+        block->values[0] |= 0x80000000u | 64u;  /* known bits from the future */
         block->values[2] |= 0x40u; block->values[6] |= 0x100u;
         block->values[7] = 7; block->values[11] = 11;
         last_error = 0; return DOSTRUE;
@@ -136,7 +136,8 @@ static void test_query(void)
     p = query(LIMPET_OK, 0);
     assert(last_action == XTY_ACTION_CONTROL && last_arg3 == 64 &&
            last_arg4 == XTY_PACKET_MAGIC && last_arg5 == 0);
-    assert(p.known == 31 && limpet_color_level(&p) == XTY_COLOR_RGB);
+    assert(p.known == 63 && limpet_color_level(&p) == XTY_COLOR_RGB);
+    assert(p.input == XTY_INPUT_BRACKETED_PASTE);
     assert(limpet_uses_pens(&p) && limpet_has_bold(&p) && limpet_can_rewrite_line(&p));
     assert(limpet_rows(&p) == 24 && limpet_columns(&p) == 80);
 
@@ -203,6 +204,15 @@ static void test_decode(void)
     assert(limpet_presentation_decode(&c, &p) == LIMPET_INVALID_REPLY);
     assert(xterm_presentation_reply(&c, sizeof c, 30, 100, 0));
     assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && p.columns == 100);
+    /* A reply from Limpet 0.1.0 has no input bit: input stays 0, even if
+       values[7] were not zero. */
+    {
+        XtyControl old = c;
+        old.values[0] &= ~XTY_PRESENT_KNOWN_INPUT;
+        old.values[7] = 5;
+        assert(limpet_presentation_decode(&old, &p) == LIMPET_OK && !p.input);
+        assert(!(p.known & XTY_PRESENT_KNOWN_INPUT) && p.columns == 100);
+    }
     c.operation = XTY_GET_GEOMETRY;
     assert(limpet_presentation_decode(&c, &p) == LIMPET_INVALID_REPLY && !p.known);
     /* Fields behind a clear known bit are zeroed, whatever the wire says. */
@@ -210,7 +220,7 @@ static void test_decode(void)
     assert(xterm_presentation_reply(&c, sizeof c, 30, 100, XTY_COLOR_PENS));
     c.values[0] = XTY_PRESENT_KNOWN_LINES;
     assert(limpet_presentation_decode(&c, &p) == LIMPET_OK);
-    assert(!p.color_level && !p.styles && !p.rows && !p.columns && !p.interpretation);
+    assert(!p.color_level && !p.styles && !p.rows && !p.columns && !p.interpretation && !p.input);
     assert(!limpet_uses_pens(&p) && limpet_color_level(&p) == XTY_COLOR_NONE);
     assert(limpet_can_rewrite_line(&p));
     /* PENS without its known bit is no claim. */

@@ -6,6 +6,7 @@
 #include "echo_session.h"
 #include "selection.h"
 #include "paste.h"
+#include "session_reset.h"
 #include "clipboard_text.h"
 #include "aros_clip_job.h"
 #include "aros_session.h"
@@ -101,6 +102,9 @@ static XTermScreen command_view;
 static XTermCell command_cells[MAX_ROWS*MAX_COLUMNS];
 static XTermCell command_history[2*XLINE_CAPACITY];
 static XPaste paste;
+/* Markers of a bracketed paste, and the session they belong to. */
+static XPasteFrame paste_frame;
+static unsigned paste_frame_generation;
 static ArosClipJob clip_job;
 static unsigned char clip_text[CLIP_TEXT_LIMIT], clip_raw[CLIP_RAW_LIMIT];
 static unsigned session_generation, paste_generation, copy_loss;
@@ -1133,6 +1137,14 @@ static void clipboard_completed(int closing)
         clip_status="Clipboard is not supported text"; return;
     }
     if(paste_prepare(&paste,clip_text,length)) { clip_status="Paste rejected: invalid text or controls"; return; }
+    /* A raw-mode client that turned on DEC 2004 receives the paste framed
+       and decides itself what a newline in it means, so the multi-line
+       confirmation would only be in its way. */
+    if(paste.length && screen.bracketed_paste && process_session.line.raw) {
+        paste_confirm(&paste);
+        paste_frame_begin(&paste_frame,1);
+        paste_frame_generation=session_generation;
+    }
     clip_status=paste.confirmation?"MULTILINE: F3 paste / Esc cancel":paste.length?"Pasting... (Esc cancels)":"Clipboard empty";
 }
 
@@ -1330,7 +1342,7 @@ int main(int argc,char **argv)
                 if(handler_mode) closing=TRUE;
                 else {
                     char status[80];
-                    if(pty_mode) write_text("\033[?1002l\033[?1000l\033[?1006l\033[?1049l\033[0m\033[?25h");
+                    if(pty_mode) write_text(XTERM_SESSION_RESET);
                     /* In PTY Shell mode the value is the supervisor's (0: the Shell
                        started and ended), not the Shell's own last return code. */
                     if(pty_mode && !process_command)
@@ -1663,7 +1675,18 @@ int main(int argc,char **argv)
         if(!closing && keyboard_ready()) {
             if(key_queue_drain(&keyboard,16,keyboard_deliver,NULL)) dirty=1;
         }
+        if(paste_frame_generation!=session_generation) memset(&paste_frame,0,sizeof paste_frame);
+        if(!closing && !reply_flow.length) {
+            const unsigned char *marker;
+            size_t left;
+            /* The end marker also follows a cancelled paste, or the client
+               would take everything after it as pasted text. */
+            if(paste_frame.open && !paste.length && !paste_frame_peek(&paste_frame,&marker)) paste_frame_end(&paste_frame);
+            left=paste_frame_peek(&paste_frame,&marker);
+            if(left) { size_t taken=session_bytes(marker,left); paste_frame_consume(&paste_frame,taken); if(taken) dirty=1; }
+        }
         if(!closing && !reply_flow.length && paste.length && !paste.confirmation &&
+           paste_frame.offset==paste_frame.length &&
            (echo_mode!=2 || !shell_session || process_session.line.raw || editor_ready())) {
             const unsigned char *bytes;
             size_t count=paste_peek(&paste,&bytes,1024);

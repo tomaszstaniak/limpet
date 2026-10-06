@@ -50,6 +50,24 @@ int main(void)
       assert(s.utf8_remaining==0);
       screen_write(&s,(const unsigned char *)"X",1);
       assert(screen_cell(&s,1,15)=='X'); }
+    /* Bracketed paste: the markers go out through the same partial writes
+       as the text, so they are queued, not written once and forgotten. */
+    { XPasteFrame f; const unsigned char *m;
+      paste_frame_begin(&f, 0);
+      assert(paste_frame_peek(&f, &m) == 0 && !f.open);
+      paste_frame_end(&f);
+      assert(paste_frame_peek(&f, &m) == 0);                  /* mode off: nothing at all */
+      paste_frame_begin(&f, 1);
+      assert(f.open && paste_frame_peek(&f, &m) == 6 && !memcmp(m, "\033[200~", 6));
+      paste_frame_consume(&f, 2);                             /* the session took two bytes */
+      assert(paste_frame_peek(&f, &m) == 4 && !memcmp(m, "200~", 4));
+      paste_frame_consume(&f, 4);
+      assert(paste_frame_peek(&f, &m) == 0);
+      paste_frame_end(&f);
+      assert(!f.open && paste_frame_peek(&f, &m) == 6 && !memcmp(m, "\033[201~", 6));
+      paste_frame_end(&f);                                    /* a second end adds nothing */
+      paste_frame_consume(&f, 6);
+      assert(paste_frame_peek(&f, &m) == 0); }
     puts("paste tests passed (UTF-8, controls, confirmation, bounded session, safe cancel)");
     return 0;
 }

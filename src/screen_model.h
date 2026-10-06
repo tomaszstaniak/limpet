@@ -55,6 +55,7 @@ typedef struct XTermScreen {
      * so a fragmented old query cannot answer a new reader. */
     unsigned csi_reply_enabled,escape_reply_enabled;
     unsigned mouse_tracking, mouse_sgr, mouse_generation;
+    unsigned bracketed_paste;   /* DEC 2004: the client wants pastes framed */
     /* Optional synchronous reply sink; must copy bytes and not reenter this
      * model. The transport decides whether a client may receive replies. */
     void (*reply)(void *, const unsigned char *, size_t);

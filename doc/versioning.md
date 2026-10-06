@@ -18,6 +18,11 @@ The control protocol is fixed at version 1:
 - the meaning of every defined bit and value;
 - the rule that a clear known bit means unknown.
 
+Since 0.1.0 the presentation reply also carries known bit 32 and
+`values[7]` (input features). A 0.1.0 client ignores both, and
+`sdk/tests/test_sdk_compat.sh` checks that it reads the new reply exactly
+as it read the 0.1.0 one.
+
 New features are added by using values and bits that are zero today,
 where an older client already ignores them.
 An incompatible layout would get a new `version`.

@@ -69,6 +69,8 @@ typedef struct {
     uint32_t lines;          /* XTY_LINE_* bits */
     uint32_t rows, columns;  /* text grid when the reply was made */
     uint32_t interpretation; /* XTY_COLOR_PENS and future bits */
+    uint32_t input;          /* XTY_INPUT_* bits: modes a raw-mode client may
+                                turn on (XTY_PRESENT_KNOWN_INPUT) */
 } LimpetPresentation;
 
 /* Zero the block and set version and operation. Every other field must be

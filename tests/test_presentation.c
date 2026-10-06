@@ -9,12 +9,14 @@ int main(void)
     assert(XTY_GET_PRESENTATION==13 && sizeof c==64);
     assert(xterm_presentation_reply(&c,sizeof c,24,80,0));
     assert(c.version==1 && c.operation==13 && c.reserved[0]==XTY_PACKET_MAGIC && !c.reserved[1]);
-    assert(c.values[0]==31 && c.values[1]==3 && c.values[2]==1 && c.values[3]==3);
+    assert(c.values[0]==63 && c.values[1]==3 && c.values[2]==1 && c.values[3]==3);
     assert(c.values[4]==24 && c.values[5]==80);
     assert(c.values[6]==0);
-    for(i=7;i<12;++i) assert(!c.values[i]);
+    /* Input features (bit 32): what a raw-mode client may turn on. */
+    assert(c.values[7]==XTY_INPUT_BRACKETED_PASTE);
+    for(i=8;i<12;++i) assert(!c.values[i]);
     c=request();assert(xterm_presentation_reply(&c,sizeof c,0,80,0));
-    assert(c.values[0]==23 && !c.values[4] && !c.values[5]);
+    assert(c.values[0]==55 && !c.values[4] && !c.values[5]);
     c=request();assert(xterm_presentation_reply(&c,sizeof c,18,63,XTY_COLOR_PENS));
     assert(c.values[4]==18 && c.values[5]==63 && c.values[6]==XTY_COLOR_PENS);
     for(i=0;i<16;++i) {

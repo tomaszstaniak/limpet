@@ -27,7 +27,8 @@ The reply uses the control envelope described in [protocols.md](protocols.md#env
 | values[4] | Current rows |
 | values[5] | Current columns |
 | values[6] | Colour interpretation mask: bit 0 `XTY_COLOR_PENS` |
-| values[7..11] | Reserved, zero |
+| values[7] | Input features (known bit 32, after 0.1.0): bit 0 bracketed paste (DEC 2004) |
+| values[8..11] | Reserved, zero |
 
 A clear known bit means unknown, not unsupported. A set known bit with a
 zero feature value means confirmed absent. Geometry is known only when both

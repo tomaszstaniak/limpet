@@ -1,5 +1,11 @@
 # Limpet SDK changes
 
+## Unreleased
+
+- `LimpetPresentation.input`, appended: the input features a raw-mode
+  client may turn on, valid with `XTY_PRESENT_KNOWN_INPUT` (bit 32).
+  `XTY_INPUT_BRACKETED_PASTE`: DEC mode 2004. Zero from Limpet 0.1.0.
+
 ## 0.1.0 (2026-10-05)
 
 First release.
