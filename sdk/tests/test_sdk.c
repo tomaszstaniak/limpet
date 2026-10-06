@@ -137,7 +137,7 @@ static void test_query(void)
     assert(last_action == XTY_ACTION_CONTROL && last_arg3 == 64 &&
            last_arg4 == XTY_PACKET_MAGIC && last_arg5 == 0);
     assert(p.known == 63 && limpet_color_level(&p) == XTY_COLOR_RGB);
-    assert(p.input == XTY_INPUT_BRACKETED_PASTE);
+    assert(p.input == (XTY_INPUT_BRACKETED_PASTE | XTY_INPUT_RESIZE_REPORT));
     assert(limpet_uses_pens(&p) && limpet_has_bold(&p) && limpet_can_rewrite_line(&p));
     assert(limpet_rows(&p) == 24 && limpet_columns(&p) == 80);
 

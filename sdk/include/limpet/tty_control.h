@@ -31,6 +31,9 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
    client may set DEC mode 2004 (CSI ? 2004 h) and then receives a paste
    framed by CSI 200 ~ and CSI 201 ~, without Limpet's multi-line
    confirmation; the text itself never contains ESC or C1.
+   INPUT_RESIZE_REPORT: in raw mode the client may set DEC mode 2048 and
+   then receives CSI 48 ; rows ; columns ; height px ; width px t as input
+   at once and after every size change.
    All promises refer to 7-bit ESC [ (0x1b,0x5b) sequences.
    ANSI16: SGR 30..37,90..97,39 (foreground), 40..47,100..107,49
    (background). INDEXED256 adds 38;5;n and 48;5;n; RGB adds
@@ -54,6 +57,7 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
 #define XTY_PRESENT_KNOWN_INTERPRETATION 16u
 #define XTY_PRESENT_KNOWN_INPUT 32u
 #define XTY_INPUT_BRACKETED_PASTE 1u
+#define XTY_INPUT_RESIZE_REPORT 2u
 #define XTY_COLOR_PENS 1u
 #define XTY_COLOR_NONE 0u
 #define XTY_COLOR_ANSI16 1u

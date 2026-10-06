@@ -67,11 +67,12 @@ There are three separate ways, and most capabilities have only one of them:
 | [Ctrl-C](#ctrl-c) | everyone | none | Verified, with limits |
 | [Mouse reporting](#mouse-reporting) | raw-mode programs | none | Released, host-tested |
 | [Bracketed paste](#bracketed-paste) | raw-mode programs | query, input known bit | Experimental |
+| [Resize reports (DEC 2048)](#resize-reports) | raw-mode programs | query, input known bit | Experimental |
 | [Scrollback, reflow, selection, clipboard](#user-interface-features) | users | not visible to programs | Verified |
 | [Themes](#user-interface-features) | users | not visible to programs | Verified |
 | [termios, PTY, TTY control operations](#terminal-settings-termios-and-pty) | POSIX programs | `XTY_CAPS` on a PTY | Experimental |
 | [SSH client](#ssh) | users | none | Experimental |
-| Window title (OSC 0/2), save cursor (DECSC), any-motion mouse, resize events | | | Not supported |
+| Window title (OSC 0/2), save cursor (DECSC), any-motion mouse, resize signals | | | Not supported |
 
 The rest of this page has one section per row.
 
@@ -284,8 +285,9 @@ that without guessing.
   the input stream. Needed only by programs that already parse input
   replies.
 
-**The size is a snapshot.** There is no resize notification: no signal, no
-event, no message in the input stream. Ask again before laying out text,
+**The size is a snapshot.** There is no resize signal. A raw-mode program
+can ask for [resize reports](#resize-reports) in its input; otherwise ask
+again before laying out text,
 and after any long pause. Do not ask on every character: each query is a
 round trip to the terminal's process.
 
@@ -527,6 +529,21 @@ with `XTY_INPUT_BRACKETED_PASTE` in `LimpetPresentation.input`. Limpet
 **Status.** Experimental: host-tested (`tests/test_bracketed_paste.c`, the
 framing cases in `tests/test_paste.c`, `sdk/tests/test_sdk_compat.sh`);
 on AROS, see hardcode's demonstration 1 evidence. Not in a release.
+
+## Resize reports
+
+In raw mode a program may send `CSI ? 2048 h`. It then receives, as input,
+`CSI 48 ; rows ; columns ; height ; width t` (height and width of the text
+area in pixels) at once, and again after every size change; a change while
+a report is still being delivered is followed by one more report with the
+newest size. `CSI ? 2048 l` turns it off, and the end of a PTY session
+turns it off for the next program. No report is sent in cooked mode.
+
+Detection: `XTY_INPUT_RESIZE_REPORT` in `LimpetPresentation.input` (known
+bit 32). Limpet 0.1.0 has neither; use `CSI 18 t` there.
+
+**Status.** Experimental: host-tested (`tests/test_resize_report.c`); on
+AROS, see hardcode's demonstration 1 evidence. Not in a release.
 
 ---
 

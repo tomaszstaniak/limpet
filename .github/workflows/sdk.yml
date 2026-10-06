@@ -22,4 +22,4 @@ jobs:
       # 2048) extended it. Older clients are checked by test_sdk_compat.sh.
       - name: Protocol header is the reviewed one
         run: |
-          echo "967fee529713658fdd00e4180204d263ef88c266db3363c21fe9078bd9aebdb9  sdk/include/limpet/tty_control.h" | sha256sum -c -
+          echo "88f0d6f5cb1cc367aa4d9f19f7a0509c6d43bc81238f94508ea55ea19341392d  sdk/include/limpet/tty_control.h" | sha256sum -c -

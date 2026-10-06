@@ -273,6 +273,10 @@ test: build/test_theme
 test: build/test_geometry_reply
 test: build/test_mouse
 test: test-bracketed-paste
+test: test-resize-report
+.PHONY: test-resize-report
+test-resize-report: build/test_resize_report
+	./build/test_resize_report
 .PHONY: test-bracketed-paste
 test-bracketed-paste: build/test_bracketed_paste
 	./build/test_bracketed_paste
@@ -302,6 +306,10 @@ build/test_boxdraw: tests/test_boxdraw.c src/boxdraw.h
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $< -o $@
 
 build/test_bracketed_paste: tests/test_bracketed_paste.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h src/session_reset.h $(UNICODE_SRC)
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
+
+build/test_resize_report: tests/test_resize_report.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h src/resize_report.h $(UNICODE_SRC)
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
 

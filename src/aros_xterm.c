@@ -126,6 +126,7 @@ static int diag_exit_stage;
 static unsigned long title_updates,title_skipped,output_redraws,output_quiet;
 static XKeyQueue keyboard;
 #include "reply_flow.h"
+#include "resize_report.h"
 static XReplyFlow reply_flow;
 static unsigned char pending_output[4096];
 static size_t output_length,output_offset;
@@ -831,6 +832,22 @@ static struct NewMenu menu_spec[]={
 };
 
 #include "limpet_icon.h"
+
+/* DEC 2048 report waiting to go out. A size change while one is half sent
+   is not lost: the newest size is sent after it. */
+static XReplyFlow resize_flow;
+static int resize_again;
+static unsigned resize_mode_seen;
+
+static int replies_enabled(void);
+static void resize_queue(void)
+{
+    if(!screen.resize_report || !replies_enabled()) return;
+    if(resize_flow.offset) { resize_again=1; return; }
+    resize_flow.length=resize_report((char *)resize_flow.bytes,sizeof resize_flow.bytes,
+                                     screen.rows,screen.columns,
+                                     screen.rows*xfont_height(),screen.columns*xfont_width());
+}
 
 static const char *const about_lines[]={
     "Limpet " LIMPET_VERSION,
@@ -1543,6 +1560,7 @@ int main(int argc,char **argv)
                     process_session.columns=cols;process_session.rows=rows;
                     aros_session_poll(&process_session);
                 }
+                resize_queue();
                 selection.active=selection.dragging=0;
                 dirty=1;
             } else if (event == IDCMP_RAWKEY && have_key) {
@@ -1674,6 +1692,19 @@ int main(int argc,char **argv)
         }
         if(!closing && keyboard_ready()) {
             if(key_queue_drain(&keyboard,16,keyboard_deliver,NULL)) dirty=1;
+        }
+        /* A client that just set 2048 gets the current size at once. */
+        if(screen.resize_report && !resize_mode_seen) resize_queue();
+        resize_mode_seen=screen.resize_report;
+        if(!replies_enabled() || !screen.resize_report) { memset(&resize_flow,0,sizeof resize_flow); resize_again=0; }
+        if(!closing && !reply_flow.length && resize_flow.length) {
+            size_t taken=aros_session_write(&process_session,resize_flow.bytes+resize_flow.offset,
+                                            resize_flow.length-resize_flow.offset);
+            resize_flow.offset+=taken;
+            if(resize_flow.offset==resize_flow.length) {
+                memset(&resize_flow,0,sizeof resize_flow);
+                if(resize_again) { resize_again=0; resize_queue(); }
+            }
         }
         if(paste_frame_generation!=session_generation) memset(&paste_frame,0,sizeof paste_frame);
         if(!closing && !reply_flow.length) {

@@ -468,6 +468,7 @@ static void execute_csi(XTermScreen *s, unsigned char command)
                     s->mouse_sgr=sgr;
                 }
                 else if(s->params[i]==2004) s->bracketed_paste=command=='h';
+                else if(s->params[i]==2048) s->resize_report=command=='h';
             }
         }
         return;
