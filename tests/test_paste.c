@@ -50,6 +50,19 @@ int main(void)
       assert(s.utf8_remaining==0);
       screen_write(&s,(const unsigned char *)"X",1);
       assert(screen_cell(&s,1,15)=='X'); }
+    /* A clipboard carrying a fake end marker, or the C1 CSI as UTF-8, is
+       refused whole, so framed text can never end its own frame; letters
+       whose UTF-8 holds 0x9b (s-acute) pass unchanged. */
+    { const char *fake = "abc\033[201~\ry\r";
+      const char *c1 = "abc\302\233" "201~";
+      const char *pl = "Za\305\274\303\263\305\202\304\207 g\304\231\305\233l\304\205";
+      p.length = 0;
+      assert(paste_prepare(&p, (const unsigned char *)fake, strlen(fake)) == -1 && !p.length);
+      assert(paste_prepare(&p, (const unsigned char *)c1, strlen(c1)) == -1 && !p.length);
+      assert(!paste_prepare(&p, (const unsigned char *)pl, strlen(pl)));
+      n = paste_peek(&p, &bytes, PASTE_LIMIT);
+      assert(n == strlen(pl) && !memcmp(bytes, pl, n));
+      paste_cancel(&p); }
     /* Bracketed paste: the markers go out through the same partial writes
        as the text, so they are queued, not written once and forgotten. */
     { XPasteFrame f; const unsigned char *m;
