@@ -558,6 +558,11 @@ static void execute_csi(XTermScreen *s, unsigned char command)
         if (mode == 0) erase_range(s, cursor, cursor - s->cursor_column + s->columns);
         if (mode == 1) erase_range(s, cursor - s->cursor_column, cursor + 1);
         if (mode == 2) erase_range(s, cursor - s->cursor_column, cursor - s->cursor_column + s->columns);
+        /* A row erased whole is no longer the continuation of the row above
+           (as insert-line already treats it): what is written there next is
+           a new line, not more of the old one, when the width changes. */
+        if ((mode == 2 || (mode == 0 && !s->cursor_column)) && s->cursor_row)
+            s->cells[(size_t)s->cursor_row * s->columns - 1].wrap = 0;
         break;
     case 'm':
         for (i = 0; i < s->param_count; ++i) {

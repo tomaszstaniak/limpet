@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define CAP (40 * 40)
 #define HIST (64 * 40)
@@ -202,9 +203,66 @@ static void without_spare_unchanged(void)
     assert(screen_cell(&s, 0, 3) == 'd' && screen_cell(&s, 1, 0) == ' ');
 }
 
+/* A continuation row erased from its first column is no longer part of the
+ * line above: text written there later is a line of its own. Without the
+ * cut, an inline status panel that the client erases and rewrites after a
+ * width change joined its next text to the panel row above in history. */
+static void erased_continuation_cut(void)
+{
+    setup(6, 10);
+    text("abcdefghijkl");
+    assert(!strcmp(logical(), "abcdefghijkl"));
+    text("\r\033[K");
+    text("XY\r\n");
+    assert(!strcmp(logical(), "abcdefghij|XY"));
+    setup(6, 10);
+    text("abcdefghijkl\r\033[2KXY\r\n");                  /* EL 2 cuts too */
+    assert(!strcmp(logical(), "abcdefghij|XY"));
+    setup(6, 10);
+    text("abcdefghijkl\r\033[1CQ\r\n");                   /* no erase: still one line */
+    assert(!strcmp(logical(), "abcdefghijkQ"));
+}
+
+/* The E0 P2 stream (hardcode probe e0panel, ERASE=k): text lines under a
+ * three-row panel that is erased with CR ESC[K and CUU and redrawn, while
+ * the width changes. Every text line must survive as a line of its own.
+ * (Empty rows the client's relative erase leaves after a reflow are the
+ * client's to avoid; it learns the new width from DEC 2048.) */
+static void panel_stream_width_change(void)
+{
+    char line[64], rule[64];
+    const char *l;
+    int i, cols = 40, drawn = 0, found = 0;
+    setup(10, 40);
+    for (i = 1; i <= 15; ++i) {
+        if (i > 8 && i <= 13) { cols -= 2; assert(!screen_resize(&s, 10, (unsigned)cols)); }   /* a drag */
+        if (drawn) text("\r\033[K\033[1A\r\033[K\033[1A\r\033[K");
+        snprintf(line, sizeof line, "line %d\r\n", i);
+        text(line);
+        text("\r\n");                                          /* empty partial row */
+        memset(rule, '-', (size_t)cols - 1); rule[cols - 1] = 0;
+        text(rule); text("\r\n");
+        memset(rule, '.', (size_t)cols - 1); memcpy(rule, "status", 6); rule[cols - 1] = 0;
+        text(rule);                                            /* as wide as the rule */
+        drawn = 1;
+    }
+    for (l = logical(), i = 1; *l; ) {
+        const char *bar = strchr(l, '|');
+        size_t n = bar ? (size_t)(bar - l) : strlen(l);
+        if (n > 4 && !strncmp(l, "line ", 5)) {
+            assert(!memchr(l, '-', n));
+            assert(atoi(l + 5) == i); ++i; ++found;
+        } else assert(!memchr(l, 'l', n) || !strncmp(l, "status", 6));
+        l += n + (bar ? 1 : 0);
+    }
+    assert(found == 15);
+}
+
 int main(void)
 {
     narrow_and_back();
+    erased_continuation_cut();
+    panel_stream_width_change();
     scrollback_kept();
     cursor_after_prompt();
     pending_wrap();
