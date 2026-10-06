@@ -98,7 +98,7 @@ static int run_case(const ReplayCase *fixture, size_t split, int bytewise)
 
 int main(void)
 {
-    size_t i, split, count = sizeof replay_cases / sizeof replay_cases[0];
+    size_t i, split, deferred, count = sizeof replay_cases / sizeof replay_cases[0];
     for (i = 0; i < count; ++i) {
         const ReplayCase *fixture = &replay_cases[i];
         for (split = 0; split <= fixture->length; ++split)
@@ -106,7 +106,10 @@ int main(void)
         if (run_case(fixture, 0, 1)) return 1;
         printf("PASS %s\n", fixture->name);
     }
-    for (i = 0; i < DEFERRED_COUNT; ++i) printf("DEFERRED %s\n", deferred_cases[i]);
+    /* Through a variable: with no deferred cases GCC's -Wtype-limits rejects
+       `i < 0u`, and the fixture checker builds that case on purpose. */
+    deferred = DEFERRED_COUNT;
+    for (i = 0; i < deferred; ++i) printf("DEFERRED %s\n", deferred_cases[i]);
     printf("replay corpus: %lu passed, %u deferred, %u runs\n",
            (unsigned long)count, DEFERRED_COUNT, runs);
     printf("snapshot hash: %08lx\n", (unsigned long)digest);

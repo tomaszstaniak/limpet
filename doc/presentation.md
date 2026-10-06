@@ -5,25 +5,28 @@ render before it decorates its output: colours, bold, line controls,
 current size and how the basic colour codes are read. The query is a DOS
 packet on the program's own output handle; on any other console it fails
 with `ERROR_ACTION_NOT_KNOWN`, and the program should write plain text.
-Constants and the wire layout are in [`src/tty_control.h`](../src/tty_control.h);
-a minimal client is [`tools/presentation_probe.c`](../tools/presentation_probe.c).
+Constants and the wire layout are in
+[`sdk/include/limpet/tty_control.h`](../sdk/include/limpet/tty_control.h),
+the header both the terminal and the [SDK](sdk/api.md) are built from.
+`limpet_query_presentation()` does everything on this page for you; the
+[`hello`](../sdk/examples/hello.c) example shows it in use.
 
 ## Request and reply
 
 `XTY_GET_PRESENTATION = 13`, in an `XtyControl` block of version 1.
 
 Request: version 1, operation 13, reserved words and all values zero.
-Reply uses the existing validated control envelope:
+The reply uses the control envelope described in [protocols.md](protocols.md#envelope):
 
 | Field | Meaning |
 | --- | --- |
-| values[0] | Known-field mask: bit 0 colors, bit 1 styles, bit 2 line editing, bit 3 geometry, bit 4 color interpretation |
-| values[1] | Color level: 0 none, 1 ANSI 16, 2 indexed 256, 3 RGB truecolor |
+| values[0] | Known-field mask: bit 0 colours, bit 1 styles, bit 2 line editing, bit 3 geometry, bit 4 colour interpretation |
+| values[1] | Colour level: 0 none, 1 ANSI 16, 2 indexed 256, 3 RGB 24-bit |
 | values[2] | Style mask: bit 0 SGR bold plus SGR reset |
 | values[3] | Line mask: bit 0 CR, bit 1 CSI K erase from cursor to end of line |
 | values[4] | Current rows |
 | values[5] | Current columns |
-| values[6] | Color interpretation mask: bit 0 `XTY_COLOR_PENS` |
+| values[6] | Colour interpretation mask: bit 0 `XTY_COLOR_PENS` |
 | values[7..11] | Reserved, zero |
 
 A clear known bit means unknown, not unsupported. A set known bit with a
@@ -40,8 +43,8 @@ the basic SGR codes then do not mean ANSI colours.
 
 Exact rules, as in the header:
 
-- `XTY_COLOR_PENS` counts only when known bit 4 is set. PENS without the
-  known bit is no claim; with the interpretation unknown the client keeps
+- `XTY_COLOR_PENS` counts only when known bit 4 is set; without it the bit
+  means nothing, and with the interpretation unknown the client keeps
   its ANSI behaviour.
 - With PENS known, `38;5;0..15` and `48;5;0..15` are guaranteed from level
   `ANSI16` (values[1] = 1) up, with their ANSI palette meaning.
@@ -51,10 +54,10 @@ Exact rules, as in the header:
 - The next Shell prompt sets its own pens with its own sequences; a client
   need not restore them, only end its own colours (`39`/`49` or `0`).
 
-Public enums and masks are in `src/tty_control.h`: `XTY_PRESENT_KNOWN_*`,
+Public enums and masks are in `limpet/tty_control.h`: `XTY_PRESENT_KNOWN_*`,
 `XTY_COLOR_*` (including `XTY_COLOR_PENS`), `XTY_STYLE_BOLD_RESET`,
 `XTY_LINE_CR` and `XTY_LINE_ERASE_EOL`.
 The header specifies 7-bit ESC [ sequences and the exact supported SGR codes.
-The query is sent directly; XTY_CAPS is not a prerequisite on native sessions.
-Unsupported operations return the normal unsupported-action error without
-modifying the caller block. Unknown future bits must be ignored by clients.
+Send the query directly; `XTY_CAPS` is not needed first. A console that
+does not support it returns an error and leaves your block unchanged.
+Ignore bits you do not know.

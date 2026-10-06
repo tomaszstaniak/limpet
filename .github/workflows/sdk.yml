@@ -1,0 +1,22 @@
+# Host checks only. There is no AROS cross toolchain here, so a green run
+# says the terminal model, the protocol and the SDK pass their host tests.
+# It does not say anything builds or runs on AROS; that is checked locally
+# and recorded in doc/sdk/verification-*.md.
+name: host tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SDK contract tests (ASan, UBSan) and SDK compile check
+        run: make test-sdk
+      - name: Full host test suite
+        run: make test
+      - name: Protocol header is the one Limpet 0.1.0 was built from
+        run: |
+          echo "921bc72d2e4c94ff937e22eacdf51d0da88995c30b7e56b9006e829fbb72cdf1  sdk/include/limpet/tty_control.h" | sha256sum -c -

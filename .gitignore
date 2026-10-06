@@ -15,6 +15,11 @@
 !/fixtures/
 !/doc/
 !/tools/
+!/sdk/
+!/.github/
+!/CONTRIBUTING.md
+/sdk/build/
+/sdk/lib/
 /vendor/doomgeneric/
 /assets/icon/limpet-1254.png
 /tools/release/

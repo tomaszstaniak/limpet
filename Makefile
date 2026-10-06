@@ -1101,3 +1101,17 @@ test: test-reflow
 .PHONY: test-reflow
 test-reflow: build/test_reflow
 	./build/test_reflow
+
+# Public SDK (sdk/): its contract tests run against the terminal's own
+# presentation reply code, plus the SDK's host compile check.
+SDK_SRC = sdk/src/limpet_format.c sdk/src/limpet_query.c
+SDK_HEADERS = sdk/include/limpet/limpet.h sdk/include/limpet/tty_control.h
+test: test-sdk
+.PHONY: test-sdk
+test-sdk: build/test_sdk
+	./build/test_sdk
+	$(MAKE) -C sdk host-check
+build/test_sdk: sdk/tests/test_sdk.c $(SDK_SRC) $(SDK_HEADERS) src/xterm_presentation.h
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all \
+		-Isdk/include -Isdk/tests/host $< $(SDK_SRC) -o $@
