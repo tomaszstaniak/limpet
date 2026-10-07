@@ -13,4 +13,10 @@ int selection_contains(const XSelection *, const XTermScreen *, unsigned row, un
 /* UTF-8 without NUL; 0 success, -1 invalid/empty selection, -2 capacity.
  * Output untouched on error; written reset. Endpoints include touched clusters. */
 int selection_text(const XSelection *, const XTermScreen *, unsigned char *, size_t, size_t *);
+/* After output: 1 when the selection may stay, because nothing scrolled
+ * (scroll_count as it was) and its text is what it was before. A redraw
+ * that rewrites other rows -- a status line, a clock -- no longer takes
+ * the user's selection away (hardcode L6). */
+int selection_keep(const XSelection *, const XTermScreen *, const unsigned char *before,
+                   size_t before_length, unsigned long scroll_before);
 #endif

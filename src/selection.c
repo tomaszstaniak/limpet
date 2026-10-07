@@ -94,3 +94,13 @@ int selection_text(const XSelection *a,const XTermScreen *s,unsigned char *out,s
     }
     *written=total; return 0;
 }
+
+int selection_keep(const XSelection *sel, const XTermScreen *s, const unsigned char *before,
+                   size_t before_length, unsigned long scroll_before)
+{
+    unsigned char now[1024];
+    size_t n=0;
+    if(!sel || !s || !sel->active || s->scroll_count!=scroll_before) return 0;
+    if(selection_text(sel,s,now,sizeof now,&n)) return 0;
+    return n==before_length && !memcmp(now,before,n);
+}

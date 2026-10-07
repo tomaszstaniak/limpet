@@ -1341,7 +1341,10 @@ int main(int argc,char **argv)
         aros_session_poll(&process_session);
         flood_diag_queues();
         if(echo_mode==2 && !closing) {
-            unsigned long seen=screen.visible_bytes;
+            unsigned long seen=screen.visible_bytes, scrolled=screen.scroll_count;
+            unsigned char kept[1024]; size_t kept_length=0;
+            int keep=selection.active && !selection.dragging &&
+                     !selection_text(&selection,&screen,kept,sizeof kept,&kept_length);
             size_t n=output_pump();
             /* Bytes that only fed an image still arriving change nothing on
                screen: no redraw, and a selection or link hover stays. A
@@ -1351,7 +1354,10 @@ int main(int argc,char **argv)
             if(n) {
                 ++output_redraws;
                 link_gesture_cancel(&link_gesture); link_hovered=0;
-                selection.active=selection.dragging=0;
+                /* A redraw of other rows (a status line, a clock) leaves the
+                   selection; output that changes or scrolls it drops it (L6). */
+                if(!(keep && selection_keep(&selection,&screen,kept,kept_length,scrolled)))
+                    selection.active=selection.dragging=0;
                 dirty=1;
             }
             if(process_session.exited && !process_session.output.length &&

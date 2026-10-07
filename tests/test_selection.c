@@ -66,6 +66,32 @@ int main(void)
     sel.active=0;
     { unsigned char out[8]; size_t n=99;
       assert(selection_text(&sel,&s,out,8,&n)==-1 && !n); }
+    /* L6 (hardcode): a selection stays when output leaves its cells as
+       they were and nothing scrolled; it goes when they change, on a
+       scroll, or when the screen is cleared. */
+    {
+        unsigned char before[256]; size_t bn=0; unsigned long sc;
+        init(4,10,"alpha\r\nbravo\r\ncharlie");
+        selection_start(&sel,&s,1,0); selection_extend(&sel,&s,1,4); sel.active=1;
+        assert(!selection_text(&sel,&s,before,sizeof before,&bn));
+        sc=s.scroll_count;
+        screen_write(&s,(const unsigned char *)"\033[4;1Hst 12 s",strlen("\033[4;1Hst 12 s"));   /* another row */
+        assert(selection_keep(&sel,&s,before,bn,sc));
+        screen_write(&s,(const unsigned char *)"\033[2;1Hxx",strlen("\033[2;1Hxx"));              /* its own row */
+        assert(!selection_keep(&sel,&s,before,bn,sc));
+        init(4,10,"alpha\r\nbravo\r\ncharlie");
+        selection_start(&sel,&s,1,0); selection_extend(&sel,&s,1,4); sel.active=1;
+        assert(!selection_text(&sel,&s,before,sizeof before,&bn));
+        sc=s.scroll_count;
+        screen_write(&s,(const unsigned char *)"\033[4;1H\r\n\r\n",strlen("\033[4;1H\r\n\r\n"));       /* scrolls */
+        assert(!selection_keep(&sel,&s,before,bn,sc));
+        init(4,10,"alpha\r\nbravo\r\ncharlie");
+        selection_start(&sel,&s,1,0); selection_extend(&sel,&s,1,4); sel.active=1;
+        assert(!selection_text(&sel,&s,before,sizeof before,&bn));
+        sc=s.scroll_count;
+        screen_write(&s,(const unsigned char *)"\033[2J",strlen("\033[2J"));                 /* cleared */
+        assert(!selection_keep(&sel,&s,before,bn,sc));
+    }
     puts("selection tests passed (clusters, wraps, history, bounds)");
     return 0;
 }
