@@ -121,6 +121,10 @@ size_t screen_mouse_encode(const XTermScreen *, unsigned, unsigned, unsigned,
    the mode is off, the cell is outside or out is too small. */
 size_t screen_wheel_encode(const XTermScreen *s, int up, unsigned col, unsigned row,
                            unsigned modifiers, unsigned char *out, size_t capacity);
+/* Turn off every input report a client can turn on: mouse 1000/1002/1006,
+   bracketed paste 2004, resize 2048, wheel 2100. Used when a native console
+   returns to cooked mode, so the Shell and the next program start clean. */
+void screen_reset_input_modes(XTermScreen *);
 unsigned screen_scalar_width(uint32_t);
 int screen_attach_history(XTermScreen *, XTermCell *, size_t);
 /* Optional disjoint caller-owned snapshot storage, at least capacity cells. */

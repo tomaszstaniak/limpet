@@ -425,6 +425,14 @@ size_t screen_wheel_encode(const XTermScreen *s, int up, unsigned col, unsigned 
     return (size_t)length;
 }
 
+void screen_reset_input_modes(XTermScreen *s)
+{
+    if (!s) return;
+    if (s->mouse_tracking || s->mouse_sgr) ++s->mouse_generation;
+    s->mouse_tracking = s->mouse_sgr = 0;
+    s->bracketed_paste = s->resize_report = s->wheel_report = 0;
+}
+
 static unsigned parameter(const XTermScreen *s, unsigned index, unsigned fallback)
 {
     return index < s->param_count && s->params[index] ? s->params[index] : fallback;

@@ -107,6 +107,7 @@ static XPaste paste;
    replies (src/input_order.h), and the input owner they belong to. */
 static XInputOrder input_order;
 static unsigned order_session_generation, order_input_generation;
+static int raw_seen;
 static ArosClipJob clip_job;
 static unsigned char clip_text[CLIP_TEXT_LIMIT], clip_raw[CLIP_RAW_LIMIT];
 static unsigned session_generation, paste_generation, copy_loss;
@@ -1728,6 +1729,11 @@ int main(int argc,char **argv)
             order_session_generation=session_generation;
             order_input_generation=process_session.input_generation;
         }
+        /* Native console: back in cooked mode, the program that turned on
+           input reports has finished with them. The Shell and the next raw
+           program must not inherit them (a PTY session is reset when it ends). */
+        if(!pty_mode && raw_seen && !process_session.line.raw) screen_reset_input_modes(&screen);
+        raw_seen=process_session.line.raw;
         /* A client that just set 2048 gets the current size at once. */
         if(screen.resize_report && !resize_mode_seen) resize_queue();
         resize_mode_seen=screen.resize_report;
