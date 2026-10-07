@@ -25,9 +25,17 @@
 #include "tty_control.h"
 
 #define LIMPET_SDK_VERSION_MAJOR 0
-#define LIMPET_SDK_VERSION_MINOR 1
+#define LIMPET_SDK_VERSION_MINOR 2
 #define LIMPET_SDK_VERSION_PATCH 0
-#define LIMPET_SDK_VERSION_STRING "0.1.0"
+#define LIMPET_SDK_VERSION_STRING "0.2.0"
+
+/* Binary guard. SDK 0.2 appended `input` to LimpetPresentation, so a
+   function that fills the struct writes more than a 0.1 client reserved.
+   These functions therefore have new link names: source code is unchanged,
+   but an object compiled with an older header no longer links against this
+   library and must be rebuilt, instead of having its stack overwritten. */
+#define limpet_query_presentation limpet_query_presentation_v2
+#define limpet_presentation_decode limpet_presentation_decode_v2
 
 #ifdef __cplusplus
 extern "C" {

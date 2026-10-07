@@ -27,3 +27,10 @@ echo "old client, reply now:  $now"
 [ "$now" = "$then_" ] || { echo "SDK COMPAT FAIL"; exit 1; }
 case "$now" in status=ok*) ;; *) echo "SDK COMPAT FAIL"; exit 1;; esac
 echo "SDK COMPAT PASS: an SDK 0.1.0 client reads the current reply as it read its own terminal's"
+# Binary guard: an object compiled with the 0.1.0 header must not link
+# against the current library (its LimpetPresentation is shorter).
+$CC -std=c99 -Wall -Wextra -Werror -I"$old/sdk/include" -Isdk/tests/host -c sdk/tests/compat_decode.c -o "$out/old-client.o"
+if $CC "$out/old-client.o" sdk/src/limpet_format.c -Isdk/include -Isdk/tests/host -o "$out/mixed" 2>/dev/null; then
+    echo "SDK BINARY GUARD FAIL: an old object linked against the new library"; exit 1
+fi
+echo "SDK BINARY GUARD PASS: an object built with the 0.1.0 header must be rebuilt"

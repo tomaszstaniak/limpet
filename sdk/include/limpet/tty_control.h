@@ -26,7 +26,7 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
    Request: reserved and values all zero. Reply values: [0] known mask,
    [1] color level, [2] styles, [3] line controls, [4] rows, [5] columns,
    [6] color interpretation (known bit 4), [7] input features (known bit
-   32, since the release after 0.1.0); [8..11] zero. Clear known bits
+   32, Limpet 0.2.0 and later; 0.1.0 leaves both clear); [8..11] zero. Clear known bits
    mean unknown, not unsupported. INPUT_BRACKETED_PASTE: in raw mode the
    client may set DEC mode 2004 (CSI ? 2004 h) and then receives a paste
    framed by CSI 200 ~ and CSI 201 ~, without Limpet's multi-line
@@ -34,6 +34,13 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
    INPUT_RESIZE_REPORT: in raw mode the client may set DEC mode 2048 and
    then receives CSI 48 ; rows ; columns ; height px ; width px t as input
    at once and after every size change.
+   INPUT_WHEEL_REPORT: in raw mode the client may set Limpet's private mode
+   2100 and then receives each wheel step as CSI < 64|65 ; col ; row M
+   (modifier bits 8 Alt, 16 Ctrl) while buttons and drags stay with the
+   terminal; mouse tracking 1000/1002, when also on, takes precedence.
+   No report or framed paste ever goes inside a framed paste. A native
+   console turns all of these modes (and 1000/1002/1006) off when it
+   returns to cooked mode; set them again after each SetMode(raw).
    All promises refer to 7-bit ESC [ (0x1b,0x5b) sequences.
    ANSI16: SGR 30..37,90..97,39 (foreground), 40..47,100..107,49
    (background). INDEXED256 adds 38;5;n and 48;5;n; RGB adds
@@ -58,7 +65,7 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
 #define XTY_PRESENT_KNOWN_INPUT 32u
 #define XTY_INPUT_BRACKETED_PASTE 1u
 #define XTY_INPUT_RESIZE_REPORT 2u
-#define XTY_INPUT_WHEEL_REPORT 4u   /* private mode 2100: wheel steps as SGR reports */
+#define XTY_INPUT_WHEEL_REPORT 4u
 #define XTY_COLOR_PENS 1u
 #define XTY_COLOR_NONE 0u
 #define XTY_COLOR_ANSI16 1u

@@ -37,7 +37,10 @@ int main(void)
     puts("Press keys; q or Ctrl-C ends, as does 60 s without a key.");
     fflush(stdout);
 
-    SetMode(Input(), 1);
+    if (!SetMode(Input(), 1)) {
+        puts("The console cannot switch to raw mode.");
+        return RETURN_WARN;
+    }
     for (;;) {
         const char *name = NULL;
         char text[16];
@@ -66,6 +69,9 @@ int main(void)
         fflush(stdout);
     }
     fflush(stdout);
-    SetMode(Input(), 0);
+    if (!SetMode(Input(), 0)) {
+        puts("The console did not return to cooked mode.");
+        return RETURN_WARN;
+    }
     return RETURN_OK;
 }
