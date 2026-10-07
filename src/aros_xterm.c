@@ -1343,7 +1343,9 @@ int main(int argc,char **argv)
         if(echo_mode==2 && !closing) {
             unsigned long seen=screen.visible_bytes, scrolled=screen.scroll_count;
             unsigned char kept[1024]; size_t kept_length=0;
-            int keep=selection.active && !selection.dragging &&
+            /* Also while dragging: output does not move the selection's ends,
+               the mouse does (a status line ticking during a drag dropped it). */
+            int keep=selection.active &&
                      !selection_text(&selection,&screen,kept,sizeof kept,&kept_length);
             size_t n=output_pump();
             /* Bytes that only fed an image still arriving change nothing on
