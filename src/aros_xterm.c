@@ -1342,11 +1342,15 @@ int main(int argc,char **argv)
         flood_diag_queues();
         if(echo_mode==2 && !closing) {
             unsigned long seen=screen.visible_bytes, scrolled=screen.scroll_count;
-            unsigned char kept[1024]; size_t kept_length=0;
-            /* Also while dragging: output does not move the selection's ends,
-               the mouse does (a status line ticking during a drag dropped it). */
-            int keep=selection.active &&
-                     !selection_text(&selection,&screen,kept,sizeof kept,&kept_length);
+            /* The selection's text before the output, to see whether the output
+               touched it. On the heap and sized to the screen: a selection of a
+               whole reply is easily more than a few KB. Also while dragging:
+               output does not move the selection's ends, the mouse does. */
+            /* Only when output is waiting: no copy on every idle pass. */
+            int pending=process_session.output.length || output_offset<output_length;
+            size_t kept_cap=selection.active && pending ? (size_t)screen.rows*screen.columns*8+8 : 0, kept_length=0;
+            unsigned char *kept=kept_cap ? malloc(kept_cap) : NULL;
+            int keep=kept && !selection_text(&selection,&screen,kept,kept_cap,&kept_length);
             size_t n=output_pump();
             /* Bytes that only fed an image still arriving change nothing on
                screen: no redraw, and a selection or link hover stays. A
@@ -1362,6 +1366,7 @@ int main(int argc,char **argv)
                     selection.active=selection.dragging=0;
                 dirty=1;
             }
+            free(kept);
             if(process_session.exited && !process_session.output.length &&
                output_offset==output_length && !process_reported) {
                 if(handler_mode) closing=TRUE;

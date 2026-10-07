@@ -1,6 +1,7 @@
 #include "selection.h"
 #include "utf8proc.h"
 #include <string.h>
+#include <stdlib.h>
 int selection_hit(const XTermScreen *s,const XSelectionGrid *g,int x,int y,int clamp,unsigned *row,unsigned *col)
 {
     int width,height;
@@ -98,9 +99,13 @@ int selection_text(const XSelection *a,const XTermScreen *s,unsigned char *out,s
 int selection_keep(const XSelection *sel, const XTermScreen *s, const unsigned char *before,
                    size_t before_length, unsigned long scroll_before)
 {
-    unsigned char now[1024];
+    unsigned char *now;
     size_t n=0;
-    if(!sel || !s || !sel->active || s->scroll_count!=scroll_before) return 0;
-    if(selection_text(sel,s,now,sizeof now,&n)) return 0;
-    return n==before_length && !memcmp(now,before,n);
+    int same;
+    if(!sel || !s || !before || !sel->active || s->scroll_count!=scroll_before) return 0;
+    /* One byte more than before: longer text now does not fit and is "changed". */
+    if(!(now=malloc(before_length+1))) return 0;
+    same=!selection_text(sel,s,now,before_length+1,&n) && n==before_length && !memcmp(now,before,n);
+    free(now);
+    return same;
 }

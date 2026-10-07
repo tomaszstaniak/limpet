@@ -92,6 +92,20 @@ int main(void)
         screen_write(&s,(const unsigned char *)"\033[2J",strlen("\033[2J"));                 /* cleared */
         assert(!selection_keep(&sel,&s,before,bn,sc));
     }
+    /* a selection of more than 1 KB is kept too */
+    {
+        static XTermCell big[40*80], bighist[40*80];
+        static unsigned char before[8192]; size_t bn=0; unsigned long sc; int r;
+        assert(!screen_init(&s,big,40*80,40,80));
+        assert(!screen_attach_history(&s,bighist,40*80));
+        memset(&sel,0,sizeof sel);
+        for(r=0;r<30;++r) screen_write(&s,(const unsigned char *)"0123456789012345678901234567890123456789012345678901234567890123456789\r\n",72);
+        selection_start(&sel,&s,0,0); selection_extend(&sel,&s,29,60); sel.active=1;
+        assert(!selection_text(&sel,&s,before,sizeof before,&bn) && bn>1024);
+        sc=s.scroll_count;
+        screen_write(&s,(const unsigned char *)"\033[40;1Hst",strlen("\033[40;1Hst"));
+        assert(selection_keep(&sel,&s,before,bn,sc));
+    }
     puts("selection tests passed (clusters, wraps, history, bounds)");
     return 0;
 }
