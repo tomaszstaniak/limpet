@@ -7,14 +7,14 @@ one C file that uses only the public SDK, `dos.library` and the C library.
 ABI=abiv11 examples`, results in `build/abiv11/`; see
 [getting started](getting-started.md).
 
-**Verified:** 2026-10-05, all seven built from these sources with GCC 10.5
+**Verified:** 2026-10-07, all seven built from these sources with GCC 10.5
 and the ABIv11 2026.09 Developer SDK, run on AROS ABIv11 2026.09 x86_64
-under QEMU, in Limpet 0.1.0 and in the system console `CON:`. Screenshots
-in [the verification record](verification-0.1.0.md).
+under QEMU in Limpet 0.2.0 and in the system console `CON:`; `hello` also
+in Limpet 0.1.0. Details in [the verification record](verification-0.2.0.md).
 
 | Program | Shows | In `CON:` | Ends |
 | --- | --- | --- | --- |
-| `hello` | the presentation query and its answer | says the console was not identified | at once |
+| `hello` | the presentation query and its answer, including the input modes | says the console was not identified | at once |
 | `colors` | 16, 256 and 24-bit colour, pens | names only, no sequences | at once |
 | `progress` | a line rewritten in place, width from the window | one line per 10% | after 10 s, or Ctrl-C |
 | `geometry` | the window size as a snapshot | says the size is unknown | after 20 s, or Ctrl-C |
@@ -22,8 +22,9 @@ in [the verification record](verification-0.1.0.md).
 | `image` | the Kitty subset: query, draw, delete | sends nothing | key, or 30 s |
 | `keys` | raw-mode key input in both consoles | works, cursor keys as 0x9B | `q`, Ctrl-C, or 60 s idle |
 
-Every program also runs with output redirected to a file and then writes no
-escape sequences.
+Every program was also run with output redirected to a file, in both
+consoles, and wrote no escape sequence (no ESC byte in any of the 14
+files).
 
 ## hello
 
@@ -64,11 +65,19 @@ the AROS system.
 ## image
 
 1. Presentation query; stops without sending anything if it fails.
-2. Raw mode, Kitty `a=q`, one second to answer, cooked mode again.
+2. Raw mode, Kitty `a=q`, then cooked mode again. The whole reply must
+   arrive within one second of writing the query; a console that answers
+   nothing costs one second.
 3. Prints blank lines for the image, moves back up, draws a 160x96 RGB
    picture with the cursor kept in place, moves below it.
 4. Raw mode, waits for a key (30 s at most), cooked mode, deletes the image
    and frees its pixels.
+
+Every `SetMode`, write and read result is checked. Whatever fails after
+raw mode was entered, the console is switched back to cooked mode, and a
+drawn or partly sent image is deleted. Return code 0 on success or when
+graphics are unavailable, 5 when the console misbehaved, 20 when writing
+the image failed.
 
 Limit: the reserved space assumes a cell at least 12 pixels high. Limpet's
 default font is taller, so one or two blank lines remain under the image.

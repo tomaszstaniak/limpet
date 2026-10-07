@@ -5,6 +5,7 @@ For users:
 - [Why Limpet](why-limpet.md): what it is, what it adds to the Shell, and a
   tested comparison with `CON:`.
 - [Compatibility and limits](compatibility.md).
+- [Changes](changes.md) of the terminal, release by release.
 - [Roadmap](roadmap.md): ports and features planned after 0.1.
 
 For programmers:
@@ -28,7 +29,8 @@ For programmers:
 For maintainers:
 
 - [Building and releasing the SDK](sdk/releasing.md).
-- [SDK 0.1.0 verification record](sdk/verification-0.1.0.md).
+- [Verification record for Limpet 0.2.0 and SDK 0.2.0](sdk/verification-0.2.0.md).
+- [Earlier record of the unpublished SDK 0.1.0](sdk/verification-0.1.0.md).
 - [Contributing](../CONTRIBUTING.md).
 
 Source layout: `src/screen_model.c` is the terminal model (parser, grid,

@@ -87,7 +87,7 @@ void limpet_presentation_request(XtyControl *request);
 
 /* Check and decode a reply block that has already been received (for
    example by limpet_control). Returns LIMPET_OK or LIMPET_INVALID_REPLY.
-   Reserved values[7..11] and unknown bits are accepted and ignored, so a
+   Reserved values[8..11] and unknown bits are accepted and ignored, so a
    newer terminal does not break an older client. On failure *out is
    zeroed. Pure function; usable on any host. */
 LimpetStatus limpet_presentation_decode(const XtyControl *reply,

@@ -27,7 +27,7 @@ and every client must compile against the same bytes.
 3. Each example has been run on AROS ABIv11 in Limpet and in `CON:`, and
    with output redirected to a file in both. Record the date, system, archive
    hashes and screenshots in a verification record like
-   [verification-0.1.0.md](verification-0.1.0.md).
+   [verification-0.2.0.md](verification-0.2.0.md).
 4. `LIMPET_SDK_VERSION_*` in `limpet.h` and `sdk/CHANGES.md` name the new
    version.
 
@@ -60,23 +60,37 @@ Unpack it outside the repository and build the examples from it, exactly
 as [getting started](getting-started.md) says:
 
     mkdir /tmp/sdk-check && cd /tmp/sdk-check
-    unzip /path/to/limpet-sdk-0.1.0.zip
-    cd limpet-sdk-0.1.0
+    unzip /path/to/limpet-sdk-0.2.0.zip
+    cd limpet-sdk-0.2.0
     shasum -a 256 -c MANIFEST.sha256
     make CC=... AROS_SDK=... ABI=abiv11 examples
     make host-check
 
 The example binaries must be byte-identical to the ones that were tested.
 
+## The terminal archive
+
+The terminal and the SDK are released together when the protocol changes,
+under separate tags (`v<version>` and `sdk-v<version>`). Build the terminal
+from the tagged commit with a fixed date, so the build can be repeated:
+
+    make abiv11-frontend LIMPET_VERSION=0.2.0 LIMPET_DATE=07.10.2026 \
+         ABIV11_GCC=... ABIV11_SDK=...
+
+The archive `Limpet-<version>-abiv11.zip` holds the `Limpet` drawer:
+the binary, `README.txt`, fonts, themes, licences and the icons. Its
+`README.txt` names the version and lists what is new.
+
 ## Publishing on GitHub
 
-1. Commit, and tag the commit `sdk-v<version>` (separate from the terminal's
-   `v<version>` tags).
-2. Push the branch and the tag.
-3. Create a release from the tag with the archive and `SHA256SUMS` as
-   assets. Paste the relevant part of `sdk/CHANGES.md` into the
+1. Merge into `main`. Tag the commit `v<version>` (terminal) and
+   `sdk-v<version>` (SDK). Both may point at the same commit.
+2. Push `main` and both tags.
+3. Create one release per tag, each with its archive and `SHA256SUMS`,
+   and the matching part of `doc/changes.md` or `sdk/CHANGES.md` as the
    description.
-4. Download the asset from GitHub and compare its SHA-256 with
+4. Wait for the CI run of the pushed commit to pass.
+5. Download every asset from GitHub and compare its SHA-256 with
    `SHA256SUMS`.
 
 ## Continuous integration

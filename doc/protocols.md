@@ -5,9 +5,10 @@ Two channels lead from a program to Limpet:
 1. **The byte stream**: what a program writes to its output handle, and
    what it reads back in raw mode. Escape sequences live here.
 2. **DOS packets** on the same handle: the control protocol, of which
-   Limpet 0.1.0 serves one operation.
+   Limpet 0.1.0 and 0.2.0 serve one operation (13).
 
-This page lists both. For whether a feature can be detected and how far it
+This page lists both, for Limpet 0.2.0. Entries marked **0.2.0** are not
+in Limpet 0.1.0. For whether a feature can be detected and how far it
 was checked, see the [capability catalogue](capabilities.md).
 
 All escape sequences below are 7-bit: `ESC` is 0x1B, `CSI` means `ESC [`,
@@ -45,6 +46,9 @@ Text is UTF-8. An invalid byte is shown as U+FFFD.
 | `CSI ? 25 h` / `l` | show / hide cursor | |
 | `CSI ? 1049 h` / `l` | alternate screen on / off | primary screen and cursor restored |
 | `CSI ? 1000 h`, `? 1002 h`, `? 1006 h` | mouse reporting | raw mode only |
+| `CSI ? 2004 h` / `l` | bracketed paste | **0.2.0**; raw mode only |
+| `CSI ? 2048 h` / `l` | resize reports | **0.2.0**; raw mode only |
+| `CSI ? 2100 h` / `l` | wheel reports, buttons left to the terminal | **0.2.0**; Limpet private mode; raw mode only |
 | `CSI ... m` | SGR | see below |
 | `CSI 5 n`, `CSI 6 n`, `CSI ? 6 n` | status, cursor position | reply in raw mode only |
 | `CSI 18 t` | text area size | reply `CSI 8 ; rows ; cols t`, raw mode only |
@@ -95,6 +99,31 @@ ignored. Image data never appears as text.
 Replies to queries (`CSI 6 n`, `CSI 18 t`, Kitty `a=q`) arrive in the same
 stream, in raw mode only. Mouse reports (`CSI < b ; x ; y M`) likewise.
 
+| Input from Limpet | Bytes | When |
+| --- | --- | --- |
+| bracketed paste | `CSI 200 ~` text `CSI 201 ~` | **0.2.0**, mode 2004 on |
+| resize report | `CSI 48 ; rows ; cols ; height ; width t` | **0.2.0**, mode 2048 on: at once, then after each change |
+| wheel step | `CSI < 64 ; col ; row M` (up), `CSI < 65 ; col ; row M` (down), +16 Ctrl, +8 Alt | **0.2.0**, mode 2100 on and 1000/1002 off |
+
+### Order of input (0.2.0)
+
+- Nothing goes inside a bracketed paste: from the first byte of
+  `CSI 200 ~` to the last byte of `CSI 201 ~`, keys, mouse and wheel
+  reports, query replies and resize reports wait.
+- A report or reply is never cut by other input, however few bytes the
+  program reads at a time.
+- A paste cancelled with Esc still ends with `CSI 201 ~`. A new paste
+  starts only after the previous one has been delivered.
+- When the program leaves raw mode or the session ends, an undelivered
+  bracketed paste and a pending resize report are dropped.
+
+### Modes end with raw mode (0.2.0)
+
+When a native Shell window returns to cooked mode, Limpet turns off 1000,
+1002, 1006, 2004, 2048 and 2100. Set them again after each
+`SetMode(Input(), 1)`. A PTY session (experimental) resets them when it
+ends.
+
 `CON:` sends cursor keys as 0x9B followed by the letter. Programs that run
 in both consoles decode both.
 
@@ -128,7 +157,7 @@ block untouched. On failure the block is unchanged and the reply is
 
 ### Control operations
 
-| No. | Name | Limpet 0.1.0 Shell session | Experimental PTY |
+| No. | Name | Limpet Shell session (0.1.0, 0.2.0) | Experimental PTY |
 | --- | --- | --- | --- |
 | 1 | `XTY_CAPS` | `ERROR_ACTION_NOT_KNOWN` | yes |
 | 2-12 | config, geometry, read state, flush, drain, flow | `ERROR_ACTION_NOT_KNOWN` | yes |

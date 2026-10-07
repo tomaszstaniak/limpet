@@ -44,6 +44,11 @@ prompt keeps its Workbench pen colours, as in `CON:`.
 **Pictures next to text.** Programs can draw images in the window through a
 subset of the Kitty graphics protocol.
 
+**A selection that stays put** (0.2.0). Select a few lines while a program
+keeps updating its status line or streams a reply below them: the
+selection stays, and RAmiga+C copies it. It goes away only when the
+selected text itself changes or scrolls.
+
 ## What you get as a programmer
 
 **You can ask before you decorate.** One DOS packet on your output handle
@@ -65,10 +70,29 @@ plain text.
 *Left: apkg in Limpet 0.1.0. Right: the SDK examples in `CON:` on the same
 system print complete plain text.*
 
+**Full-screen programs that behave like the user expects** (0.2.0). A
+program in raw mode can ask for pastes as one framed block (so a pasted
+newline is not Enter), for size changes as input, and for wheel steps
+without taking over the mouse, so the user can still select and copy.
+Limpet turns these modes off when the program returns the console to
+cooked mode, so the Shell never inherits them.
+
+hardcode, an AI coding agent for AROS, uses all three: a 50-line paste
+lands in its input box as text, its panel redraws at every width, and a
+selection survives while the reply streams in.
+
+| A 50-line paste in hardcode's input box | Selection kept while a reply streams |
+| --- | --- |
+| ![hardcode in Limpet with a 51-line draft after a paste](screenshots/hardcode-paste.png) | ![hardcode in Limpet: a selected line stays while the reply grows below](screenshots/hardcode-selection-stream.png) |
+
+*hardcode 0.3.0-dev in Limpet 0.2.0 on AROS ABIv11 2026.09 under QEMU,
+against a local test server (no AI model), 2026-10-07.*
+
 **Standard sequences, not a private dialect.** Output uses well-known
 protocols: ANSI/VT colour and cursor sequences, OSC 8 links and Kitty
 graphics. A program written for these elsewhere needs little change. The
-AROS-specific part is limited to the detection packet and the pens rule.
+Limpet-specific part is the detection packet, the pens rule and one
+private mode (2100, wheel reports).
 
 ## What is specific to Limpet
 
@@ -79,7 +103,8 @@ on AROS:
   Unix shell in an emulation layer;
 - it keeps **AROS console conventions**: Workbench pens for SGR 30-37,
   Ctrl-C as the break signal, `WaitForChar()` and raw mode as programs
-  expect;
+  expect, and from 0.2.0 it ties input modes to raw mode, which ends them
+  when the program hands the console back;
 - it uses **AROS services**: the system clipboard, OpenURL, FreeType and
   the system fonts;
 - it offers **detection through a DOS packet**, which needs no reply on
@@ -119,7 +144,8 @@ Only these rows were tested. Other `CON:` behaviour is not described here.
 - It does not replace `CON:` system-wide.
 - POSIX programs that need termios (most Unix TUI programs) do not run in
   it yet.
-- There is no resize notification; full-screen programs poll the size.
+- There is no resize signal. Raw-mode programs can get resize reports
+  (0.2.0); others ask for the size again.
 - Images are raw RGB/RGBA only, without PNG or scaling.
 
 The [capability catalogue](capabilities.md) lists every feature with its

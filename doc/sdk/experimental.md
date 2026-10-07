@@ -23,9 +23,9 @@ On mainline AROS x86_64, in a PTY build of Limpet that is not published,
 with an experimental `posixc.library` that is not part of AROS. A Ratatui
 program and an SSH client preview have run there.
 
-## What Limpet 0.1.0 does with it
+## What Limpet 0.1.0 and 0.2.0 do with it
 
-A Limpet 0.1.0 Shell session on ABIv11 answers every control operation
+A Limpet Shell session (0.1.0 and 0.2.0) on ABIv11 answers every control operation
 except 13 with `ERROR_ACTION_NOT_KNOWN`, and does not accept
 `XTY_ACTION_CANCEL`, `XTY_ACTION_TRY_READ` or `XTY_ACTION_TRY_WRITE`. A
 program that sends `XTY_CAPS` there learns nothing.

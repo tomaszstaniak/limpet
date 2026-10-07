@@ -1,5 +1,8 @@
 # SDK 0.1.0 verification record
 
+*Historical. SDK 0.1.0 was never published; it was superseded by 0.2.0,
+recorded in [verification-0.2.0.md](verification-0.2.0.md).*
+
 What was checked for Limpet SDK 0.1.0, where, and what was not.
 
 ## Environment

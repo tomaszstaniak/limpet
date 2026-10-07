@@ -11,7 +11,7 @@ and stop at the first entry that covers what you want to do.
 | print links | OSC 8, after the query | yes, for the query |
 | show pictures | Kitty graphics subset, after two checks | yes |
 | read single keys | `SetMode()` raw mode, `WaitForChar()`, `Read()` | no |
-| a full-screen interface | raw mode plus cursor sequences and the alternate screen | for detection only |
+| a full-screen interface | raw mode plus cursor sequences and the alternate screen; in 0.2.0 also bracketed paste, resize and wheel reports | for detection only |
 | run a POSIX/termios program | not available in a public release yet | experimental |
 
 ## Plain command-line tools
@@ -63,7 +63,7 @@ target after the label otherwise. See
 
 Two checks, in order: the presentation query (no image bytes to a console
 that fails it), then the Kitty `a=q` query in raw mode with a time limit.
-Make room before drawing, because Limpet 0.1.0 does not scroll for the
+Make room before drawing, because Limpet does not scroll for the
 image. See [`image`](../../sdk/examples/image.c) and
 [inline images](../capabilities.md#inline-images).
 
@@ -80,22 +80,35 @@ program must handle:
 Restore cooked mode and the primary screen on every exit path. See
 [`keys`](../../sdk/examples/keys.c).
 
-There is no resize event. A full-screen program asks for the size again
-(query or `CSI 18 t`) after each key press or on a timer, and redraws when
-it changed.
+Three input modes in Limpet 0.2.0 are made for full-screen programs. Check
+each bit in `LimpetPresentation.input` and turn the mode on after
+`SetMode(Input(), 1)`:
+
+- **bracketed paste** (2004): a paste arrives as one framed block, so a
+  pasted newline does not act as Enter and nothing else is mixed into it;
+- **resize reports** (2048): the new size arrives as input after each
+  change, so the program redraws without polling;
+- **wheel reports** (2100): the wheel scrolls the program's own view while
+  a plain drag still selects text for the user.
+
+Limpet turns them off when the console returns to cooked mode. With Limpet
+0.1.0, or when a bit is missing, poll the size (query or `CSI 18 t`) after
+each key press or on a timer, and accept unframed pastes after the user's
+confirmation. Real use: hardcode, an AI coding agent for AROS, runs its
+full screen this way.
 
 ## Portable POSIX and TUI programs
 
 Programs written for termios (Ratatui, crossterm, ncurses) need a
 pseudo-terminal and a termios layer. Both exist only in an unpublished
 mainline preview with an experimental system library. Nothing in Limpet
-0.1.0 for ABIv11 supports them. Read
+0.1.0 or 0.2.0 for ABIv11 supports them. Read
 [the experimental guide](experimental.md) if you want to follow that work.
 
 ## Reading answers from the input stream
 
 Some protocols answer on the input stream: `CSI 6 n`, `CSI 18 t`, the Kitty
-query. In Limpet 0.1.0 these answers are sent only in raw mode. A program
+query. Limpet sends these answers only in raw mode. A program
 that uses them must:
 
 - switch to raw mode for the exchange and back afterwards;

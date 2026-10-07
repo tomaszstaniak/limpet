@@ -1,6 +1,6 @@
 # Limpet SDK API reference
 
-SDK version 0.1.0. Header: `#include <limpet/limpet.h>`, which also
+SDK version 0.2.0. Header: `#include <limpet/limpet.h>`, which also
 includes the protocol header `limpet/tty_control.h`.
 
 ## Two layers
@@ -34,13 +34,32 @@ protocol directly or check what the SDK does.
 
 ```c
 #define LIMPET_SDK_VERSION_MAJOR 0
-#define LIMPET_SDK_VERSION_MINOR 1
+#define LIMPET_SDK_VERSION_MINOR 2
 #define LIMPET_SDK_VERSION_PATCH 0
-#define LIMPET_SDK_VERSION_STRING "0.1.0"
+#define LIMPET_SDK_VERSION_STRING "0.2.0"
 ```
 
 These describe the SDK, not the terminal. The terminal's version is not
 reported by any query; features are.
+
+## Building with one SDK version
+
+`LimpetPresentation` is part of the binary interface. SDK 0.2.0 appended
+`input`, so the struct grew from 28 to 32 bytes. Compile every object that
+uses the SDK, and the library, with the same SDK version.
+
+To make a mix fail safely, `limpet.h` renames the two functions that fill
+the struct:
+
+```c
+#define limpet_query_presentation limpet_query_presentation_v2
+#define limpet_presentation_decode limpet_presentation_decode_v2
+```
+
+Source code keeps using the plain names. An object compiled with the 0.1
+header refers to the old link names, so linking it against the 0.2 library
+fails with an undefined symbol instead of overwriting the caller's stack.
+`sdk/tests/test_sdk_compat.sh` checks that this link fails.
 
 ## Presentation query
 
@@ -65,6 +84,7 @@ typedef struct {
     uint32_t lines;
     uint32_t rows, columns;
     uint32_t interpretation;
+    uint32_t input;          /* 0.2.0 */
 } LimpetPresentation;
 ```
 
@@ -75,6 +95,7 @@ typedef struct {
 | `lines` | `XTY_PRESENT_KNOWN_LINES` (4) | bits `XTY_LINE_CR` (1), `XTY_LINE_ERASE_EOL` (2) |
 | `rows`, `columns` | `XTY_PRESENT_KNOWN_GEOMETRY` (8) | both positive |
 | `interpretation` | `XTY_PRESENT_KNOWN_INTERPRETATION` (16) | bit `XTY_COLOR_PENS` (1) |
+| `input` (0.2.0) | `XTY_PRESENT_KNOWN_INPUT` (32) | bits `XTY_INPUT_BRACKETED_PASTE` (1), `XTY_INPUT_RESIZE_REPORT` (2), `XTY_INPUT_WHEEL_REPORT` (4): modes a raw-mode program may turn on |
 
 **Unknown versus unsupported.** A clear bit in `known` means the terminal
 said nothing about that field. A set bit with a zero value means the
@@ -137,7 +158,8 @@ LimpetStatus limpet_presentation_decode(const XtyControl *reply,
 Checks a received block: version 1, operation 13, `reserved[0]` equal to
 `XTY_PACKET_MAGIC`, `reserved[1]` zero, and both sizes positive when the
 geometry bit is set. Returns `LIMPET_OK` or `LIMPET_INVALID_REPLY`.
-`values[7]` to `values[11]` are ignored, not rejected. Pure; usable in host
+`values[7]` is decoded into `input` when known bit 32 is set;
+`values[8]` to `values[11]` are ignored, not rejected. Pure; usable in host
 tests.
 
 ### `limpet_control`
@@ -161,8 +183,8 @@ envelope of the reply.
 | `ERROR_INVALID_LOCK` (211) | the handle has no handler (`NIL:`, closed) |
 | other | passed through from the handler |
 
-In Limpet 0.1.0 a Shell session answers only operation 13. Every other
-operation returns `ERROR_ACTION_NOT_KNOWN`.
+A Limpet Shell session (0.1.0 and 0.2.0) answers only operation 13. Every
+other operation returns `ERROR_ACTION_NOT_KNOWN`.
 
 ## Decisions
 
@@ -177,6 +199,31 @@ All take a `const LimpetPresentation *` (NULL allowed, treated as
 | `int limpet_can_rewrite_line(p)` | 1 if CR and `CSI K` are both confirmed |
 | `uint32_t limpet_columns(p)` | columns, or 0 if unknown |
 | `uint32_t limpet_rows(p)` | rows, or 0 if unknown |
+
+### Input modes (0.2.0)
+
+There are no helper functions for these; test the bits and send the mode
+sequences yourself, after switching to raw mode:
+
+```c
+int paste = (p.known & XTY_PRESENT_KNOWN_INPUT) && (p.input & XTY_INPUT_BRACKETED_PASTE);
+int resize = (p.known & XTY_PRESENT_KNOWN_INPUT) && (p.input & XTY_INPUT_RESIZE_REPORT);
+
+if (SetMode(Input(), 1)) {
+    if (paste) fputs("\033[?2004h", stdout);
+    if (resize) fputs("\033[?2048h", stdout);
+    fflush(stdout);
+    /* ... read input: CSI 200 ~ text CSI 201 ~, CSI 48 ; r ; c ; h ; w t ... */
+    if (paste) fputs("\033[?2004l", stdout);
+    if (resize) fputs("\033[?2048l", stdout);
+    fflush(stdout);
+    SetMode(Input(), 0);
+}
+```
+
+Limpet also turns the modes off when the console returns to cooked mode,
+so a program that stops early does not leave them on. What each mode
+delivers: [capability catalogue](../capabilities.md#bracketed-paste).
 
 ## Sequence builders
 

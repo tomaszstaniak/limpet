@@ -4,16 +4,17 @@ This is the single list of what Limpet does, for users and for programmers.
 Each entry says how a program finds out about it, what to send, what to do
 when it is missing, and how far it has been checked.
 
-Applies to **Limpet 0.1.0** for **AROS ABIv11, x86_64** (the only public
-build) and **Limpet SDK 0.1.0**. Other builds are covered in
+Applies to **Limpet 0.2.0** and **Limpet SDK 0.2.0** for **AROS ABIv11,
+x86_64**. The Since column gives the first version with the feature. Other builds are covered in
 [compatibility](compatibility.md).
 
 ## Status labels
 
 | Label | Meaning |
 | --- | --- |
-| **Verified** | In the 0.1.0 release and checked on that build running on AROS ABIv11 2026.09 x86_64 (QEMU). |
-| **Released, host-tested** | In the 0.1.0 release. Its exact bytes are checked by host tests; on AROS it was checked on a development build or a different system, as stated. |
+| **Verified** | Checked on Limpet 0.2.0 running on AROS ABIv11 2026.09 x86_64 under QEMU, 2026-10-07. |
+| **Verified (0.1.0)** | Checked on Limpet 0.1.0 on that system; the code behind it did not change in 0.2.0, and it was not checked again. |
+| **Released, host-tested** | In a release. Its exact bytes are checked by host tests; on AROS it was checked on a development build or a different system, as stated, or not at all. |
 | **Experimental** | In the source tree only, not in any public release. May change or disappear. |
 | **Not supported** | Not implemented. A program must not rely on it. |
 
@@ -27,53 +28,54 @@ their own.
 There are three separate ways, and most capabilities have only one of them:
 
 1. **The presentation query** (operation 13). A DOS packet on your output
-   handle. It reports colours, bold, line rewriting, the window size and
-   how SGR 30-37 are read. It does not read input. This is the method to
-   use first. [Details](presentation.md).
+   handle. It reports colours, bold, line rewriting, the window size, how
+   SGR 30-37 are read and, from 0.2.0, which input modes a raw-mode
+   program may turn on. It does not read input. This is the method to use
+   first. [Details](presentation.md).
 2. **Stream queries** such as `CSI 6 n` or the Kitty `a=q` query. The
    answer arrives as input, and Limpet sends it only while the console is
    in raw mode. Use them only after the presentation query has succeeded.
 3. **Nothing.** Many features (Unicode, scrollback, the alternate screen)
    have no query. A successful presentation query means the console
    implements this protocol; today that is Limpet 0.1.0 or later, and this
-   catalogue says what that version does.
+   catalogue says what each version does.
 
 `XTY_CAPS` (operation 1) is **not** a way to find any of this: a Limpet
-0.1.0 Shell session does not answer it. See
+Shell session does not answer it. See
 [the protocol reference](protocols.md#control-operations).
 
 ## Summary
 
-| Capability | For | How to detect | Status |
-| --- | --- | --- | --- |
-| [Presentation query](#presentation-query) | programs | itself | Verified |
-| [16 colours](#colours) | programs | query, colour level 1+ | Verified |
-| [256 colours](#colours) | programs | query, colour level 2+ | Verified |
-| [24-bit colour](#colours) | programs | query, colour level 3 | Verified |
-| [SGR 30-37 as Workbench pens](#sgr-30-37-as-workbench-pens) | programs | query, `XTY_COLOR_PENS` | Verified |
-| [Bold and reset](#text-styles) | programs | query, `XTY_STYLE_BOLD_RESET` | Verified |
-| [Underline, inverse](#text-styles) | programs | none | Released, host-tested |
-| [Rewriting a line](#rewriting-a-line) | programs | query, CR and ERASE_EOL | Verified |
-| [Window size](#window-size) | programs | query, geometry known bit | Verified |
-| [Size by `CSI 18 t`](#window-size) | raw-mode programs | none | Released, host-tested |
-| [Cursor movement and erasing](#cursor-movement-and-erasing) | full-screen programs | none | Released, host-tested |
-| [Cursor position report](#cursor-position-report) | raw-mode programs | none | Released, host-tested |
-| [Alternate screen](#alternate-screen) | full-screen programs | none | Verified |
-| [Unicode text](#unicode-text) | everyone | none | Verified |
-| [Hyperlinks (OSC 8)](#hyperlinks) | programs | query success | Verified (display, hover); opening not verified |
-| [Plain URL detection](#hyperlinks) | users | none | Released, host-tested |
-| [Inline images (Kitty subset)](#inline-images) | programs | query success, then `a=q` | Verified |
-| [Keyboard input, cooked and raw](#keyboard-input) | programs | none | Verified |
-| [Ctrl-C](#ctrl-c) | everyone | none | Verified, with limits |
-| [Mouse reporting](#mouse-reporting) | raw-mode programs | none | Released, host-tested |
-| [Bracketed paste](#bracketed-paste) | raw-mode programs | query, input known bit | Experimental |
-| [Resize reports (DEC 2048)](#resize-reports) | raw-mode programs | query, input known bit | Experimental |
-| [Wheel reports (mode 2100)](#wheel-reports) | raw-mode programs | query, input known bit | Experimental |
-| [Scrollback, reflow, selection, clipboard](#user-interface-features) | users | not visible to programs | Verified |
-| [Themes](#user-interface-features) | users | not visible to programs | Verified |
-| [termios, PTY, TTY control operations](#terminal-settings-termios-and-pty) | POSIX programs | `XTY_CAPS` on a PTY | Experimental |
-| [SSH client](#ssh) | users | none | Experimental |
-| Window title (OSC 0/2), save cursor (DECSC), any-motion mouse, resize signals | | | Not supported |
+| Capability | For | How to detect | Since | Status |
+| --- | --- | --- | --- | --- |
+| [Presentation query](#presentation-query) | programs | itself | 0.1.0 | Verified |
+| [16, 256 and 24-bit colour](#colours) | programs | query, colour level | 0.1.0 | Verified |
+| [SGR 30-37 as Workbench pens](#sgr-30-37-as-workbench-pens) | programs | query, `XTY_COLOR_PENS` | 0.1.0 | Verified |
+| [Bold and reset](#text-styles) | programs | query, `XTY_STYLE_BOLD_RESET` | 0.1.0 | Verified |
+| [Underline, inverse](#text-styles) | programs | none | 0.1.0 | Released, host-tested |
+| [Rewriting a line](#rewriting-a-line) | programs | query, CR and ERASE_EOL | 0.1.0 | Verified |
+| [Window size](#window-size) | programs | query, geometry known bit | 0.1.0 | Verified |
+| [Size by `CSI 18 t`](#window-size) | raw-mode programs | none | 0.1.0 | Released, host-tested |
+| [Cursor movement and erasing](#cursor-movement-and-erasing) | full-screen programs | none | 0.1.0 | Released, host-tested |
+| [Cursor position report](#cursor-position-report) | raw-mode programs | none | 0.1.0 | Released, host-tested |
+| [Alternate screen](#alternate-screen) | full-screen programs | none | 0.1.0 | Verified |
+| [Unicode text](#unicode-text) | everyone | none | 0.1.0 | Verified |
+| [Hyperlinks (OSC 8)](#hyperlinks) | programs | query success | 0.1.0 | Verified (0.1.0) for display and hover; opening not verified |
+| [Plain URL detection](#hyperlinks) | users | none | 0.1.0 | Released, host-tested |
+| [Inline images (Kitty subset)](#inline-images) | programs | query success, then `a=q` | 0.1.0 | Verified |
+| [Keyboard input, cooked and raw](#keyboard-input) | programs | none | 0.1.0 | Verified |
+| [Ctrl-C](#ctrl-c) | everyone | none | 0.1.0 | Verified, with limits |
+| [Mouse reporting](#mouse-reporting) | raw-mode programs | none | 0.1.0 | Released, host-tested |
+| [Bracketed paste (DEC 2004)](#bracketed-paste) | raw-mode programs | query, `XTY_INPUT_BRACKETED_PASTE` | **0.2.0** | Verified |
+| [Resize reports (DEC 2048)](#resize-reports) | raw-mode programs | query, `XTY_INPUT_RESIZE_REPORT` | **0.2.0** | Verified |
+| [Wheel reports (private mode 2100)](#wheel-reports) | raw-mode programs | query, `XTY_INPUT_WHEEL_REPORT` | **0.2.0** | Verified |
+| [Input modes end with raw mode](#input-modes-end-with-raw-mode) | everyone | none | **0.2.0** | Verified |
+| [Selection kept during output](#user-interface-features) | users | not visible to programs | **0.2.0** | Verified |
+| [Scrollback, reflow, copy and paste](#user-interface-features) | users | not visible to programs | 0.1.0 | Verified |
+| [Themes](#user-interface-features) | users | not visible to programs | 0.1.0 | Verified (0.1.0) |
+| [termios, PTY, TTY control operations](#terminal-settings-termios-and-pty) | POSIX programs | `XTY_CAPS` on a PTY | | Experimental |
+| [SSH client](#ssh) | users | none | | Experimental |
+| Window title (OSC 0/2), save cursor (DECSC), any-motion mouse, resize signals | | | | Not supported |
 
 The rest of this page has one section per row.
 
@@ -83,7 +85,8 @@ The rest of this page has one section per row.
 
 **What it gives you.** One answer to "what will this console render?",
 without touching the keyboard or terminal modes: colour level, bold and
-reset, line rewriting, current size, and how SGR 30-37 are read.
+reset, line rewriting, current size, how SGR 30-37 are read and, from
+0.2.0, the input modes a raw-mode program may turn on.
 
 **Problem it solves.** On AROS the same program can write to `CON:`, to a
 file, to a pipe or to Limpet. Escape sequences that look good in Limpet
@@ -117,8 +120,9 @@ API in [the SDK reference](sdk/api.md).
 - **A clear known bit means unknown, not absent.** A set bit with a zero
   value means confirmed absent. The SDK zeroes fields whose bit is clear.
 - **Ignore what you do not know.** Unknown bits and the reserved values
-  7 to 11 must not make a client fall back to plain text. A newer Limpet
-  may set them.
+  8 to 11 must not make a client fall back to plain text. A newer Limpet
+  may set them. (Limpet 0.2.0 started using `values[7]` this way: a 0.1.0
+  client ignores it and still decodes everything else.)
 - **The answer is a snapshot.** It describes the console at that moment.
   The size in particular changes when the user resizes the window.
 - **It blocks** until the handler replies. Limpet and `CON:` reply at once.
@@ -133,17 +137,18 @@ API in [the SDK reference](sdk/api.md).
 
 ![Output of the hello example in Limpet](screenshots/sdk-hello.png)
 
-*`hello` in Limpet 0.1.0 on ABIv11 2026.09: 24-bit colour, pens, bold,
-line rewriting, 117x37 cells.*
+*`hello` (SDK 0.2.0) in Limpet 0.2.0 on ABIv11 2026.09: 24-bit colour,
+pens, bold, line rewriting, 117x37 cells and the three input modes.*
 
-**Status.** Verified 2026-10-05: Limpet 0.1.0 (release archive SHA-256
-`668ba57e...a339a0`) on AROS ABIv11 2026.09 x86_64 under QEMU answers with
-known mask 31, colour level 3, `XTY_COLOR_PENS`, and the live size. On the
-same system `CON:` answers `ERROR_ACTION_NOT_KNOWN`, and output redirected
-to a file is reported as not interactive. Earlier, apkg's presentation
-support was accepted against this query on AROS One 1.3.
-Host test: `sdk/tests/test_sdk.c` sends the SDK's request through Limpet's
-own reply code.
+**Status.** Verified 2026-10-07 on AROS ABIv11 2026.09 x86_64 under QEMU:
+Limpet 0.2.0 answers with all six fields known; the published Limpet 0.1.0
+answers the same SDK 0.2.0 client with the first five, and `hello` reports
+the input modes as unknown there; `CON:` answers `ERROR_ACTION_NOT_KNOWN`;
+output redirected to a file is reported as not interactive. apkg's
+presentation support was accepted against this query on AROS One 1.3
+(Limpet 0.1.0). Host tests: `sdk/tests/test_sdk.c` sends the SDK's request
+through Limpet's own reply code; `sdk/tests/test_sdk_compat.sh` decodes the
+0.2.0 reply with the SDK 0.1.0 sources.
 
 ---
 
@@ -157,7 +162,7 @@ own reply code.
 | INDEXED256 | 2 | adds `38;5;n` and `48;5;n` |
 | RGB | 3 | adds `38;2;r;g;b` and `48;2;r;g;b` |
 
-Limpet 0.1.0 reports level 3. Colon forms (`38:2::r:g:b`) are not
+Limpet 0.1.0 and 0.2.0 report level 3. Colon forms (`38:2::r:g:b`) are not
 promised. The 8-bit CSI byte 0x9B is not promised.
 
 **Detect.** Presentation query: known bit `XTY_PRESENT_KNOWN_COLORS`, value
@@ -176,10 +181,10 @@ plain text: write "error:", not just red. Read the
 
 ![The colors example in Limpet: 16 colours with samples and swatches, a 256-colour ramp and a 24-bit gradient](screenshots/sdk-colors.png)
 
-*`colors` in Limpet 0.1.0, dark theme. Colour 0 is black text on a dark
+*`colors` in Limpet, dark theme. Colour 0 is black text on a dark
 background, which is why the example prints names in the default colour.*
 
-**Status.** Verified (all three levels, `colors` example, 2026-10-05).
+**Status.** Verified (all three levels, `colors` example, on 0.1.0 2026-10-05 and on 0.2.0 2026-10-07).
 Host tests: `tests/test_screen_model.c`, `tests/test_theme.c`.
 
 ---
@@ -218,7 +223,7 @@ behaviour. When the query fails, you are not in Limpet, and SGR 30-37 in
 *Line 2 sends `ESC [31m`. Limpet shows pen 1 of the dark theme, as `CON:`
 would, not red.*
 
-**Status.** Verified 2026-10-05 with `colors` and the comparison probe
+**Status.** Verified 2026-10-05 and again on 0.2.0 2026-10-07 with `colors` and the comparison probe
 (`tools/con_compare.c`). apkg uses this rule in its coloured output.
 
 ---
@@ -236,7 +241,7 @@ Italic, blink, strike-through, double and curly underline are not
 supported and are ignored.
 
 **Detect.** Only bold and reset are reported. Underline and inverse have no
-detection; a program that needs them must treat them as Limpet 0.1.0
+detection; a program that needs them must treat them as Limpet
 behaviour, not a promise of the query.
 
 **Fallback.** Do not carry meaning in a style alone.
@@ -267,7 +272,7 @@ write CR updates to a file.
 
 ![A progress bar at 47%, drawn in one line](screenshots/sdk-progress.png)
 
-**Status.** Verified 2026-10-05 (`progress`, including Ctrl-C in the
+**Status.** Verified (0.1.0: 2026-10-05; 0.2.0: 2026-10-07) (`progress`, including Ctrl-C in the
 middle of the bar, return code 5). `CON:` on the same system also honours
 CR and `CSI K`, but does not answer the query, so a program cannot know
 that without guessing.
@@ -292,7 +297,7 @@ again before laying out text,
 and after any long pause. Do not ask on every character: each query is a
 round trip to the terminal's process.
 
-**Limits.** At most 80 rows and 160 columns in Limpet 0.1.0.
+**Limits.** At most 80 rows and 160 columns.
 
 **Fallback.** Assume 80 columns, wrap long lines yourself, or let the
 terminal wrap them.
@@ -301,7 +306,7 @@ terminal wrap them.
 
 ![The geometry example reports 117x37, then 91x28 after a resize, then 117x37](screenshots/sdk-geometry.png)
 
-**Status.** Query: verified, including a resize during the run (2026-10-05).
+**Status.** Query: verified, including a resize during the run (0.1.0 2026-10-05, 0.2.0 2026-10-07).
 `CSI 18 t`: released, host-tested (`tests/test_geometry_reply.c`), checked
 in a mainline development build; not run on ABIv11.
 
@@ -356,7 +361,7 @@ restored.
 **Detect.** None. A full-screen program must restore the primary screen on
 every exit path, including Ctrl-C.
 
-**Status.** Verified in the 0.1.0 release regression (native full-screen
+**Status.** Verified on 0.2.0 2026-10-07 (hardcode's full screen enters and leaves it) and in the 0.1.0 release regression (native full-screen
 program, resize, return to the Shell). Host test: `tests/test_alternate.c`.
 
 ---
@@ -379,8 +384,8 @@ decodes UTF-8. In `CON:` the same bytes show as Latin-1 characters.
 *The comparison probe in `CON:` on ABIv11 2026.09: line 1 is UTF-8, shown
 as Latin-1; line 5 is an OSC 8 link, printed as text.*
 
-**Status.** Verified (0.1.0 release regression, and the comparison probe
-on 2026-10-05). Host tests: `tests/test_graphemes.c`,
+**Status.** Verified (0.1.0 release regression; the comparison probe on
+0.1.0 2026-10-05 and on 0.2.0 2026-10-07). Host tests: `tests/test_graphemes.c`,
 `tests/test_width_table.py`.
 
 ---
@@ -442,7 +447,7 @@ total.
 
 **Things to know before drawing.**
 
-- Limpet 0.1.0 does not scroll the screen to make room. An image placed
+- Limpet does not scroll the screen to make room. An image placed
   near the bottom of the window is cut off, and `C=0` moves the cursor no
   further than the last row. Print blank lines first, move back up, draw
   with `C=1`, then move down. The [`image`](../sdk/examples/image.c)
@@ -457,7 +462,7 @@ total.
 
 ![A 160x96 image drawn below a line of text](screenshots/sdk-image.png)
 
-**Status.** Verified 2026-10-05 (`image`: query reply in raw mode,
+**Status.** Verified (0.1.0: 2026-10-05; 0.2.0: 2026-10-07) (`image`: query reply in raw mode,
 transmission, deletion). Host tests: `tests/test_kitty_graphics.c` and the
 Kitty part of `sdk/tests/test_sdk.c`.
 
@@ -480,7 +485,7 @@ supports both consoles must decode both forms. Return to cooked mode with
 **Example.** [`keys`](../sdk/examples/keys.c), which runs unchanged in both
 consoles.
 
-**Status.** Verified 2026-10-05 in Limpet and in `CON:` (arrows, a letter,
+**Status.** Verified in Limpet 0.1.0 and 0.2.0 and in `CON:` (arrows, a letter,
 Esc, Ctrl-C, cooked mode afterwards).
 
 ---
@@ -496,8 +501,9 @@ Esc, Ctrl-C, cooked mode afterwards).
 multi-processor system one press can be skipped; press again. A program
 that never checks for the signal cannot be stopped this way, as in `CON:`.
 
-**Status.** Verified (release acceptance, and `progress` on 2026-10-05:
-break at 33%, return code 5).
+**Status.** Verified (0.1.0 release acceptance; `progress` on 0.1.0,
+2026-10-05: break at 33%, return code 5; `Wait 30` on 0.2.0, 2026-10-07:
+return code 5).
 
 ---
 
@@ -514,54 +520,106 @@ development build. Not checked on ABIv11.
 
 ## Bracketed paste
 
-In raw mode a program may send `CSI ? 2004 h`. A paste then arrives framed
-as `CSI 200 ~` text `CSI 201 ~`, and Limpet does not ask for the multi-line
-confirmation: the program decides what a newline in a paste means (a
-coding agent keeps it as text instead of sending the line). The text never
-contains ESC or C1 controls, because Limpet rejects such a clipboard
-before pasting, so it cannot end the frame early. A paste cancelled with
-Esc still gets its end marker. `CSI ? 2004 l` turns the mode off, and the
-end of a PTY session turns it off for the next program.
+**What it gives you.** A raw-mode program sees a paste as one marked block,
+not as typing, and decides itself what a newline in it means: a coding
+agent keeps a pasted 50-line file as text instead of sending it line by
+line.
 
-Detection: the presentation query's known bit 32 (`XTY_PRESENT_KNOWN_INPUT`)
-with `XTY_INPUT_BRACKETED_PASTE` in `LimpetPresentation.input`. Limpet
-0.1.0 has neither and pastes unframed, with the confirmation.
+**Use.** After `SetMode(Input(), 1)`, send `CSI ? 2004 h`. A paste then
+arrives as `CSI 200 ~`, the text, `CSI 201 ~`, and Limpet does not ask for
+its multi-line confirmation. Send `CSI ? 2004 l` before leaving raw mode.
 
-**Status.** Experimental: host-tested (`tests/test_bracketed_paste.c`, the
-framing cases in `tests/test_paste.c`, `sdk/tests/test_sdk_compat.sh`);
-on AROS, see hardcode's demonstration 1 evidence. Not in a release.
+**Guarantees.**
+
+- The text never contains ESC or C1 controls: Limpet refuses such a
+  clipboard whole, so a paste cannot end its own frame.
+- Nothing is inserted between the markers: key presses, mouse and wheel
+  reports, query replies and resize reports wait until `CSI 201 ~` has
+  been delivered, however slowly the program reads.
+- A paste cancelled with Esc still ends with `CSI 201 ~`.
+- A new paste waits until the previous one has been delivered completely.
+- If the program leaves raw mode during a paste, the rest of it is
+  dropped; it never reaches the Shell unconfirmed.
+
+**Detect.** `XTY_INPUT_BRACKETED_PASTE` in `LimpetPresentation.input`, valid
+with known bit 32 (`XTY_PRESENT_KNOWN_INPUT`). Limpet 0.1.0 reports
+neither; it ignores `CSI ? 2004 h` and pastes unframed, with the
+confirmation.
+
+**Status.** Verified 2026-10-07: a 20 000-byte paste arrived as one framed
+block with no other byte inside it, while the window was resized during
+the paste (the resize reports followed the end marker); hardcode received
+a 50-line paste whole (1682 bytes, 51 lines) without confirmation.
+Cancellation with Esc during delivery, a second paste during the first and
+an owner change are host-tested only (`tests/test_input_order.c`, which
+reads in pieces down to one byte; `tests/test_paste.c`,
+`tests/test_bracketed_paste.c`).
 
 ## Resize reports
 
-In raw mode a program may send `CSI ? 2048 h`. It then receives, as input,
-`CSI 48 ; rows ; columns ; height ; width t` (height and width of the text
-area in pixels) at once, and again after every size change; a change while
-a report is still being delivered is followed by one more report with the
-newest size. `CSI ? 2048 l` turns it off, and the end of a PTY session
-turns it off for the next program. No report is sent in cooked mode.
+**What it gives you.** A full-screen program learns about every size change
+in its input, instead of asking on a timer.
 
-Detection: `XTY_INPUT_RESIZE_REPORT` in `LimpetPresentation.input` (known
-bit 32). Limpet 0.1.0 has neither; use `CSI 18 t` there.
+**Use.** In raw mode, send `CSI ? 2048 h`. The program receives
+`CSI 48 ; rows ; columns ; height ; width t` (text area height and width in
+pixels) at once, and again after every size change. If the size changes
+while a report is half delivered, one more report with the newest size
+follows. No report is ever cut by other input or put inside a bracketed
+paste. `CSI ? 2048 l` turns it off.
 
-**Status.** Experimental: host-tested (`tests/test_resize_report.c`); on
-AROS, see hardcode's demonstration 1 evidence. Not in a release.
+**Detect.** `XTY_INPUT_RESIZE_REPORT` in `LimpetPresentation.input` (known
+bit 32). With Limpet 0.1.0, use the presentation query or `CSI 18 t`.
+
+**Status.** Verified 2026-10-07 (the first report on `CSI ? 2048 h`, two
+reports after two resizes, the newest size last; hardcode redrew at each
+size). Host tests: `tests/test_resize_report.c`, `tests/test_input_order.c`.
 
 ## Wheel reports
 
-For a full-screen program that scrolls its own content but leaves mouse
-selection to the terminal. In raw mode a program may send `CSI ? 2100 h`
-(a Limpet private mode). Each wheel step then arrives as input in the SGR
-mouse form, `CSI < 64 ; column ; row M` for up and `65` for down, with the
-usual modifier bits (16 Ctrl, 8 Alt). Buttons and drags are not reported:
-a plain drag still selects, and Shift with the wheel still scrolls
-Limpet's own history. With mouse tracking (1000/1002) on as well, the
-tracking modes decide. `CSI ? 2100 l` turns it off, and the end of a PTY
-session turns it off for the next program. Nothing is sent in cooked mode.
+**What it gives you.** A full-screen program can scroll its own content with
+the mouse wheel while text selection stays with the terminal. Ordinary
+mouse tracking (1000/1002) would take the buttons as well, and the user
+could no longer select and copy.
 
-Detection: `XTY_INPUT_WHEEL_REPORT` (4) in `LimpetPresentation.input`.
+**Use.** In raw mode, send `CSI ? 2100 h`. Each wheel step arrives as an SGR
+mouse report, `CSI < 64 ; column ; row M` for up and `CSI < 65 ; column ;
+row M` for down, plus 16 for Ctrl and 8 for Alt. Buttons and drags are not
+reported. Shift with the wheel still scrolls Limpet's own history. If
+mouse tracking 1000 or 1002 is also on, it takes precedence and the wheel
+is reported as part of it. `CSI ? 2100 l` turns it off.
 
-**Status.** Experimental: host-tested (`tests/test_mouse.c`). Added for
-hardcode's full screen; not in a release.
+**Why a private number.** No existing mode has this meaning. xterm's 1007
+turns the wheel into cursor keys, which a program cannot tell from real
+ones and which carry no position. Contour's 2029 ("passive mouse
+tracking") reports every mouse event. 2100 is not used by xterm, foot,
+Ghostty, Kitty, Windows Terminal, Alacritty, Contour or mintty, according
+to their sources and documentation checked on 2026-10-07. It is a Limpet
+extension; other terminals ignore it.
+
+**Detect.** `XTY_INPUT_WHEEL_REPORT` in `LimpetPresentation.input` (known
+bit 32). Never send `CSI ? 2100 h` without it.
+
+**Status.** Verified 2026-10-07 (reports with the right direction and
+position; none after the mode was reset; hardcode scrolled with the
+wheel, and in the same session a drag selected text). Host test: `tests/test_mouse.c`.
+
+## Input modes end with raw mode
+
+When a Limpet Shell window returns to cooked mode (a program calls
+`SetMode(Input(), 0)` or ends), Limpet turns off mouse tracking 1000, 1002
+and 1006, bracketed paste 2004, resize reports 2048 and wheel reports
+2100. A program that crashes or forgets to clean up therefore cannot leave
+the Shell, or the next program, with modes it never asked for.
+
+**Consequence for programs.** Set these modes after every switch to raw
+mode, not once at start-up.
+
+**Status.** New in 0.2.0. Verified 2026-10-07: after a program that left
+2004, 2048 and 2100 on, the next raw-mode program received an unframed
+paste after the confirmation, no resize report and no wheel report, and a
+paste in the Shell asked for confirmation again. Host test:
+`tests/test_bracketed_paste.c`. Limpet 0.1.0 does not reset mouse tracking
+on return to cooked mode; it has no 2004, 2048 or 2100.
 
 ---
 
@@ -570,17 +628,21 @@ hardcode's full screen; not in a release.
 These help the person at the keyboard. Programs cannot detect or control
 them, and should not need to.
 
-| Feature | In 0.1.0 | Status |
-| --- | --- | --- |
-| Scrollback | 256 lines at full width (160 columns), more for narrower windows, e.g. 512 at 80 columns | Verified |
-| Reflow | text and scrollback rewrap when the width changes | Verified |
-| Selection and clipboard | drag to select, RAmiga+C / RAmiga+V, system clipboard. A selection stays while a program redraws other rows (a status line, a clock); output that changes or scrolls the selected text drops it (newer than 0.1.0, host-tested in `tests/test_selection.c`) | Verified |
-| Themes | dark (built in), light, high contrast | Verified |
-| Line editing | command history, Tab completion of paths and commands | Released, host-tested (`tests/test_line_editor.c`, `tests/test_completion.c`) |
-| End of input | F5 ends the Shell's input; F4 starts a new Shell | Verified |
+| Feature | Detail | Since | Status |
+| --- | --- | --- | --- |
+| Scrollback | 256 lines at full width (160 columns), more for narrower windows, e.g. 512 at 80 columns | 0.1.0 | Verified |
+| Reflow | text and scrollback rewrap when the width changes | 0.1.0 | Verified |
+| Erased rows stay separate | a row erased whole (`CSI 2 K`, or `CSI K` at column 1) no longer joins the row above when the width changes later | **0.2.0** | Verified (hardcode panel, no joined lines in the history); host-tested in `tests/test_reflow.c` |
+| Selection and clipboard | drag to select, RAmiga+C / RAmiga+V, system clipboard | 0.1.0 | Verified |
+| Selection kept during output | a selection stays while a program redraws other rows (a status line, a clock, a reply streaming below it), also during a drag, including selections larger than 1 KB; output that changes or scrolls the selected text clears it | **0.2.0** | Verified (selection kept while hardcode streamed a reply; copy afterwards); host-tested in `tests/test_selection.c` |
+| Themes | dark (built in), light, high contrast | 0.1.0 | Verified (0.1.0) |
+| Line editing | command history, Tab completion of paths and commands | 0.1.0 | Released, host-tested (`tests/test_line_editor.c`, `tests/test_completion.c`) |
+| End of input | F5 ends the Shell's input; F4 starts a new Shell | 0.1.0 | Verified (0.1.0) |
 
-Source of these results: the Limpet 0.1.0 release regression and
-acceptance on AROS ABIv11 2026.09 and AROS One 1.3.
+The erased-row change affects only programs that erase a continuation row
+from column 1 and then write there: after a later width change that line
+shows as two lines in the history. Limpet's own command-line editing does
+not write erase sequences into the screen and is not affected.
 
 ---
 
@@ -592,7 +654,7 @@ I/O) and an experimental termios layer for POSIX programs. They run only in
 a **mainline** preview build that is not published, together with an
 experimental `posixc.library`.
 
-A Limpet 0.1.0 Shell session answers every one of those operations with
+A Limpet Shell session (0.1.0 and 0.2.0) answers every one of those operations with
 `ERROR_ACTION_NOT_KNOWN`. Do not build on them yet. What exists is
 described in [the experimental guide](sdk/experimental.md).
 

@@ -1,10 +1,33 @@
-# Limpet SDK 0.1.0
+# Limpet SDK 0.2.0
 
-For AROS programs that want to know what the console renders before they
-add colour, progress lines, links or images. In Limpet they get an answer;
-in `CON:` and in files they get a clean "no", and print plain text.
+Limpet is a terminal window for the AROS Shell. The Shell and its commands
+stay the same; the window adds UTF-8 text, scrollback that rewraps on
+resize, copy and paste through the system clipboard, clickable links,
+256 and 24-bit colour, inline images and, for full-screen programs,
+bracketed paste, resize and wheel reports. See `doc/why-limpet.md`.
 
+The SDK checks whether the output goes to Limpet: there a program uses
+these features, and in `CON:` or a file it prints plain text.
 Target: **AROS ABIv11, x86_64**. Licence: MIT (`LICENSE.txt`).
+
+## Do you need it?
+
+- **No**, if your program prints text and reads lines. It already works in
+  Limpet, Unicode included.
+- **Yes**, if you want colour, a progress line, links, images or full-screen
+  input modes, and want your program to stay correct in `CON:` and when
+  its output goes to a file.
+
+## What is specific to Limpet on AROS
+
+- Detection is one DOS packet on your own `Output()`. It never reads the
+  keyboard, and `CON:` refuses it at once, so there are no timeouts and no
+  stray characters in the Shell.
+- SGR 30-37 select Workbench pens, as in `CON:`, so the Shell prompt keeps
+  its colours. The SDK sends ANSI colours in a form that keeps their
+  meaning.
+- Input modes for full-screen programs end when the program returns the
+  console to cooked mode, so the Shell never inherits them.
 
 ## Contents
 
@@ -16,22 +39,38 @@ Target: **AROS ABIv11, x86_64**. Licence: MIT (`LICENSE.txt`).
 | `src/` | library source: two C files, needing only `dos.library` and the C library |
 | `examples/` | `hello`, `colors`, `progress`, `geometry`, `hyperlink`, `image`, `keys` |
 | `tests/host/` | stand-in AROS headers for compiling the library on a desktop host |
-| `doc/` | documentation; start with `doc/sdk/getting-started.md` |
+| `doc/` | documentation |
 | `MANIFEST.sha256` | checksums of all files |
 
-## Quick start
+## Start here
+
+1. `doc/sdk/getting-started.md`: build the examples and run `hello`.
+2. `doc/sdk/choosing.md`: which interface fits your program.
+3. `doc/capabilities.md`: every feature, how to detect it, and how far it
+   was tested.
+4. `doc/sdk/api.md`: the reference.
+
+Quick build:
 
     make CC=/path/to/x86_64-aros-gcc AROS_SDK=/path/to/SDK/Development \
          ABI=abiv11 examples
 
 Copy `build/abiv11/hello` to AROS and run it from the Shell in a Limpet
-window and from the Shell in a `CON:` window. Then read `doc/sdk/choosing.md`.
+window and from the Shell in a `CON:` window.
+
+## Compatibility in one paragraph
+
+Works against Limpet 0.2.0 (every feature) and Limpet 0.1.0 (everything
+except the input modes, which it reports as unknown). Code written for an
+earlier SDK compiles unchanged, but objects must be rebuilt with this
+version: `LimpetPresentation` grew. Details: `doc/versioning.md`.
 
 ## Tested
 
-Built with GCC 10.5 and the ABIv11 2026.09 Developer SDK. All examples run
-on AROS ABIv11 2026.09 x86_64 under QEMU, in Limpet 0.1.0 and in `CON:`,
-on 2026-10-05. Not tested on mainline AROS, on AROS One 1.3, or on real
-hardware. Details: `doc/sdk/verification-0.1.0.md`.
+Built with GCC 10.5 and the ABIv11 2026.09 Developer SDK. All examples ran
+on AROS ABIv11 2026.09 x86_64 under QEMU, in Limpet 0.2.0 and in `CON:`,
+and `hello` also in Limpet 0.1.0, on 2026-10-07. Not tested on mainline
+AROS, on AROS One 1.3 or on real hardware. Details:
+`doc/sdk/verification-0.2.0.md`.
 
 Project: <https://github.com/tomaszstaniak/limpet>

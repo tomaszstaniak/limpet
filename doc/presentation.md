@@ -20,14 +20,14 @@ The reply uses the control envelope described in [protocols.md](protocols.md#env
 
 | Field | Meaning |
 | --- | --- |
-| values[0] | Known-field mask: bit 0 colours, bit 1 styles, bit 2 line editing, bit 3 geometry, bit 4 colour interpretation |
+| values[0] | Known-field mask: bit 0 colours, bit 1 styles, bit 2 line editing, bit 3 geometry, bit 4 colour interpretation, bit 5 input modes (0.2.0) |
 | values[1] | Colour level: 0 none, 1 ANSI 16, 2 indexed 256, 3 RGB 24-bit |
 | values[2] | Style mask: bit 0 SGR bold plus SGR reset |
 | values[3] | Line mask: bit 0 CR, bit 1 CSI K erase from cursor to end of line |
 | values[4] | Current rows |
 | values[5] | Current columns |
 | values[6] | Colour interpretation mask: bit 0 `XTY_COLOR_PENS` |
-| values[7] | Input features (known bit 32, after 0.1.0): bit 0 bracketed paste (DEC 2004), bit 1 resize reports (DEC 2048) |
+| values[7] | Input modes a raw-mode client may turn on, valid with known bit 5 (value 32): bit 0 bracketed paste (DEC 2004), bit 1 resize reports (DEC 2048), bit 2 wheel reports (private 2100). Limpet 0.2.0 and later; 0.1.0 leaves the field and its known bit clear |
 | values[8..11] | Reserved, zero |
 
 A clear known bit means unknown, not unsupported. A set known bit with a

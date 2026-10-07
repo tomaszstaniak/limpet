@@ -11,9 +11,17 @@ and remote work over SSH.
 
 ![Limpet showing an animated plasma drawn with the Kitty graphics protocol](doc/screenshots/kitty-plasma.png)
 
-**Latest release: Limpet 0.1.0** for AROS ABIv11 x86_64 (AROS One 1.3,
-2026.09 and later), and **Limpet SDK 0.1.0** for programs that want to use
-it.
+## Versions
+
+| | What it is | Where |
+| --- | --- | --- |
+| **Limpet 0.1.0** | the first published terminal, AROS ABIv11 x86_64 | [releases](https://github.com/tomaszstaniak/limpet/releases), tag `v0.1.0` |
+| **Limpet 0.2.0** | the terminal these sources build: 0.1.0 plus the input modes for full-screen programs and a selection that stays while other rows are redrawn | prepared, not yet published; when released, tag `v0.2.0` on the releases page |
+| **Limpet SDK 0.2.0** | headers, library and examples for programs that use Limpet | prepared, not yet published; when released, tag `sdk-v0.2.0` on the releases page |
+| `main` | development; may be ahead of every release | this repository |
+
+The releases page shows what is actually published. What changed:
+[terminal](doc/changes.md), [SDK](sdk/CHANGES.md).
 
 ## What you can use today
 
@@ -25,7 +33,7 @@ colours and progress updates.
 | --- | --- |
 | ![apkg show](doc/screenshots/apkg-show-dark.png) | ![Kitty image](doc/screenshots/kitty-image.png) |
 
-Version 0.1 includes:
+Limpet includes:
 
 - Unicode: CJK, emoji (monochrome), combining clusters;
 - 16-colour, 256-colour and 24-bit colour, themes (dark, light, high
@@ -35,7 +43,10 @@ Version 0.1 includes:
 - the alternate screen used by full-screen programs;
 - Ctrl-C to break the running command;
 - inline images through a documented subset of the Kitty graphics protocol;
-- OSC 8 hyperlinks (Ctrl+click opens them through OpenURL when installed).
+- OSC 8 hyperlinks (Ctrl+click opens them through OpenURL when installed);
+- from 0.2.0: a selection that stays while a program redraws other rows,
+  and bracketed paste, resize reports and wheel reports for full-screen
+  programs such as hardcode.
 
 The AROS Shell itself is unchanged: Limpet is the window it runs in.
 Limpet runs alongside the system console for now. Programs that explicitly
@@ -50,10 +61,10 @@ With [apkg](https://github.com/tomaszstaniak/arospkg):
 
     apkg install limpet
 
-Or by hand: download `Limpet-0.1.0-abiv11.zip` from the
+Or by hand: download the newest `Limpet-<version>-abiv11.zip` from the
 [releases](https://github.com/tomaszstaniak/limpet/releases), then
 
-    UnZip Limpet-0.1.0-abiv11.zip -d SYS:Utilities
+    UnZip Limpet-<version>-abiv11.zip -d SYS:Utilities
 
 and double-click the Limpet icon, or run `SYS:Utilities/Limpet/Limpet`.
 The archive's `README.txt` lists keys, options and known limitations.
@@ -85,10 +96,9 @@ thing in either console without configuration.
 | --- | --- |
 | ![hello example in Limpet](doc/screenshots/sdk-hello.png) | ![examples in CON:](doc/screenshots/sdk-con-fallback.png) |
 
-`limpet-sdk-0.1.0.zip` on the
-[releases](https://github.com/tomaszstaniak/limpet/releases) page contains
-the headers, a prebuilt library for ABIv11, the library sources and seven
-examples.
+The SDK archive (`limpet-sdk-0.2.0.zip`, tag `sdk-v0.2.0`) contains the
+headers, a prebuilt library for ABIv11, the library sources, seven
+examples and this documentation. The same files are in `sdk/` here.
 
 - [Getting started](doc/sdk/getting-started.md): build and run the first
   example.
@@ -107,11 +117,15 @@ examples.
 Limpet is built on a host with an AROS ABIv11 cross toolchain (GCC 10.5)
 and the ABIv11 SDK:
 
-    make abiv11-frontend LIMPET_VERSION=0.1.0 \
+    make abiv11-frontend LIMPET_VERSION=0.2.0 LIMPET_DATE=07.10.2026 \
          ABIV11_GCC=/path/to/x86_64-aros-gcc \
          ABIV11_SDK=/path/to/SDK/Development
 
-The result is `build/abiv11/aros-xterm` (installed as `Limpet`). Host tests
+The result is `build/abiv11/aros-xterm` (installed as `Limpet`). The
+version string carries `LIMPET_DATE`; with the date of a release, the build
+of its tag is byte-identical to the released binary (checked for 0.1.0
+with `LIMPET_DATE=03.10.2026`; the 0.2.0 archive is built this way from
+commit `60d3eac`). Host tests
 of the terminal model, the protocols and the SDK need only a C compiler:
 
     make test

@@ -44,11 +44,14 @@ cp LICENSE.txt "$STAGE/LICENSE.txt"
 for f in getting-started choosing api examples experimental "verification-$VERSION"; do
     cp "doc/sdk/$f.md" "$STAGE/doc/sdk/"
 done
-for f in capabilities protocols presentation kitty-graphics hyperlinks compatibility \
-         troubleshooting versioning; do
+for f in why-limpet capabilities protocols presentation kitty-graphics hyperlinks \
+         compatibility troubleshooting versioning; do
     cp "doc/$f.md" "$STAGE/doc/"
 done
-cp doc/screenshots/sdk-*.png "$STAGE/doc/screenshots/"
+# Exactly the images the staged pages show, no more.
+for img in $(grep -ohE 'screenshots/[A-Za-z0-9._-]+\.png' "$STAGE"/doc/*.md "$STAGE"/doc/sdk/*.md | sort -u); do
+    cp "doc/$img" "$STAGE/doc/$img"
+done
 
 # What lives under sdk/ in the repository is at the top of the archive.
 # Any other relative link that leaves the archive points at the same file

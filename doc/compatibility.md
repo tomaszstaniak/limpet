@@ -2,13 +2,13 @@
 
 ## Systems
 
-| System | Limpet 0.1.0 | SDK 0.1.0 |
-| --- | --- | --- |
-| AROS ABIv11 x86_64, 2026.09 | released, tested | prebuilt library, examples tested |
-| AROS One 1.3 (ABIv11 x86_64) | released, tested at release | not run on this system |
-| AROS mainline x86_64 (ABI v1) | not released (an unpublished preview exists) | no library shipped; the sources contain no ABI-specific code but have not been built or run on mainline |
-| AROS i386, aarch64, ARM | no build | no build |
-| AmigaOS 4, MorphOS, AmigaOS 3 | no build | no build |
+| System | Limpet 0.1.0 | Limpet 0.2.0 | SDK 0.2.0 |
+| --- | --- | --- | --- |
+| AROS ABIv11 x86_64, 2026.09 | published, tested | tested | prebuilt library, examples tested |
+| AROS One 1.3 (ABIv11 x86_64) | published, tested at release | not run | not run |
+| AROS mainline x86_64 (ABI v1) | not released (an unpublished preview exists) | not released | no library shipped; the sources contain no ABI-specific code but have not been built or run on mainline |
+| AROS i386, aarch64, ARM | no build | no build | no build |
+| AmigaOS 4, MorphOS, AmigaOS 3 | no build | no build | no build |
 
 ABIv11 and mainline binaries do not run on each other's systems, and a
 result on one says nothing about the other. The SDK's sources contain no
@@ -22,14 +22,13 @@ QEMU, results checked on screen. No test ran on real hardware.
 
 | Terminal | Presentation query | Stream features in this documentation |
 | --- | --- | --- |
-| Limpet 0.1.0 | answers | as listed in the [catalogue](capabilities.md) |
+| Limpet 0.2.0 | answers, with input modes | as listed in the [catalogue](capabilities.md) |
+| Limpet 0.1.0 | answers, without input modes | as listed, except entries marked "Since 0.2.0" |
 | `CON:` (system console) | `ERROR_ACTION_NOT_KNOWN` | the Amiga console sequences, not the ones documented here |
 | other consoles (KingCON and similar) | not tested; expected `ERROR_ACTION_NOT_KNOWN` | unknown |
 
-A program built with SDK 0.1.0 keeps working with later Limpet versions:
-the protocol does not change meaning, and the SDK ignores fields it does
-not know. A later version may report more; the program will not see it
-until it is rebuilt with a newer SDK.
+Which client works with which terminal, and what a rebuild is needed for:
+[versions and stability](versioning.md).
 
 ## Standards
 
@@ -38,13 +37,13 @@ following is claimed:
 
 - full xterm or VT100/VT220 compatibility;
 - full Kitty graphics protocol support;
-- POSIX terminal interface or termios on a Limpet 0.1.0 session;
+- POSIX terminal interface or termios on a Limpet Shell session;
 - compatibility with any particular TUI library (ncurses, Ratatui,
   crossterm) on ABIv11.
 
 The exact subsets are in the [protocol reference](protocols.md).
 
-## Limits of Limpet 0.1.0
+## Limits of Limpet 0.1.0 and 0.2.0
 
 | Item | Limit |
 | --- | --- |
@@ -56,7 +55,10 @@ The exact subsets are in the [protocol reference](protocols.md).
 
 ## Known behaviour that affects programs
 
-- **No resize notification.** Ask for the size again.
+- **No resize signal.** Ask for the size again, or (0.2.0) turn on resize
+  reports in raw mode.
+- **Input modes end with raw mode** (0.2.0). Set 2004, 2048, 2100 and mouse
+  tracking again after each switch to raw mode.
 - **No reply in cooked mode.** Stream queries are answered only in raw
   mode.
 - **SGR 30-37 are pens** in a Shell session. Use `38;5;n` for ANSI colours

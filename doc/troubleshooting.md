@@ -37,6 +37,19 @@ The program runs in `CON:`, which reads bytes as Latin-1. There is no
 detection for this other than the query; write ASCII when it fails, if the
 text must be readable there.
 
+## A paste or a report arrives where the program does not expect it
+
+- **Framed paste after the program ended.** Not possible from 0.2.0:
+  Limpet turns 2004, 2048, 2100 and mouse tracking off when the console
+  returns to cooked mode. With Limpet 0.1.0 these modes do not exist.
+- **No framed paste although the program sent `CSI ? 2004 h`.** The mode
+  was set before `SetMode(Input(), 1)`, or the terminal is Limpet 0.1.0.
+  Check `XTY_INPUT_BRACKETED_PASTE` and set the mode after raw mode.
+- **The multi-line confirmation appears in a raw-mode program.** Bracketed
+  paste is off; the paste is delivered after F3, unframed.
+- **"Clipboard busy".** The previous paste is still being delivered, or a
+  framed paste still owes its end marker to a program that is not reading.
+
 ## A stream query never answers
 
 `CSI 6 n`, `CSI 18 t` or the Kitty query wait forever:
@@ -48,13 +61,13 @@ text must be readable there.
 
 ## An image is cut off at the bottom, or text overlaps it
 
-Limpet 0.1.0 does not scroll to make room for an image. Print blank lines,
+Limpet (0.1.0 and 0.2.0) does not scroll to make room for an image. Print blank lines,
 move back up, draw with `keep_cursor = 1`, then move down, as the `image`
 example does.
 
 ## `ERROR_ACTION_NOT_KNOWN` for `XTY_CAPS` or termios calls
 
-Expected. A Limpet 0.1.0 Shell session serves only operation 13. See
+Expected. A Limpet Shell session serves only operation 13. See
 [experimental interfaces](sdk/experimental.md).
 
 ## The program crashes at start on AROS
