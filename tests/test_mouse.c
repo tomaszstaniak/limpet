@@ -9,6 +9,21 @@ static void feed(XTermScreen *s,const char *p) {
 int main(void) {
     XTermScreen s; unsigned char out[64]; size_t n;
     assert(!screen_init(&s,cells,300*25,25,300));
+    /* L5 (hardcode): wheel reports without mouse tracking, private mode
+       2100. Only wheel steps, always SGR; buttons stay with the terminal,
+       so plain drag still selects. */
+    assert(!screen_wheel_encode(&s,1,3,4,0,out,sizeof out));
+    feed(&s,"\033[?2100h");
+    assert(s.wheel_report && !s.mouse_tracking);
+    n=screen_wheel_encode(&s,1,3,4,0,out,sizeof out);
+    assert(n==10 && !memcmp(out,"\033[<64;4;5M",10));
+    n=screen_wheel_encode(&s,0,3,4,16,out,sizeof out);
+    assert(n==10 && !memcmp(out,"\033[<81;4;5M",10));
+    assert(!screen_mouse_encode(&s,0,0,0,0,0,out,sizeof out)); /* buttons: not reported */
+    assert(!screen_wheel_encode(&s,1,300,0,0,out,sizeof out));
+    assert(!screen_wheel_encode(&s,1,0,0,0,out,4));
+    feed(&s,"\033[?2100l");
+    assert(!s.wheel_report && !screen_wheel_encode(&s,1,3,4,0,out,sizeof out));
     assert(!screen_mouse_encode(&s,0,0,0,0,0,out,sizeof out));
     feed(&s,"\033[?1006h"); /* Encoding alone must not capture the mouse. */
     assert(!screen_mouse_encode(&s,0,0,0,0,0,out,sizeof out));

@@ -68,6 +68,7 @@ There are three separate ways, and most capabilities have only one of them:
 | [Mouse reporting](#mouse-reporting) | raw-mode programs | none | Released, host-tested |
 | [Bracketed paste](#bracketed-paste) | raw-mode programs | query, input known bit | Experimental |
 | [Resize reports (DEC 2048)](#resize-reports) | raw-mode programs | query, input known bit | Experimental |
+| [Wheel reports (mode 2100)](#wheel-reports) | raw-mode programs | query, input known bit | Experimental |
 | [Scrollback, reflow, selection, clipboard](#user-interface-features) | users | not visible to programs | Verified |
 | [Themes](#user-interface-features) | users | not visible to programs | Verified |
 | [termios, PTY, TTY control operations](#terminal-settings-termios-and-pty) | POSIX programs | `XTY_CAPS` on a PTY | Experimental |
@@ -545,6 +546,23 @@ bit 32). Limpet 0.1.0 has neither; use `CSI 18 t` there.
 **Status.** Experimental: host-tested (`tests/test_resize_report.c`); on
 AROS, see hardcode's demonstration 1 evidence. Not in a release.
 
+## Wheel reports
+
+For a full-screen program that scrolls its own content but leaves mouse
+selection to the terminal. In raw mode a program may send `CSI ? 2100 h`
+(a Limpet private mode). Each wheel step then arrives as input in the SGR
+mouse form, `CSI < 64 ; column ; row M` for up and `65` for down, with the
+usual modifier bits (16 Ctrl, 8 Alt). Buttons and drags are not reported:
+a plain drag still selects, and Shift with the wheel still scrolls
+Limpet's own history. With mouse tracking (1000/1002) on as well, the
+tracking modes decide. `CSI ? 2100 l` turns it off, and the end of a PTY
+session turns it off for the next program. Nothing is sent in cooked mode.
+
+Detection: `XTY_INPUT_WHEEL_REPORT` (4) in `LimpetPresentation.input`.
+
+**Status.** Experimental: host-tested (`tests/test_mouse.c`). Added for
+hardcode's full screen; not in a release.
+
 ---
 
 ## User-interface features
@@ -556,7 +574,7 @@ them, and should not need to.
 | --- | --- | --- |
 | Scrollback | 256 lines at full width (160 columns), more for narrower windows, e.g. 512 at 80 columns | Verified |
 | Reflow | text and scrollback rewrap when the width changes | Verified |
-| Selection and clipboard | drag to select, RAmiga+C / RAmiga+V, system clipboard | Verified |
+| Selection and clipboard | drag to select, RAmiga+C / RAmiga+V, system clipboard. A selection stays while a program redraws other rows (a status line, a clock); output that changes or scrolls the selected text drops it (newer than 0.1.0, host-tested in `tests/test_selection.c`) | Verified |
 | Themes | dark (built in), light, high contrast | Verified |
 | Line editing | command history, Tab completion of paths and commands | Released, host-tested (`tests/test_line_editor.c`, `tests/test_completion.c`) |
 | End of input | F5 ends the Shell's input; F4 starts a new Shell | Verified |

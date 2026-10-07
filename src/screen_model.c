@@ -413,6 +413,18 @@ size_t screen_mouse_encode(const XTermScreen *s, unsigned button, unsigned col,
     return n;
 }
 
+size_t screen_wheel_encode(const XTermScreen *s, int up, unsigned col, unsigned row,
+                           unsigned modifiers, unsigned char *out, size_t capacity)
+{
+    char bytes[48];
+    int length;
+    if(!s || !s->wheel_report || !out || col>=s->columns || row>=s->rows || (modifiers&~28u)) return 0;
+    length=snprintf(bytes,sizeof bytes,"\033[<%u;%u;%uM",(up?64u:65u)|modifiers,col+1,row+1);
+    if(length<=0 || (size_t)length>capacity) return 0;
+    memcpy(out,bytes,(size_t)length);
+    return (size_t)length;
+}
+
 static unsigned parameter(const XTermScreen *s, unsigned index, unsigned fallback)
 {
     return index < s->param_count && s->params[index] ? s->params[index] : fallback;
@@ -469,6 +481,7 @@ static void execute_csi(XTermScreen *s, unsigned char command)
                 }
                 else if(s->params[i]==2004) s->bracketed_paste=command=='h';
                 else if(s->params[i]==2048) s->resize_report=command=='h';
+                else if(s->params[i]==2100) s->wheel_report=command=='h';
             }
         }
         return;

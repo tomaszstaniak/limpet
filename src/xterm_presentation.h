@@ -19,7 +19,7 @@ static inline int xterm_presentation_reply(void *block,size_t bytes,
     out.reserved[0]=XTY_PACKET_MAGIC;
     out.values[0]=XTY_PRESENT_KNOWN_COLORS|XTY_PRESENT_KNOWN_STYLES|XTY_PRESENT_KNOWN_LINES|
                   XTY_PRESENT_KNOWN_INTERPRETATION|XTY_PRESENT_KNOWN_INPUT;
-    out.values[7]=XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT;
+    out.values[7]=XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT|XTY_INPUT_WHEEL_REPORT;
     out.values[6]=interpretation;
     out.values[1]=XTY_COLOR_RGB;out.values[2]=XTY_STYLE_BOLD_RESET;
     out.values[3]=XTY_LINE_CR|XTY_LINE_ERASE_EOL;

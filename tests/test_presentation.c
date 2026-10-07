@@ -13,7 +13,7 @@ int main(void)
     assert(c.values[4]==24 && c.values[5]==80);
     assert(c.values[6]==0);
     /* Input features (bit 32): what a raw-mode client may turn on. */
-    assert(c.values[7]==(XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT));
+    assert(c.values[7]==(XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT|XTY_INPUT_WHEEL_REPORT));
     for(i=8;i<12;++i) assert(!c.values[i]);
     c=request();assert(xterm_presentation_reply(&c,sizeof c,0,80,0));
     assert(c.values[0]==55 && !c.values[4] && !c.values[5]);

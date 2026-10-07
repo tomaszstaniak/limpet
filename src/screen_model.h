@@ -57,6 +57,7 @@ typedef struct XTermScreen {
     unsigned mouse_tracking, mouse_sgr, mouse_generation;
     unsigned bracketed_paste;   /* DEC 2004: the client wants pastes framed */
     unsigned resize_report;     /* DEC 2048: the client wants size changes in band */
+    unsigned wheel_report;      /* private 2100: wheel steps as SGR reports, buttons not taken (hardcode L5) */
     /* Optional synchronous reply sink; must copy bytes and not reenter this
      * model. The transport decides whether a client may receive replies. */
     void (*reply)(void *, const unsigned char *, size_t);
@@ -115,6 +116,11 @@ int screen_init(XTermScreen *, XTermCell *, size_t, unsigned, unsigned);
  * Returns zero for disabled/invalid/unrepresentable events or a small buffer. */
 size_t screen_mouse_encode(const XTermScreen *, unsigned, unsigned, unsigned,
                            unsigned, int, unsigned char *, size_t);
+/* Mode 2100: one SGR report per wheel step (64 up, 65 down, with the
+   modifier bits), while buttons and drags stay with the terminal. 0 when
+   the mode is off, the cell is outside or out is too small. */
+size_t screen_wheel_encode(const XTermScreen *s, int up, unsigned col, unsigned row,
+                           unsigned modifiers, unsigned char *out, size_t capacity);
 unsigned screen_scalar_width(uint32_t);
 int screen_attach_history(XTermScreen *, XTermCell *, size_t);
 /* Optional disjoint caller-owned snapshot storage, at least capacity cells. */

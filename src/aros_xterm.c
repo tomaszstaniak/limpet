@@ -1577,14 +1577,19 @@ int main(int argc,char **argv)
                 }
                 if(code==RAWKEY_NM_WHEEL_UP || code==RAWKEY_NM_WHEEL_DOWN) {
                     if(mouse_releases.count) continue;
-                    if(process_session.console && process_session.line.raw && screen.mouse_tracking &&
+                    /* Mode 2100 (hardcode L5): wheel steps go to the program,
+                       buttons stay with the terminal, so a plain drag still selects. */
+                    if(process_session.console && process_session.line.raw &&
+                       (screen.mouse_tracking || screen.wheel_report) &&
                        !(q&(IEQUALIFIER_LSHIFT|IEQUALIFIER_RSHIFT))) {
                         unsigned row,col; unsigned char report[64];
                         if(mouse_cell(window,mx,my,&row,&col,0)) {
                             unsigned modifiers=(q&IEQUALIFIER_CONTROL?16:0)|
                                 (q&(IEQUALIFIER_LALT|IEQUALIFIER_RALT)?8:0);
-                            size_t n=screen_mouse_encode(&screen,
-                                code==RAWKEY_NM_WHEEL_UP?64:65,col,row,modifiers,0,report,sizeof report);
+                            size_t n=screen.mouse_tracking ?
+                                screen_mouse_encode(&screen,
+                                    code==RAWKEY_NM_WHEEL_UP?64:65,col,row,modifiers,0,report,sizeof report) :
+                                screen_wheel_encode(&screen,code==RAWKEY_NM_WHEEL_UP,col,row,modifiers,report,sizeof report);
                             if(n) terminal_reply(&process_session,report,n);
                         }
                         continue;
