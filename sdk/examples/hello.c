@@ -67,9 +67,19 @@ int main(void)
                (unsigned long)limpet_columns(&p), (unsigned long)limpet_rows(&p));
     else
         puts("  Size:          unknown");
+    /* Input modes a raw-mode program may turn on. Limpet 0.1.0 does not
+       report this field, so "unknown" is the honest answer there. */
+    if (p.known & XTY_PRESENT_KNOWN_INPUT)
+        printf("  Input modes:   %s%s%s%s\n",
+               p.input & XTY_INPUT_BRACKETED_PASTE ? "bracketed paste (2004) " : "",
+               p.input & XTY_INPUT_RESIZE_REPORT ? "resize reports (2048) " : "",
+               p.input & XTY_INPUT_WHEEL_REPORT ? "wheel reports (2100)" : "",
+               p.input ? "" : "none");
+    else
+        puts("  Input modes:   unknown (Limpet 0.1.0 does not report them)");
     if (p.known & ~(uint32_t)(XTY_PRESENT_KNOWN_COLORS | XTY_PRESENT_KNOWN_STYLES |
                               XTY_PRESENT_KNOWN_LINES | XTY_PRESENT_KNOWN_GEOMETRY |
-                              XTY_PRESENT_KNOWN_INTERPRETATION))
+                              XTY_PRESENT_KNOWN_INTERPRETATION | XTY_PRESENT_KNOWN_INPUT))
         puts("  The terminal also reported fields newer than this SDK; ignored.");
     return RETURN_OK;
 }
