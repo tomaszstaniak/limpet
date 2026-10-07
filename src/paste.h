@@ -24,7 +24,8 @@ void paste_consume(XPaste *, size_t);
 typedef struct {
     unsigned char marker[8];
     size_t length, offset;
-    int open;                       /* a start marker went out, the end has not */
+    int open;                       /* a start marker is queued or sent, the end is not */
+    int in_band;                    /* from the first byte of ESC[200~ to the last of ESC[201~ */
 } XPasteFrame;
 void paste_frame_begin(XPasteFrame *, int bracketed);
 void paste_frame_end(XPasteFrame *);

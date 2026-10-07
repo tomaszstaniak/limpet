@@ -73,4 +73,6 @@ void paste_frame_consume(XPasteFrame *f, size_t n)
 {
     if (n > f->length - f->offset) n = f->length - f->offset;
     f->offset += n;
+    if (n && f->open) f->in_band = 1;
+    if (!f->open && f->offset == f->length) f->in_band = 0;
 }

@@ -7,6 +7,7 @@
 #include "selection.h"
 #include "paste.h"
 #include "session_reset.h"
+#include "input_order.h"
 #include "clipboard_text.h"
 #include "aros_clip_job.h"
 #include "aros_session.h"
@@ -102,9 +103,10 @@ static XTermScreen command_view;
 static XTermCell command_cells[MAX_ROWS*MAX_COLUMNS];
 static XTermCell command_history[2*XLINE_CAPACITY];
 static XPaste paste;
-/* Markers of a bracketed paste, and the session they belong to. */
-static XPasteFrame paste_frame;
-static unsigned paste_frame_generation;
+/* Bracketed pastes and resize reports, kept in order against keys and
+   replies (src/input_order.h), and the input owner they belong to. */
+static XInputOrder input_order;
+static unsigned order_session_generation, order_input_generation;
 static ArosClipJob clip_job;
 static unsigned char clip_text[CLIP_TEXT_LIMIT], clip_raw[CLIP_RAW_LIMIT];
 static unsigned session_generation, paste_generation, copy_loss;
@@ -331,12 +333,14 @@ static void terminal_reply(void *context,const unsigned char *bytes,size_t lengt
     ArosSession *session=context;
     /* Never put protocol replies into a cooked Shell command line. Native
      * console writes are all-or-nothing when input capacity is exhausted. */
-    if(session->console && session->line.raw && !reply_flow.length)
+    if(session->console && session->line.raw && !reply_flow.length &&
+       input_order_others_may_send(&input_order))
         (void)aros_session_write(session,bytes,length);
 }
 
 static size_t mouse_write(void *context,const unsigned char *bytes,size_t length)
-{ return reply_flow.length?0:aros_session_write(context,bytes,length); }
+{ return reply_flow.length || !input_order_others_may_send(&input_order)?0:
+         aros_session_write(context,bytes,length); }
 
 static int replies_enabled(void)
 {
@@ -352,8 +356,9 @@ static void replies_sync(void)
     }
     reply_generation=process_session.input_generation;
 }
+/* A reply that must wait for a paste keeps the output paused meanwhile. */
 static size_t reply_send(void *context,const unsigned char *bytes,size_t length)
-{ return aros_session_write(context,bytes,length); }
+{ return input_order_others_may_send(&input_order)?aros_session_write(context,bytes,length):0; }
 static int output_ready(void)
 {
     if(reply_flow.length)
@@ -833,21 +838,18 @@ static struct NewMenu menu_spec[]={
 
 #include "limpet_icon.h"
 
-/* DEC 2048 report waiting to go out. A size change while one is half sent
-   is not lost: the newest size is sent after it. */
-static XReplyFlow resize_flow;
-static int resize_again;
+/* DEC 2048: queue a report of the current size. A change while one is
+   half sent is not lost: the newest size follows it. */
 static unsigned resize_mode_seen;
-
 static int replies_enabled(void);
 static void resize_queue(void)
 {
     if(!screen.resize_report || !replies_enabled()) return;
-    if(resize_flow.offset) { resize_again=1; return; }
-    resize_flow.length=resize_report((char *)resize_flow.bytes,sizeof resize_flow.bytes,
-                                     screen.rows,screen.columns,
-                                     screen.rows*xfont_height(),screen.columns*xfont_width());
+    input_order_resize(&input_order,screen.rows,screen.columns,
+                       screen.rows*xfont_height(),screen.columns*xfont_width());
 }
+static size_t order_sink(void *context,const unsigned char *bytes,size_t length)
+{ return aros_session_write(context,bytes,length); }
 
 static const char *const about_lines[]={
     "Limpet " LIMPET_VERSION,
@@ -1059,6 +1061,7 @@ static int keyboard_ready(void)
             (aros_break_ready(&process_session.breaker) && XSESSION_CAPACITY-process_session.output.length>=4);
     if(paste.length || (clip_job.task_id && !clip_job.writing)) return 0;
     if(echo_mode!=2) return 1;
+    if(!input_order_others_may_send(&input_order)) return 0;
     if(replies_enabled() && reply_flow.length) return 0;
     if(shell_session && !process_session.line.raw) return editor_ready();
     return key->length-key->offset<=XSESSION_CAPACITY-process_session.input.length;
@@ -1113,7 +1116,9 @@ static void clipboard_action(int action)
 {
     size_t text_length,raw_length;
     if(keyboard.count) { clip_status="Clipboard waits for typeahead; retry shortcut"; return; }
-    if(clip_job.task_id || paste.length) { clip_status="Clipboard busy (Esc cancels queued paste)"; return; }
+    if(clip_job.task_id || paste.length || input_order_paste_busy(&input_order)) {
+        clip_status="Clipboard busy (Esc cancels queued paste)"; return;
+    }
     if(action==1) {
         int result=0;
         if(editor_ready() && command_editor.selecting) {
@@ -1158,9 +1163,9 @@ static void clipboard_completed(int closing)
        and decides itself what a newline in it means, so the multi-line
        confirmation would only be in its way. */
     if(paste.length && screen.bracketed_paste && process_session.line.raw) {
-        paste_confirm(&paste);
-        paste_frame_begin(&paste_frame,1);
-        paste_frame_generation=session_generation;
+        /* The previous paste's end marker has not gone out yet. */
+        if(input_order_paste_busy(&input_order)) { paste_cancel(&paste); clip_status="Clipboard busy"; return; }
+        input_order_begin_bracketed(&input_order);
     }
     clip_status=paste.confirmation?"MULTILINE: F3 paste / Esc cancel":paste.length?"Pasting... (Esc cancels)":"Clipboard empty";
 }
@@ -1200,6 +1205,7 @@ int main(int argc,char **argv)
     unsigned last_key = 0;
     theme_default(&theme);
     paint_damage_init(&paint_damage,paint_cache,MAX_ROWS*MAX_COLUMNS);
+    input_order_init(&input_order,&paste);
 #ifdef XTERM_DOS_HANDLER
     XHandlerContext *handler=aros_handler_context();
     (void)argc; (void)argv;
@@ -1611,7 +1617,10 @@ int main(int argc,char **argv)
                     dirty=1; continue;
                 }
                 if(code==RAWKEY_ESCAPE && (paste.length || (clip_job.task_id && !clip_job.writing))) {
-                    paste_cancel(&paste); key_queue_clear(&keyboard); ++session_generation;
+                    /* The same client keeps reading: a bracketed paste still
+                       gets its end marker. */
+                    input_order_cancel_paste(&input_order); key_queue_clear(&keyboard); ++session_generation;
+                    order_session_generation=session_generation;
                     clip_status="Paste cancelled"; dirty=1; continue;
                 }
 #ifdef XTERM_PROCESS_PORT_CLIENTS
@@ -1711,31 +1720,29 @@ int main(int argc,char **argv)
         if(!closing && keyboard_ready()) {
             if(key_queue_drain(&keyboard,16,keyboard_deliver,NULL)) dirty=1;
         }
+        /* Another reader, another session or no raw client: a bracketed
+           paste and a pending resize report belong to the old owner. */
+        if(order_session_generation!=session_generation ||
+           order_input_generation!=process_session.input_generation || !replies_enabled()) {
+            input_order_drop(&input_order);
+            order_session_generation=session_generation;
+            order_input_generation=process_session.input_generation;
+        }
         /* A client that just set 2048 gets the current size at once. */
         if(screen.resize_report && !resize_mode_seen) resize_queue();
         resize_mode_seen=screen.resize_report;
-        if(!replies_enabled() || !screen.resize_report) { memset(&resize_flow,0,sizeof resize_flow); resize_again=0; }
-        if(!closing && !reply_flow.length && resize_flow.length) {
-            size_t taken=aros_session_write(&process_session,resize_flow.bytes+resize_flow.offset,
-                                            resize_flow.length-resize_flow.offset);
-            resize_flow.offset+=taken;
-            if(resize_flow.offset==resize_flow.length) {
-                memset(&resize_flow,0,sizeof resize_flow);
-                if(resize_again) { resize_again=0; resize_queue(); }
+        if(!screen.resize_report && !input_order.resize.offset)
+            memset(&input_order.resize,0,sizeof input_order.resize);
+        if(!closing && replies_enabled()) {
+            int framed=input_order_paste_busy(&input_order);
+            if(input_order_pump(&input_order,!reply_flow.length,order_sink,&process_session)) {
+                dirty=1;
+                if(framed && !input_order_paste_busy(&input_order)) clip_status="Pasted";
+                link_gesture_cancel(&link_gesture); link_hovered=0;
             }
         }
-        if(paste_frame_generation!=session_generation) memset(&paste_frame,0,sizeof paste_frame);
-        if(!closing && !reply_flow.length) {
-            const unsigned char *marker;
-            size_t left;
-            /* The end marker also follows a cancelled paste, or the client
-               would take everything after it as pasted text. */
-            if(paste_frame.open && !paste.length && !paste_frame_peek(&paste_frame,&marker)) paste_frame_end(&paste_frame);
-            left=paste_frame_peek(&paste_frame,&marker);
-            if(left) { size_t taken=session_bytes(marker,left); paste_frame_consume(&paste_frame,taken); if(taken) dirty=1; }
-        }
         if(!closing && !reply_flow.length && paste.length && !paste.confirmation &&
-           paste_frame.offset==paste_frame.length &&
+           !input_order_paste_busy(&input_order) && input_order_plain_paste_may_send(&input_order) &&
            (echo_mode!=2 || !shell_session || process_session.line.raw || editor_ready())) {
             const unsigned char *bytes;
             size_t count=paste_peek(&paste,&bytes,1024);

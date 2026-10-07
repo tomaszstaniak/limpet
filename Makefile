@@ -16,7 +16,7 @@ EDITOR_SRC = src/line_editor.c src/line_view.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
 SESSION_SRC = src/aros_session.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
-CLIP_GUI_SRC = src/selection.c src/paste.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
+CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
 CLUSTER_SRC = src/font_cache.c src/cluster_font.c
 THEME_SRC = src/theme.c
@@ -1132,3 +1132,13 @@ build/test_sdk: sdk/tests/test_sdk.c $(SDK_SRC) $(SDK_HEADERS) src/xterm_present
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all \
 		-Isdk/include -Isdk/tests/host $< $(SDK_SRC) -o $@
+
+# Bracketed paste and resize reports against keys and replies (input_order.h).
+test: test-input-order
+.PHONY: test-input-order
+test-input-order: build/test_input_order
+	./build/test_input_order
+build/test_input_order: tests/test_input_order.c src/input_order.c src/input_order.h src/paste.c src/paste.h src/resize_report.h $(UNICODE_SRC)
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all \
+		$(UNICODE_FLAGS) $< src/input_order.c src/paste.c $(UNICODE_SRC) -o $@
