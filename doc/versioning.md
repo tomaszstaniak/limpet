@@ -8,7 +8,7 @@ Limpet and the SDK have separate version numbers and separate tags.
 | Limpet SDK | 0.2.0 | `limpet-sdk-0.2.0.zip` | `sdk-v0.2.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
-Limpet 0.1.0 (tag `v0.1.0`) is the only published terminal so far. An SDK 0.1.0
+Limpet 0.1.0 (tag `v0.1.0`) is the earlier terminal release. An SDK 0.1.0
 was prepared but never published; its sources are kept in
 `sdk/tests/compat-0.1.0` for the compatibility test.
 

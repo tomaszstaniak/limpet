@@ -15,9 +15,9 @@ and remote work over SSH.
 
 | | What it is | Where |
 | --- | --- | --- |
-| **Limpet 0.1.0** | the first published terminal, AROS ABIv11 x86_64 | [releases](https://github.com/tomaszstaniak/limpet/releases), tag `v0.1.0` |
-| **Limpet 0.2.0** | the terminal these sources build: 0.1.0 plus the input modes for full-screen programs and a selection that stays while other rows are redrawn | prepared, not yet published; when released, tag `v0.2.0` on the releases page |
-| **Limpet SDK 0.2.0** | headers, library and examples for programs that use Limpet | prepared, not yet published; when released, tag `sdk-v0.2.0` on the releases page |
+| **Limpet 0.1.0** | the first terminal release, AROS ABIv11 x86_64 | [releases](https://github.com/tomaszstaniak/limpet/releases), tag `v0.1.0` |
+| **Limpet 0.2.0** | the terminal these sources build: 0.1.0 plus the input modes for full-screen programs and a selection that stays while other rows are redrawn | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.0), tag `v0.2.0` |
+| **Limpet SDK 0.2.0** | headers, library and examples for programs that use Limpet | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.2.0), tag `sdk-v0.2.0` |
 | `main` | development; may be ahead of every release | this repository |
 
 The releases page shows what is actually published. What changed:
