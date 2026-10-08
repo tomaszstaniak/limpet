@@ -68,7 +68,8 @@ static XTermCell alternate[MAX_ROWS * MAX_COLUMNS];
 static XTermCell history[HISTORY_LINES * MAX_COLUMNS];
 /* Reflow writes the rewrapped history here and swaps the two. */
 static XTermCell history_spare[HISTORY_LINES * MAX_COLUMNS];
-static char title[160];
+#include "title_buffer.h"
+static XTitleBuffers titles;
 static EchoSession echo;
 static int echo_mode;
 static ArosSession process_session;
@@ -952,50 +953,52 @@ static void close_main_window(struct Window *window)
 
 static void update_title(struct Window *window, unsigned last_key)
 {
-    /* Intuition keeps a pointer to `title`; compose elsewhere and only touch
-       it (and the title bar) when the text changes. */
-    static char next[sizeof title];
+    /* Intuition holds the shown buffer and may draw from it at any time
+       (src/title_buffer.h): compose in the other one, hand it over only
+       when the text changes. */
+    char *next=title_buffers_next(&titles);
+    const size_t cap=sizeof titles.text[0];
     (void)last_key;
     /* The title is the program's name plus what the user needs now: a
        message, or where the view is in the scrollback. */
-    snprintf(next, sizeof next, "%s", pty_mode?"Limpet (PTY preview)":"Limpet");
+    snprintf(next, cap, "%s", pty_mode?"Limpet (PTY preview)":"Limpet");
     /* The copy hint describes a live selection; whatever cleared the
        selection (typing, output, resize) retires the hint too. */
     if(clip_status && !selection.active && !strncmp(clip_status,"Selected",8))
         clip_status=NULL;
     if(clip_status) {
         size_t used=strlen(next);
-        snprintf(next+used,sizeof next-used," | %s",clip_status);
+        snprintf(next+used,cap-used," | %s",clip_status);
     }
     if(screen.view_offset) {
         size_t used=strlen(next);
-        snprintf(next+used,sizeof next-used," | scrollback %u/%u",screen.view_offset,screen.history_count);
+        snprintf(next+used,cap-used," | scrollback %u/%u",screen.view_offset,screen.history_count);
     }
 #ifdef XTERM_PKTWAIT_PROBE
     {
         size_t used=strlen(next);
-        snprintf(next+used,sizeof next-used," | pktwait %lu fontmem %luK",
+        snprintf(next+used,cap-used," | pktwait %lu fontmem %luK",
                  aros_handler_pktwaits(),(unsigned long)(xfont_resident_bytes()/1024));
     }
 #endif
 #ifdef XTERM_DIAG_FORWARD
     {
         size_t used=strlen(next);
-        snprintf(next+used,sizeof next-used," | diag fwd %lu types %ld,%ld,%ld,%ld",
+        snprintf(next+used,cap-used," | diag fwd %lu types %ld,%ld,%ld,%ld",
                  diag_forwarded,(long)diag_types[0],(long)diag_types[1],(long)diag_types[2],(long)diag_types[3]);
     }
 #endif
     if(title_stats && kitty.stats.commands) {
         size_t used=strlen(next);
-        snprintf(next+used,sizeof next-used," | img rx %lu drawn %lu %luK",
+        snprintf(next+used,cap-used," | img rx %lu drawn %lu %luK",
                  kitty.stats.frames_received,kitty_drawn,(unsigned long)(kitty.stats.memory_bytes/1024));
     }
     if(link_hovered)
-        snprintf(next,sizeof next,"Link: %.100s%s | Ctrl-click open; +Shift copy",
+        snprintf(next,cap,"Link: %.100s%s | Ctrl-click open; +Shift copy",
             hovered_link.url,strlen(hovered_link.url)>100?"...":"");
-    if(title_cache && !strcmp(next,title)) { ++title_skipped;return; }
-    strcpy(title,next);++title_updates;
-    SetWindowTitles(window, (CONST_STRPTR)title, (CONST_STRPTR)-1);
+    if(!title_buffers_commit(&titles) && title_cache) { ++title_skipped;return; }
+    ++title_updates;
+    SetWindowTitles(window, (CONST_STRPTR)title_buffers_shown(&titles), (CONST_STRPTR)-1);
 }
 
 static size_t session_bytes(const unsigned char *bytes,size_t count)

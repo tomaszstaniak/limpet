@@ -275,6 +275,7 @@ build/test_line_editor_aros: tests/test_line_editor.c src/line_editor.c src/line
 test: build/test_alternate
 test: build/test_tui_menu
 test: build/test_status_area
+test: build/test_title_buffer
 test: build/test_profile_prompt
 test: build/test_theme
 test: build/test_geometry_reply
@@ -339,6 +340,10 @@ build/test_profile_prompt: tests/test_profile_prompt.c src/screen_model.c src/hy
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
 package: build/test_status_area_aros
+
+build/test_title_buffer: tests/test_title_buffer.c src/title_buffer.h Makefile
+	mkdir -p $(dir $@)
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $< -o $@
 
 build/test_status_area: tests/test_status_area.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC) Makefile
 	mkdir -p $(dir $@)
@@ -579,6 +584,7 @@ test: $(HOST_TEST) build/test_replay build/test_graphemes build/test_input_echo 
 	./build/test_alternate
 	./build/test_tui_menu
 	./build/test_status_area
+	./build/test_title_buffer
 	./build/test_profile_prompt
 	./build/test_theme
 	./build/test_geometry_reply
