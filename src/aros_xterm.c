@@ -1351,7 +1351,8 @@ int main(int argc,char **argv)
         aros_session_poll(&process_session);
         flood_diag_queues();
         if(echo_mode==2 && !closing) {
-            unsigned long seen=screen.visible_bytes, scrolled=screen.scroll_count;
+            unsigned long seen=screen.visible_bytes;
+            XSelectionMark scrolled=selection_mark(&screen);
             /* The selection's text before the output, to see whether the output
                touched it. On the heap and sized to the screen: a selection of a
                whole reply is easily more than a few KB. Also while dragging:
@@ -1372,7 +1373,7 @@ int main(int argc,char **argv)
                 link_gesture_cancel(&link_gesture); link_hovered=0;
                 /* A redraw of other rows (a status line, a clock) leaves the
                    selection; output that changes or scrolls it drops it (L6). */
-                if(!(keep && selection_keep(&selection,&screen,kept,kept_length,scrolled)))
+                if(!(keep && selection_keep(&selection,&screen,kept,kept_length,&scrolled)))
                     selection.active=selection.dragging=0;
                 dirty=1;
             }

@@ -96,13 +96,23 @@ int selection_text(const XSelection *a,const XTermScreen *s,unsigned char *out,s
     *written=total; return 0;
 }
 
+XSelectionMark selection_mark(const XTermScreen *s)
+{
+    XSelectionMark m;
+    m.scroll=s->scroll_count; m.alternate=s->alternate_active; m.view=s->view_offset;
+    return m;
+}
+
 int selection_keep(const XSelection *sel, const XTermScreen *s, const unsigned char *before,
-                   size_t before_length, unsigned long scroll_before)
+                   size_t before_length, const XSelectionMark *mark)
 {
     unsigned char *now;
     size_t n=0;
     int same;
-    if(!sel || !s || !before || !sel->active || s->scroll_count!=scroll_before) return 0;
+    /* Another screen or another place in the history: even blank text that
+       matches is not the text that was selected. */
+    if(!sel || !s || !before || !mark || !sel->active || s->scroll_count!=mark->scroll ||
+       s->alternate_active!=mark->alternate || s->view_offset!=mark->view) return 0;
     /* One byte more than before: longer text now does not fit and is "changed". */
     if(!(now=malloc(before_length+1))) return 0;
     same=!selection_text(sel,s,now,before_length+1,&n) && n==before_length && !memcmp(now,before,n);
