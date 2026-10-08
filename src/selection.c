@@ -99,7 +99,7 @@ int selection_text(const XSelection *a,const XTermScreen *s,unsigned char *out,s
 XSelectionMark selection_mark(const XTermScreen *s)
 {
     XSelectionMark m;
-    m.scroll=s->scroll_count; m.alternate=s->alternate_active; m.view=s->view_offset;
+    m.scroll=s->scroll_count; m.alternate=s->alternate_active; m.view=s->view_offset; m.generation=s->buffer_generation;
     return m;
 }
 
@@ -112,7 +112,8 @@ int selection_keep(const XSelection *sel, const XTermScreen *s, const unsigned c
     /* Another screen or another place in the history: even blank text that
        matches is not the text that was selected. */
     if(!sel || !s || !before || !mark || !sel->active || s->scroll_count!=mark->scroll ||
-       s->alternate_active!=mark->alternate || s->view_offset!=mark->view) return 0;
+       s->alternate_active!=mark->alternate || s->view_offset!=mark->view ||
+       s->buffer_generation!=mark->generation) return 0;
     /* One byte more than before: longer text now does not fit and is "changed". */
     if(!(now=malloc(before_length+1))) return 0;
     same=!selection_text(sel,s,now,before_length+1,&n) && n==before_length && !memcmp(now,before,n);

@@ -19,7 +19,7 @@ int selection_text(const XSelection *, const XTermScreen *, unsigned char *, siz
  * the user's selection away (hardcode L6). */
 /* What must not change under a kept selection besides its text: the
  * scroll count, the screen shown (main or alternate), the view offset. */
-typedef struct { unsigned long scroll; unsigned alternate, view; } XSelectionMark;
+typedef struct { unsigned long scroll; unsigned alternate, view, generation; } XSelectionMark;
 XSelectionMark selection_mark(const XTermScreen *);
 int selection_keep(const XSelection *, const XTermScreen *, const unsigned char *before,
                    size_t before_length, const XSelectionMark *before_mark);

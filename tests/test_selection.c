@@ -120,6 +120,20 @@ int main(void)
         screen_write(&s,(const unsigned char *)"\033[?1049h",8);
         assert(!selection_keep(&sel,&s,before,bn,&sc));
     }
+    /* away and back within one batch of output: dropped as well */
+    {
+        static XTermCell c2[64], h2[64], a2[64];
+        unsigned char before[256]; size_t bn=0; XSelectionMark sc;
+        assert(!screen_init(&s,c2,64,4,10));
+        assert(!screen_attach_history(&s,h2,64));
+        assert(!screen_attach_alternate(&s,a2,64));
+        memset(&sel,0,sizeof sel);
+        selection_start(&sel,&s,3,5); selection_extend(&sel,&s,3,6); sel.active=1;
+        assert(!selection_text(&sel,&s,before,sizeof before,&bn));
+        sc=selection_mark(&s);
+        screen_write(&s,(const unsigned char *)"\033[?1049h\033[?1049l",16);
+        assert(!selection_keep(&sel,&s,before,bn,&sc));
+    }
     puts("selection tests passed (clusters, wraps, history, bounds)");
     return 0;
 }
