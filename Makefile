@@ -54,7 +54,14 @@ abiv11-frontend:
 	@test -d "$(ABIV11_SDK)/include" || { echo "Set ABIV11_SDK to the ABIv11 Developer SDK"; exit 1; }
 	mkdir -p build/abiv11
 	$(ABIV11_CXX) $(HB_FLAGS) --sysroot=$(ABIV11_SDK) -c $(HB_SRC) -o build/abiv11/harfbuzz.o
-	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -o build/abiv11/aros-xterm src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
+	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -o build/abiv11/aros-xtermsrc/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
+
+# Shaping benchmark (tools/bench_shaping.c), with the HarfBuzz object of
+# abiv11-frontend. Run it from the Limpet drawer: it reads PROGDIR:Fonts.
+.PHONY: abiv11-bench-shaping
+abiv11-bench-shaping:
+	@test -f build/abiv11/harfbuzz.o || { echo "Run make abiv11-frontend first (ABIv11 HarfBuzz object)"; exit 1; }
+	$(ABIV11_GCC) $(OPTFLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -o build/abiv11/bench-shaping tools/bench_shaping.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lm
 
 # ABIv11 mounted-handler build: the GUI worker and CRT-free launcher that
 # `Mount XTERM:` uses, plus the headless launcher harness that isolates the
@@ -476,7 +483,16 @@ test-font: build/test_font build/test_cluster_font build/test_cluster_bitmap
 	./build/test_cluster_font "$(FONT_PRIMARY)" "$(FONT_SECONDARY)" $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/Unifont.otf $(FONT_ASSETS)/NotoColorEmoji.ttf
 	./build/test_cluster_bitmap
 
-package: $(OUT) build/font-probe-aros build/test_font_aros build/test_cluster_font_aros build/test_graphemes_aros build/test_input_echo_aros build/test_aros_input $(AROS_TEST) build/test_replay_aros build/test_selection_aros build/test_paste_aros build/test_aros_clip_job build/test_clipboard_text_aros build/clip-probe
+# Every cluster of a fixed corpus as the renderer draws it, compared with the
+# accepted output. Run before and after updating HarfBuzz or the fonts.
+build/test_shaping_corpus: tests/test_shaping_corpus.c tests/shaping_corpus.h $(CLUSTER_SRC) src/cluster_font.h src/aros_font.h src/screen_model.c src/hyperlink.c src/screen_model.h build/harfbuzz-host.o
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(FONT_CFLAGS) $(UNICODE_FLAGS) -Ivendor/harfbuzz/src $< $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) build/harfbuzz-host.o $(FONT_LIBS) $(HOST_CXX_LIBS) -lm -o $@
+
+test-shaping-corpus: build/test_shaping_corpus
+	./build/test_shaping_corpus "$(FONT_PRIMARY)" "$(FONT_SECONDARY)" $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/Unifont.otf $(FONT_ASSETS)/NotoColorEmoji.ttf > build/shaping-corpus.out
+	diff -u tests/shaping-corpus.expected build/shaping-corpus.out
+
+package:$(OUT) build/font-probe-aros build/test_font_aros build/test_cluster_font_aros build/test_graphemes_aros build/test_input_echo_aros build/test_aros_input $(AROS_TEST) build/test_replay_aros build/test_selection_aros build/test_paste_aros build/test_aros_clip_job build/test_clipboard_text_aros build/clip-probe
 	mkdir -p build/aros-xterm-demo/Fonts
 	cp build/session-peer build/test_aros_session build/aros-xterm-demo/
 	cp build/geometry-probe build/aros-xterm-demo/
