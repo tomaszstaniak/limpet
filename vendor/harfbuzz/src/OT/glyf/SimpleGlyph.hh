@@ -178,7 +178,8 @@ struct SimpleGlyph
   }
 
   bool get_contour_points (contour_point_vector_t &points /* OUT */,
-			   bool phantom_only = false) const
+			   bool phantom_only = false,
+			   int64_t *budget = nullptr) const
   {
     const HBUINT16 *endPtsOfContours = &StructAfter<HBUINT16> (header);
     int num_contours = header.numberOfContours;
@@ -186,10 +187,15 @@ struct SimpleGlyph
     /* One extra item at the end, for the instruction-count below. */
     if (unlikely (!bytes.check_range (&endPtsOfContours[num_contours]))) return false;
     unsigned int num_points = endPtsOfContours[num_contours - 1] + 1;
+    if (unlikely (num_points < (unsigned) num_contours)) return false;
+
+    /* Charge before allocating and reading, so that glyphs that fail
+     * later (truncated data, composite caps) still pay for this work. */
+    if (budget && unlikely (!hb_budget_spend (*budget, HB_BUDGET_1, num_points))) return false;
 
     unsigned old_length = points.length;
     points.alloc (points.length + num_points + 4); // Allocate for phantom points, to avoid a possible copy
-    if (unlikely (!points.resize (points.length + num_points, false))) return false;
+    if (unlikely (!points.resize_dirty (points.length + num_points))) return false;
     auto points_ = points.as_array ().sub_array (old_length);
     if (!phantom_only)
       hb_memset (points_.arrayZ, 0, sizeof (contour_point_t) * num_points);

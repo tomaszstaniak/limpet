@@ -102,17 +102,15 @@ struct Glyph
     if (unlikely (!points.resize (points.length + PHANTOM_COUNT))) return false;
     hb_array_t<contour_point_t> phantoms = points.as_array ().sub_array (points.length - PHANTOM_COUNT, PHANTOM_COUNT);
     {
+      // Duplicated code.
       int lsb = 0;
-      int h_delta = face->table.hmtx->get_leading_bearing_without_var_unscaled (gid, &lsb) ?
-                    (int) header->xMin - lsb : 0;
+      face->table.hmtx->get_leading_bearing_without_var_unscaled (gid, &lsb);
+      int h_delta = (int) header->xMin - lsb;
       HB_UNUSED int tsb = 0;
-      int v_orig  = (int) header->yMax +
 #ifndef HB_NO_VERTICAL
-                    ((void) face->table.vmtx->get_leading_bearing_without_var_unscaled (gid, &tsb), tsb)
-#else
-                    0
+      face->table.vmtx->get_leading_bearing_without_var_unscaled (gid, &tsb);
 #endif
-                    ;
+      int v_orig  = (int) header->yMax + tsb;
       unsigned h_adv = face->table.hmtx->get_advance_without_var_unscaled (gid);
       unsigned v_adv =
 #ifndef HB_NO_VERTICAL
@@ -314,8 +312,10 @@ struct Glyph
 		   bool use_my_metrics = true,
 		   bool phantom_only = false,
 		   hb_array_t<const int> coords = hb_array_t<const int> (),
+		   hb_scalar_cache_t *gvar_cache = nullptr,
 		   unsigned int depth = 0,
-		   unsigned *edge_count = nullptr) const
+		   unsigned *edge_count = nullptr,
+		   int64_t *budget = nullptr) const
   {
     if (unlikely (depth > HB_MAX_NESTING_LEVEL)) return false;
     unsigned stack_edge_count = 0;
@@ -323,12 +323,16 @@ struct Glyph
     if (unlikely (*edge_count > HB_MAX_GRAPH_EDGE_COUNT)) return false;
     (*edge_count)++;
 
+    int64_t stack_budget = HB_BUDGET_GLYPH;
+    if (!budget) budget = &stack_budget;
+    if (unlikely (!hb_budget_spend (*budget, HB_BUDGET_16))) return false;
+
     if (head_maxp_info)
     {
       head_maxp_info->maxComponentDepth = hb_max (head_maxp_info->maxComponentDepth, depth);
     }
 
-    if (!coords)
+    if (!coords && font->has_nonzero_coords)
       coords = hb_array (font->coords, font->num_coords);
 
     contour_point_vector_t &points = type == SIMPLE ? all_points : scratch.comp_points;
@@ -340,7 +344,7 @@ struct Glyph
         head_maxp_info->maxContours = hb_max (head_maxp_info->maxContours, (unsigned) header->numberOfContours);
       if (depth > 0 && composite_contours)
         *composite_contours += (unsigned) header->numberOfContours;
-      if (unlikely (!SimpleGlyph (*header, bytes).get_contour_points (all_points, phantom_only)))
+      if (unlikely (!SimpleGlyph (*header, bytes).get_contour_points (all_points, phantom_only, budget)))
 	return false;
       break;
     case COMPOSITE:
@@ -357,25 +361,23 @@ struct Glyph
     if (unlikely (!points.resize (points.length + PHANTOM_COUNT))) return false;
     hb_array_t<contour_point_t> phantoms = points.as_array ().sub_array (points.length - PHANTOM_COUNT, PHANTOM_COUNT);
     {
+      // Duplicated code.
       int lsb = 0;
-      int h_delta = glyf_accelerator.hmtx->get_leading_bearing_without_var_unscaled (gid, &lsb) ?
-		    (int) header->xMin - lsb : 0;
+      glyf_accelerator.hmtx->get_leading_bearing_without_var_unscaled (gid, &lsb);
+      int h_delta = (int) header->xMin - lsb;
       HB_UNUSED int tsb = 0;
-      int v_orig  = (int) header->yMax +
 #ifndef HB_NO_VERTICAL
-		    ((void) glyf_accelerator.vmtx->get_leading_bearing_without_var_unscaled (gid, &tsb), tsb)
-#else
-		    0
+      glyf_accelerator.vmtx->get_leading_bearing_without_var_unscaled (gid, &tsb);
 #endif
-		    ;
+      int v_orig  = (int) header->yMax + tsb;
       unsigned h_adv = glyf_accelerator.hmtx->get_advance_without_var_unscaled (gid);
       unsigned v_adv =
 #ifndef HB_NO_VERTICAL
-		       glyf_accelerator.vmtx->get_advance_without_var_unscaled (gid)
+                       glyf_accelerator.vmtx->get_advance_without_var_unscaled (gid)
 #else
-		       - font->face->get_upem ()
+                       - font->face->get_upem ()
 #endif
-		       ;
+                       ;
       phantoms[PHANTOM_LEFT].x = h_delta;
       phantoms[PHANTOM_RIGHT].x = (int) h_adv + h_delta;
       phantoms[PHANTOM_TOP].y = v_orig;
@@ -383,22 +385,30 @@ struct Glyph
     }
 
 #ifndef HB_NO_VAR
-    if (coords)
+    if (hb_any (coords))
     {
 #ifndef HB_NO_BEYOND_64K
       if (glyf_accelerator.GVAR->has_data ())
-	glyf_accelerator.GVAR->apply_deltas_to_points (gid,
-						       coords,
-						       points.as_array ().sub_array (old_length),
-						       scratch,
-						       phantom_only && type == SIMPLE);
+      {
+	if (!glyf_accelerator.GVAR->apply_deltas_to_points (gid,
+							    coords,
+							    points.as_array ().sub_array (old_length),
+							    scratch,
+							    gvar_cache,
+							    phantom_only && type == SIMPLE,
+							    budget))
+	  return false;
+      }
       else
 #endif
-	glyf_accelerator.gvar->apply_deltas_to_points (gid,
-						       coords,
-						       points.as_array ().sub_array (old_length),
-						       scratch,
-						       phantom_only && type == SIMPLE);
+      if (!glyf_accelerator.gvar->apply_deltas_to_points (gid,
+							  coords,
+							  points.as_array ().sub_array (old_length),
+							  scratch,
+							  gvar_cache,
+							  phantom_only && type == SIMPLE,
+							  budget))
+        return false;
     }
 #endif
 
@@ -447,8 +457,10 @@ struct Glyph
 						    use_my_metrics,
 						    phantom_only,
 						    coords,
+						    gvar_cache,
 						    depth + 1,
-						    edge_count)))
+						    edge_count,
+						    budget)))
 	{
 	  points.resize (old_length);
 	  return false;
@@ -463,6 +475,15 @@ struct Glyph
 	if (use_my_metrics && item.is_use_my_metrics ())
 	  for (unsigned int i = 0; i < PHANTOM_COUNT; i++)
 	    phantoms[i] = comp_points[comp_points.length - PHANTOM_COUNT + i];
+
+	/* Each composite level transforms the whole subtree below it;
+	 * charge that work here so deep nesting is bounded by the budget
+	 * rather than by the per-draw point cap alone. */
+	if (unlikely (!hb_budget_spend (*budget, HB_BUDGET_1, comp_points.length)))
+	{
+	  points.resize (old_length);
+	  return false;
+	}
 
 	if (comp_points) // Empty in case of phantom_only
 	{
@@ -533,7 +554,11 @@ struct Glyph
   bool get_extents_without_var_scaled (hb_font_t *font, const glyf_accelerator_t &glyf_accelerator,
 				       hb_glyph_extents_t *extents) const
   {
-    if (type == EMPTY) return true; /* Empty glyph; zero extents. */
+    if (type == EMPTY)
+    {
+      *extents = {0, 0, 0, 0};
+      return true; /* Empty glyph; zero extents. */
+    }
     return header->get_extents_without_var_scaled (font, glyf_accelerator, gid, extents);
   }
 

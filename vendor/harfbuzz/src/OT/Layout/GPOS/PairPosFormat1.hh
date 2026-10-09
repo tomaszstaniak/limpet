@@ -101,48 +101,48 @@ struct PairPosFormat1_3
       (this+pairSet[i]).collect_glyphs (c, valueFormat);
   }
 
+  void collect_second_glyphs (hb_set_digest_t *digest) const
+  {
+    unsigned count = pairSet.len;
+    for (unsigned i = 0; i < count; i++)
+      (this+pairSet[i]).collect_second_glyphs (digest, valueFormat);
+  }
+
   const Coverage &get_coverage () const { return this+coverage; }
 
-  unsigned cache_cost () const
+  struct external_cache_t
   {
-    return (this+coverage).cost ();
-  }
-  static void * cache_func (void *p, hb_ot_lookup_cache_op_t op)
+    hb_ot_layout_mapping_cache_t coverage;
+    hb_set_digest_t pair_sets[HB_VAR_ARRAY];
+  };
+  void *external_cache_create () const
   {
-    switch (op)
+    unsigned count = pairSet.len;
+    unsigned size = sizeof (external_cache_t) -
+		    HB_VAR_ARRAY * sizeof (hb_set_digest_t) +
+		    count * sizeof (hb_set_digest_t);
+    external_cache_t *cache = (external_cache_t *) hb_malloc (size);
+    if (likely (cache))
     {
-      case hb_ot_lookup_cache_op_t::CREATE:
+      cache->coverage.clear ();
+      for (unsigned i = 0; i < count; i++)
       {
-	hb_ot_lookup_cache_t *cache = (hb_ot_lookup_cache_t *) hb_malloc (sizeof (hb_ot_lookup_cache_t));
-	if (likely (cache))
-	  cache->clear ();
-	return cache;
-      }
-      case hb_ot_lookup_cache_op_t::ENTER:
-	return (void *) true;
-      case hb_ot_lookup_cache_op_t::LEAVE:
-	return nullptr;
-      case hb_ot_lookup_cache_op_t::DESTROY:
-      {
-	hb_ot_lookup_cache_t *cache = (hb_ot_lookup_cache_t *) p;
-	hb_free (cache);
-	return nullptr;
+	cache->pair_sets[i].init ();
+	(this+pairSet[i]).collect_second_glyphs (&cache->pair_sets[i], valueFormat);
       }
     }
-    return nullptr;
+    return cache;
   }
 
-  bool apply_cached (hb_ot_apply_context_t *c) const { return _apply (c, true); }
-  bool apply (hb_ot_apply_context_t *c) const { return _apply (c, false); }
-  bool _apply (hb_ot_apply_context_t *c, bool cached) const
+  bool apply (hb_ot_apply_context_t *c, void *external_cache) const
   {
     TRACE_APPLY (this);
 
     hb_buffer_t *buffer = c->buffer;
 
 #ifndef HB_NO_OT_LAYOUT_LOOKUP_CACHE
-    hb_ot_lookup_cache_t *cache = cached ? (hb_ot_lookup_cache_t *) c->lookup_accel->cache : nullptr;
-    unsigned int index = (this+coverage).get_coverage  (buffer->cur().codepoint, cache);
+    external_cache_t *cache = (external_cache_t *) external_cache;
+    unsigned int index = (this+coverage).get_coverage  (buffer->cur().codepoint, cache ? &cache->coverage : nullptr);
 #else
     unsigned int index = (this+coverage).get_coverage  (buffer->cur().codepoint);
 #endif
@@ -156,6 +156,16 @@ struct PairPosFormat1_3
       buffer->unsafe_to_concat (buffer->idx, unsafe_to);
       return_trace (false);
     }
+
+#ifndef HB_NO_OT_LAYOUT_LOOKUP_CACHE
+    if (cache &&
+	index < pairSet.len &&
+	!cache->pair_sets[index].may_have (buffer->info[skippy_iter.idx].codepoint))
+    {
+      buffer->unsafe_to_concat (buffer->idx, skippy_iter.idx + 1);
+      return_trace (false);
+    }
+#endif
 
     return_trace ((this+pairSet[index]).apply (c, valueFormat, skippy_iter.idx));
   }
