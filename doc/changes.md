@@ -9,8 +9,10 @@ Changes of the terminal. The SDK has its own list in
   shaping and in handling damaged fonts. No new terminal features. The
   clusters of the shaping corpus draw the same as with 11.2.1. With a font
   whose tables are damaged, a cluster may now fall back to another font or
-  lose a ligature where 11.2.1 still used the damaged table. Source and
-  build settings: [vendor/README.md](../vendor/README.md).
+  lose a ligature where 11.2.1 still used the damaged table. Speed: one
+  controlled measurement on AROS found no large slowdown, but it was too
+  unsteady to rule out a small one. Source and build settings:
+  [vendor/README.md](../vendor/README.md).
 - `make test-shaping-corpus`: every cluster of a fixed corpus as the
   renderer draws it, compared with the accepted output.
 - `make abiv11-bench-shaping`: a shaping benchmark to run on AROS.
