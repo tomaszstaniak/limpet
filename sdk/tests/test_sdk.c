@@ -136,7 +136,7 @@ static void test_query(void)
     p = query(LIMPET_OK, 0);
     assert(last_action == XTY_ACTION_CONTROL && last_arg3 == 64 &&
            last_arg4 == XTY_PACKET_MAGIC && last_arg5 == 0);
-    assert(p.known == 63 && limpet_color_level(&p) == XTY_COLOR_RGB);
+    assert(p.known == 127 && limpet_color_level(&p) == XTY_COLOR_RGB);
     assert(p.input == (XTY_INPUT_BRACKETED_PASTE | XTY_INPUT_RESIZE_REPORT | XTY_INPUT_WHEEL_REPORT));
     assert(XTY_INPUT_WHEEL_REPORT == 4u);
     assert(limpet_uses_pens(&p) && limpet_has_bold(&p) && limpet_can_rewrite_line(&p));
@@ -214,6 +214,18 @@ static void test_decode(void)
         assert(limpet_presentation_decode(&old, &p) == LIMPET_OK && !p.input);
         assert(!(p.known & XTY_PRESENT_KNOWN_INPUT) && p.columns == 100);
     }
+    /* This terminal confirms window titles; a reply from Limpet 0.2.x has
+       no feature bit, so the title is not confirmed even if values[8]
+       were not zero. */
+    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && p.features == XTY_FEATURE_TITLE);
+    assert(limpet_can_set_title(&p));
+    {
+        XtyControl old = c;
+        old.values[0] &= ~XTY_PRESENT_KNOWN_FEATURES;
+        old.values[8] = XTY_FEATURE_TITLE;
+        assert(limpet_presentation_decode(&old, &p) == LIMPET_OK && !p.features);
+        assert(!limpet_can_set_title(&p) && p.columns == 100 && p.input);
+    }
     c.operation = XTY_GET_GEOMETRY;
     assert(limpet_presentation_decode(&c, &p) == LIMPET_INVALID_REPLY && !p.known);
     /* Fields behind a clear known bit are zeroed, whatever the wire says. */
@@ -272,6 +284,41 @@ static void test_sgr(void)
     assert(!limpet_sgr_rgb(b, sizeof b, &pen, 1, 2, 3, 0) && !b[0]);
     assert(!limpet_sgr_rgb(b, sizeof b, &rgb, 256, 0, 0, 0));
     assert(!limpet_sgr_rgb(b, 8, &rgb, 1, 2, 3, 0) && !b[0]);
+}
+
+static void test_title(void)
+{
+    XtyControl c; LimpetPresentation p, old; char b[300], big[LIMPET_TITLE_MAX + 2];
+    limpet_presentation_request(&c);
+    assert(xterm_presentation_reply(&c, sizeof c, 24, 80, 0));
+    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK);
+    assert(limpet_osc_title(b, sizeof b, &p, "Hardcode: replying") == 24);
+    assert(!strcmp(b, "\033]2;Hardcode: replying\033\\"));
+    /* UTF-8 is kept as it is; the terminal maps it for its title bar. */
+    assert(limpet_osc_title(b, sizeof b, &p, "Za\xc5\xbc\xc3\xb3\xc5\x82\xc4\x87") == 16);
+    assert(limpet_osc_title(b, sizeof b, &p, "") == 6 && !strcmp(b, LIMPET_TITLE_RESET));
+    /* Nothing that could end the sequence or start another one. */
+    assert(!limpet_osc_title(b, sizeof b, &p, "a\033]0;x") && !b[0]);
+    assert(!limpet_osc_title(b, sizeof b, &p, "a\x07"));
+    assert(!limpet_osc_title(b, sizeof b, &p, "a\x7f"));
+    assert(!limpet_osc_title(b, sizeof b, &p, "a\xc2\x9c"));       /* C1 ST */
+    assert(!limpet_osc_title(b, sizeof b, &p, "a\xc3"));            /* cut */
+    assert(!limpet_osc_title(b, sizeof b, &p, "a\xc0\xaf"));       /* overlong */
+    assert(!limpet_osc_title(b, sizeof b, &p, "a\xed\xa0\x80"));   /* surrogate */
+    assert(!limpet_osc_title(b, sizeof b, &p, "a\xf4\x90\x80\x80")); /* > U+10FFFF */
+    assert(!limpet_osc_title(b, sizeof b, &p, NULL));
+    memset(big, 'x', sizeof big - 1); big[sizeof big - 1] = 0;
+    assert(!limpet_osc_title(b, sizeof b, &p, big));
+    big[LIMPET_TITLE_MAX] = 0;
+    assert(limpet_osc_title(b, sizeof b, &p, big) == LIMPET_TITLE_MAX + 6);
+    assert(!limpet_osc_title(b, LIMPET_TITLE_MAX + 6, &p, big) && !b[0]);
+    /* Not confirmed (Limpet 0.2.x, CON:): nothing to send. */
+    old = p; old.known &= ~XTY_PRESENT_KNOWN_FEATURES;
+    assert(!limpet_osc_title(b, sizeof b, &old, "x") && !b[0]);
+    old = p; old.features = 0;
+    assert(!limpet_osc_title(b, sizeof b, &old, "x"));
+    assert(!limpet_osc_title(b, sizeof b, NULL, "x") && !limpet_can_set_title(NULL));
+    assert(!limpet_osc_title(NULL, 9, &p, "x") && !limpet_osc_title(b, 0, &p, "x"));
 }
 
 static void test_osc8(void)
@@ -408,9 +455,10 @@ int main(void)
     test_sgr();
     test_write_dos();
     test_osc8();
+    test_title();
     test_kitty();
-    assert(!strcmp(LIMPET_SDK_VERSION_STRING, "0.2.0"));
+    assert(!strcmp(LIMPET_SDK_VERSION_STRING, "0.3.0"));
     puts("LIMPET SDK PASS: query against the terminal's reply code, refusals, malformed and future replies, "
-         "SGR, OSC 8, Kitty framing and limits");
+         "SGR, OSC 8, window title, Kitty framing and limits");
     return 0;
 }

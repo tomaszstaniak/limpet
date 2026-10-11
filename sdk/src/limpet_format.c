@@ -37,7 +37,8 @@ LimpetStatus limpet_presentation_decode(const XtyControl *reply,
     if (known & XTY_PRESENT_KNOWN_GEOMETRY) { p.rows = reply->values[4]; p.columns = reply->values[5]; }
     if (known & XTY_PRESENT_KNOWN_INTERPRETATION) p.interpretation = reply->values[6];
     if (known & XTY_PRESENT_KNOWN_INPUT) p.input = reply->values[7];
-    /* values[8..11] are reserved for later fields: ignored, not rejected,
+    if (known & XTY_PRESENT_KNOWN_FEATURES) p.features = reply->values[8];
+    /* values[9..11] are reserved for later fields: ignored, not rejected,
        so a newer terminal keeps working with this client. */
     *out = p;
     return LIMPET_OK;
@@ -148,6 +149,55 @@ size_t limpet_osc8_open(char *buf, size_t size, const char *uri)
     buf[6 + n] = '\\';
     buf[7 + n] = 0;
     return n + 7;
+}
+
+int limpet_can_set_title(const LimpetPresentation *p)
+{
+    return p && (p->known & XTY_PRESENT_KNOWN_FEATURES) &&
+           (p->features & XTY_FEATURE_TITLE);
+}
+
+/* Length of one valid UTF-8 scalar at s (n bytes left) that is not a
+   control character, or 0. Overlong forms, surrogates and values past
+   U+10FFFF are invalid. */
+static size_t title_scalar(const unsigned char *s, size_t n)
+{
+    unsigned long c;
+    size_t len, i;
+    if (s[0] < 0x80) return s[0] >= 0x20 && s[0] != 0x7f;
+    if (s[0] >= 0xc2 && s[0] <= 0xdf) { len = 2; c = s[0] & 0x1f; }
+    else if (s[0] >= 0xe0 && s[0] <= 0xef) { len = 3; c = s[0] & 0x0f; }
+    else if (s[0] >= 0xf0 && s[0] <= 0xf4) { len = 4; c = s[0] & 0x07; }
+    else return 0;
+    if (n < len) return 0;
+    for (i = 1; i < len; ++i) {
+        if ((s[i] & 0xc0) != 0x80) return 0;
+        c = (c << 6) | (s[i] & 0x3f);
+    }
+    if ((len == 3 && c < 0x800) || (len == 4 && (c < 0x10000 || c > 0x10ffff)) ||
+        (c >= 0xd800 && c <= 0xdfff) || (c >= 0x80 && c <= 0x9f))
+        return 0;
+    return len;
+}
+
+size_t limpet_osc_title(char *buf, size_t size, const LimpetPresentation *p,
+                        const char *text)
+{
+    size_t n, i, step;
+    if (!buf || !size) return 0;
+    if (!text || !limpet_can_set_title(p)) return nothing(buf, size);
+    n = strlen(text);
+    if (n > LIMPET_TITLE_MAX) return nothing(buf, size);
+    for (i = 0; i < n; i += step)
+        if (!(step = title_scalar((const unsigned char *)text + i, n - i)))
+            return nothing(buf, size);
+    if (n + 6 >= size) return nothing(buf, size);
+    memcpy(buf, "\033]2;", 4);
+    memcpy(buf + 4, text, n);
+    buf[4 + n] = '\033';
+    buf[5 + n] = '\\';
+    buf[6 + n] = 0;
+    return n + 6;
 }
 
 static const char base64_table[] =

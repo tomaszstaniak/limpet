@@ -55,6 +55,14 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
    pens with its own sequences. PENS without the known bit is no claim;
    unknown interpretation leaves the client's ANSI behaviour unchanged.
    BOLD_RESET: SGR 1 and 0. CR: byte 0x0d. ERASE_EOL: CSI K / CSI 0 K.
+   FEATURES in [8], valid only with KNOWN_FEATURES in [0] (Limpet 0.3.0;
+   0.2.x and earlier leave both clear, so a reply alone never means a
+   feature below exists). FEATURE_TITLE: OSC 0 and OSC 2 set the window
+   title: ESC ] 0|2 ; text BEL or ESC ] 0|2 ; text ESC \, text 1..255
+   bytes of UTF-8 without C0, DEL or C1 controls (anything else drops the
+   whole sequence), empty text drops the program's title. The title lasts
+   while the command that was in the foreground when it arrived runs;
+   characters outside Latin-1 show as '?'. CON: prints OSC as text.
    Generic PTYs do not imply presentation support. This query neither
    reads keyboard input nor changes terminal modes. No response deadline. */
 #define XTY_PRESENT_KNOWN_COLORS 1u
@@ -63,9 +71,11 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
 #define XTY_PRESENT_KNOWN_GEOMETRY 8u
 #define XTY_PRESENT_KNOWN_INTERPRETATION 16u
 #define XTY_PRESENT_KNOWN_INPUT 32u
+#define XTY_PRESENT_KNOWN_FEATURES 64u
 #define XTY_INPUT_BRACKETED_PASTE 1u
 #define XTY_INPUT_RESIZE_REPORT 2u
 #define XTY_INPUT_WHEEL_REPORT 4u
+#define XTY_FEATURE_TITLE 1u
 #define XTY_COLOR_PENS 1u
 #define XTY_COLOR_NONE 0u
 #define XTY_COLOR_ANSI16 1u

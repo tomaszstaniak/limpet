@@ -29,7 +29,7 @@ ifneq ($(AROS_SDK),)
 SYSROOT = --sysroot=$(AROS_SDK) -I$(AROS_SDK)/include
 LIBDIRS = -L$(AROS_SDK)/lib
 endif
-EXAMPLES = hello colors progress geometry hyperlink image keys
+EXAMPLES = hello colors progress geometry hyperlink image keys title
 LIB = lib/$(ABI)/libLimpet.a
 LIB_SRC = src/limpet_query.c src/limpet_format.c
 LIB_HEADERS = include/limpet/limpet.h include/limpet/tty_control.h

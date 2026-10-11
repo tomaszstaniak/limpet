@@ -77,9 +77,15 @@ int main(void)
                p.input ? "" : "none");
     else
         puts("  Input modes:   unknown (Limpet 0.1.0 does not report them)");
+    /* Window title by OSC 0/2: confirmed by Limpet 0.3.0 and later only. */
+    if (p.known & XTY_PRESENT_KNOWN_FEATURES)
+        printf("  Window title:  %s\n", limpet_can_set_title(&p) ? "settable (OSC 0/2)" : "no");
+    else
+        puts("  Window title:  unknown (Limpet before 0.3.0 does not report it)");
     if (p.known & ~(uint32_t)(XTY_PRESENT_KNOWN_COLORS | XTY_PRESENT_KNOWN_STYLES |
                               XTY_PRESENT_KNOWN_LINES | XTY_PRESENT_KNOWN_GEOMETRY |
-                              XTY_PRESENT_KNOWN_INTERPRETATION | XTY_PRESENT_KNOWN_INPUT))
+                              XTY_PRESENT_KNOWN_INTERPRETATION | XTY_PRESENT_KNOWN_INPUT |
+                              XTY_PRESENT_KNOWN_FEATURES))
         puts("  The terminal also reported fields newer than this SDK; ignored.");
     return RETURN_OK;
 }

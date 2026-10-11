@@ -25,17 +25,18 @@
 #include "tty_control.h"
 
 #define LIMPET_SDK_VERSION_MAJOR 0
-#define LIMPET_SDK_VERSION_MINOR 2
+#define LIMPET_SDK_VERSION_MINOR 3
 #define LIMPET_SDK_VERSION_PATCH 0
-#define LIMPET_SDK_VERSION_STRING "0.2.0"
+#define LIMPET_SDK_VERSION_STRING "0.3.0"
 
-/* Binary guard. SDK 0.2 appended `input` to LimpetPresentation, so a
-   function that fills the struct writes more than a 0.1 client reserved.
-   These functions therefore have new link names: source code is unchanged,
-   but an object compiled with an older header no longer links against this
-   library and must be rebuilt, instead of having its stack overwritten. */
-#define limpet_query_presentation limpet_query_presentation_v2
-#define limpet_presentation_decode limpet_presentation_decode_v2
+/* Binary guard. SDK 0.2 appended `input` and SDK 0.3 `features` to
+   LimpetPresentation, so a function that fills the struct writes more than
+   an older client reserved. These functions therefore have new link names
+   in each such release: source code is unchanged, but an object compiled
+   with an older header no longer links against this library and must be
+   rebuilt, instead of having its stack overwritten. */
+#define limpet_query_presentation limpet_query_presentation_v3
+#define limpet_presentation_decode limpet_presentation_decode_v3
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,6 +80,8 @@ typedef struct {
     uint32_t interpretation; /* XTY_COLOR_PENS and future bits */
     uint32_t input;          /* XTY_INPUT_* bits: modes a raw-mode client may
                                 turn on (XTY_PRESENT_KNOWN_INPUT) */
+    uint32_t features;       /* XTY_FEATURE_* bits (XTY_PRESENT_KNOWN_FEATURES,
+                                Limpet 0.3.0 and later) */
 } LimpetPresentation;
 
 /* Zero the block and set version and operation. Every other field must be
@@ -144,6 +147,11 @@ int limpet_can_rewrite_line(const LimpetPresentation *p);
 uint32_t limpet_columns(const LimpetPresentation *p);
 uint32_t limpet_rows(const LimpetPresentation *p);
 
+/* 1 when the terminal confirmed that OSC 0/2 set its window title
+   (XTY_FEATURE_TITLE). Limpet 0.2.x answers the query but does not
+   confirm it; never send a title then: CON: would print it as text. */
+int limpet_can_set_title(const LimpetPresentation *p);
+
 /* ---- Sequence builders (pure) ----
 
    Each writes a NUL-terminated sequence into buf and returns its length
@@ -179,6 +187,19 @@ size_t limpet_sgr_rgb(char *buf, size_t size, const LimpetPresentation *p,
 #define LIMPET_OSC8_URI_MAX 2047
 #define LIMPET_OSC8_CLOSE "\033]8;;\033\\"
 size_t limpet_osc8_open(char *buf, size_t size, const char *uri);
+
+/* Window title: ESC ] 2 ; text ESC \. text is 1..LIMPET_TITLE_MAX bytes
+   of valid UTF-8 without control characters (C0, DEL, C1); anything else
+   returns 0, as does a terminal that did not confirm XTY_FEATURE_TITLE.
+   text "" builds the reset, LIMPET_TITLE_RESET: the terminal shows the
+   running command's name again. Limpet keeps a title while the command
+   that sent it runs and drops it when that command ends, so a program
+   need not reset it on exit. Send a title when your state changes, not
+   with every write: the terminal applies at most about four per second. */
+#define LIMPET_TITLE_MAX 255
+#define LIMPET_TITLE_RESET "\033]2;\033\\"
+size_t limpet_osc_title(char *buf, size_t size, const LimpetPresentation *p,
+                        const char *text);
 
 /* ---- Kitty graphics, the subset Limpet implements ----
 
