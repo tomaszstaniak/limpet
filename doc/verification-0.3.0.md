@@ -16,7 +16,7 @@ was not. The archive checked here is the one published under tag `v0.3.0`
 | Build | `make abiv11-frontend LIMPET_VERSION=0.3.0 LIMPET_DATE=11.10.2026`, `x86_64-aros-gcc` 10.5.0, ABIv11 2026.09 Developer SDK |
 | Program | SHA-256 `784a0c88726929d771395bb6926e493aa2b627859eff83ee19831512f3b0ed71`, the same bytes from a clean checkout and from the working tree |
 | Size | 3,375,824 bytes; 0.2.1 was 3,357,536 (+18,288 bytes, +0.54 %) |
-| Archive | `Limpet-0.3.0-abiv11.zip`, 3,648,704 bytes, SHA-256 `99577cfff6aa25cd5faa5abfa202d0c2498edce30459abba3734de7f64a6fa8b`. Against 0.2.1 only `Limpet/Limpet` and `Limpet/README.txt` differ |
+| Archive | `Limpet-0.3.0-abiv11.zip`, 3,648,767 bytes, SHA-256 `7e2514029e0e6fadc7d331ceeb817df4b7f780dfed12409f347cf244d8a31676`. Against 0.2.1 only `Limpet/Limpet` and `Limpet/README.txt` differ. The candidate archive tested below (`99577cff...`) differs from it only in `README.txt` (wording of the title example and of the requirements) |
 
 ## Host tests
 
@@ -64,7 +64,8 @@ AROS One 1.3 (ABIv11, x86_64), QEMU TCG, published `Limpet-0.2.1-abiv11.zip`,
 ## On AROS
 
 AROS One 1.3 (ABIv11, x86_64), QEMU TCG, 2026-10-11. Development builds of
-this branch, then the archive above unpacked to `RAM:`.
+this branch, then the candidate archive unpacked to `RAM:`; its program is
+the released one.
 
 From the archive:
 
