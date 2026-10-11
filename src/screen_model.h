@@ -117,7 +117,11 @@ typedef struct XTermScreen {
  * Native CSI 0 space q is
  * not a size query in VT mode: it conflicts with DECSCUSR cursor styling.
  */
-enum { XSCREEN_APC_BEGIN, XSCREEN_APC_DATA, XSCREEN_APC_END, XSCREEN_APC_ABORT };
+/* XSCREEN_APC_ERASE (no bytes): the visible screen was erased whole (ED 2)
+ * or the alternate screen was entered; images placed on the screen now
+ * shown go with the text (Kitty graphics, "Interaction with other terminal
+ * actions"). Sent outside any APC string. */
+enum { XSCREEN_APC_BEGIN, XSCREEN_APC_DATA, XSCREEN_APC_END, XSCREEN_APC_ABORT, XSCREEN_APC_ERASE };
 int screen_init(XTermScreen *, XTermCell *, size_t, unsigned, unsigned);
 /* Buttons 0..2, wheel 64/65, button-motion 32..34 in mode 1002;
  * coordinates zero-based; modifiers VT bits 4/8/16.
@@ -150,6 +154,12 @@ void screen_write(XTermScreen *, const unsigned char *, size_t);
 size_t screen_bulk_length(const XTermScreen *, const unsigned char *, size_t);
 uint32_t screen_cell(const XTermScreen *, unsigned, unsigned);
 /* Positive delta moves into history; negative returns towards live output. */
+/* Scroll the screen up by count lines as line feeds at the bottom would
+ * (history, scroll_count), keeping the cursor's column; for an image that
+ * needs room below the cursor. Only with full-screen margins: a partial
+ * region does not move images, so nothing is done. Returns the lines
+ * scrolled. */
+unsigned screen_index_lines(XTermScreen *, unsigned count);
 void screen_scroll_view(XTermScreen *, int);
 XTermCell screen_view_cell(const XTermScreen *, unsigned, unsigned);
 /* Logical rows: oldest retained history first, then live rows. */

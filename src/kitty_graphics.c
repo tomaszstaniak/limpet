@@ -262,10 +262,18 @@ static void place(XKitty *k,XKittyImage *image,const XKittyCursor *c,unsigned cu
     image->placed_column=c->column;image->placed_alternate=c->alternate;
     r->changed=1;
     if(!cursor_policy) {
-        unsigned row=c->row+(rows?rows-1:0),column=c->column+columns;
+        unsigned last=c->row+(rows?rows-1:0);
+        unsigned long column=(unsigned long)c->column+columns;
+        int inside=c->row>=c->scroll_top && c->row<=c->scroll_bottom && c->scroll_bottom<c->rows;
+        int full=c->scroll_top==0 && c->scroll_bottom+1==c->rows;
         r->move_cursor=1;
-        r->cursor_row=row<c->rows?row:c->rows-1;
-        r->cursor_column=column<c->columns?column:c->columns-1;
+        if(inside && last>c->scroll_bottom) {
+            if(full) r->scroll=last-c->scroll_bottom;
+            last=c->scroll_bottom;
+        } else if(last>=c->rows) last=c->rows-1;
+        r->cursor_row=last;
+        if(column>=c->columns) { r->cursor_column=c->columns-1;r->wrap_pending=1; }
+        else r->cursor_column=(unsigned)column;
     }
 }
 
@@ -340,6 +348,16 @@ int xkitty_apc_end(XKitty *k,const XKittyCursor *c,XKittyResult *r)
     }
     }
     return 1;
+}
+
+unsigned xkitty_erase_screen(XKitty *k,unsigned alternate)
+{
+    unsigned i,n=0;
+    for(i=0;i<XKITTY_MAX_IMAGES;++i)
+        if(k->images[i].id && k->images[i].placed && k->images[i].placed_alternate==alternate) {
+            k->images[i].placed=0;++n;
+        }
+    return n;
 }
 
 int xkitty_placement_rows(const XKittyImage *image,const XKittyCursor *c,long *first,unsigned *count)

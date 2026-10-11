@@ -12,7 +12,10 @@
        displaying again moves it; placement ids (p) are not supported
      retransmitting an id replaces its pixels; a placement keeps showing it
      d=a/A all placements (A also frees images), d=i/I by id (I also frees)
-     q=0/1/2 reply suppression, C=0/1 cursor movement after display
+     q=0/1/2 reply suppression, C=0/1 cursor movement after display (C=0
+       scrolls the screen when the image would pass its bottom; see
+       XKittyResult); ED 2 and entering the alternate screen remove the
+       placements on that screen
    Everything else (PNG, files, shared memory, compression, animation
    frames, image numbers, extra placements, other delete targets, unicode
    placeholders, cropping and scaling keys) gets ENOTSUPPORTED.
@@ -62,12 +65,24 @@ typedef struct {
     unsigned row, column, rows, columns, alternate;
     unsigned long scroll_count;
     unsigned cell_width, cell_height;
+    unsigned scroll_top, scroll_bottom;   /* margins, inclusive (DECSTBM) */
 } XKittyCursor;
 
+/* Cursor after a display with C=0 (the default): on the image's last
+   row, one column past its right edge. When that row is below the bottom
+   margin, `scroll` asks the caller to scroll the screen up by that many
+   lines first (the image, anchored to its text row, moves up with the text)
+   so the whole image shows; only with full-screen margins, since a partial
+   region does not move images; otherwise the row is clamped to the bottom
+   margin as before. Past the right edge the cursor stays in the last column
+   with `wrap_pending` set, as after writing that column. C=1 never moves
+   the cursor and never scrolls; transmit, query and delete never do. */
 typedef struct {
     int changed;                      /* placements or displayed pixels */
     int move_cursor;
     unsigned cursor_row, cursor_column;
+    unsigned scroll;                  /* lines to scroll up before moving */
+    int wrap_pending;
     unsigned char reply[XKITTY_REPLY_MAX];
     size_t reply_length;
 } XKittyResult;
@@ -104,6 +119,10 @@ void xkitty_apc_data(XKitty *, const unsigned char *, size_t);
 void xkitty_apc_abort(XKitty *);
 /* The string ended with ST. Fills result; returns nonzero if it was Kitty. */
 int xkitty_apc_end(XKitty *, const XKittyCursor *, XKittyResult *);
+/* The screen showing `alternate` (0 main, 1 alternate) was erased whole:
+   ED 2, or entering the alternate screen. Its placements go; the images
+   stay transmitted and can be displayed again. Returns how many went. */
+unsigned xkitty_erase_screen(XKitty *, unsigned alternate);
 /* First screen row (may be negative) and row count a placement covers. */
 int xkitty_placement_rows(const XKittyImage *, const XKittyCursor *, long *first, unsigned *count);
 #endif

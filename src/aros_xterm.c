@@ -461,6 +461,7 @@ static void kitty_cursor(XKittyCursor *c,const XTermScreen *s)
     c->row=s->cursor_row;c->column=s->cursor_column;c->rows=s->rows;c->columns=s->columns;
     c->alternate=s->alternate_active;c->scroll_count=s->scroll_count;
     c->cell_width=xfont_width();c->cell_height=xfont_height();
+    c->scroll_top=s->scroll_top;c->scroll_bottom=s->scroll_bottom;
 }
 static void kitty_sink(void *context,int event,const unsigned char *bytes,size_t n)
 {
@@ -469,7 +470,9 @@ static void kitty_sink(void *context,int event,const unsigned char *bytes,size_t
     if(event==XSCREEN_APC_BEGIN) xkitty_apc_begin(&kitty);
     else if(event==XSCREEN_APC_DATA) xkitty_apc_data(&kitty,bytes,n);
     else if(event==XSCREEN_APC_ABORT) xkitty_apc_abort(&kitty);
-    else {
+    else if(event==XSCREEN_APC_ERASE) {
+        if(xkitty_erase_screen(&kitty,screen.alternate_active)) kitty_shown_change=1;
+    } else {
         kitty_cursor(&c,&screen);
         if(!xkitty_apc_end(&kitty,&c,&r)) return;
         if(kitty.stats.frames_received==1 && !kitty_first.ds_Days && !kitty_first.ds_Tick) DateStamp(&kitty_first);
@@ -477,8 +480,12 @@ static void kitty_sink(void *context,int event,const unsigned char *bytes,size_t
            the terminal's reply channel (raw mode), like CSI queries. */
         if(r.reply_length && screen.reply && r.reply_length<=XSCREEN_REPLY_CAPACITY)
             screen.reply(screen.reply_context,r.reply,r.reply_length);
+        /* C=0 at the bottom: make room first, so the image moves up with
+           the text it was placed on (src/kitty_graphics.h). */
+        if(r.scroll) screen_index_lines(&screen,r.scroll);
         if(r.move_cursor) {
-            screen.cursor_row=r.cursor_row;screen.cursor_column=r.cursor_column;screen.wrap_pending=0;
+            screen.cursor_row=r.cursor_row;screen.cursor_column=r.cursor_column;
+            screen.wrap_pending=r.wrap_pending;
         }
         /* What changed on screen is worked out per image when drawing; this
            only says that a redraw is due at all. */

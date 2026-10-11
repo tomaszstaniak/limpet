@@ -110,6 +110,7 @@ static void alternate_mode(XTermScreen *s,unsigned enabled)
     }
     s->alternate_active=enabled; ++s->buffer_generation;
     s->cluster_active=0; s->cluster_state=0;
+    if(enabled && s->apc) s->apc(s->apc_context,XSCREEN_APC_ERASE,NULL,0);
 }
 
 /* Append one screen row to the primary scrollback ring. A scrolled-back
@@ -356,6 +357,21 @@ static void line_feed(XTermScreen *s)
     if (top == 0 && bottom == s->rows - 1) ++s->scroll_count;
 }
 
+unsigned screen_index_lines(XTermScreen *s, unsigned count)
+{
+    unsigned row, column, i;
+    if (!s || !count || s->scroll_top != 0 || s->scroll_bottom != s->rows - 1) return 0;
+    if (count > s->rows) count = s->rows;
+    row = s->cursor_row; column = s->cursor_column;
+    s->cursor_row = s->scroll_bottom;
+    for (i = 0; i < count; ++i) line_feed(s);
+    s->cursor_row = row >= count ? row - count : 0;
+    s->cursor_column = column;
+    s->wrap_pending = 0;
+    s->cluster_active = 0; s->cluster_state = 0;
+    return count;
+}
+
 static void scroll_region_rows(XTermScreen *s, unsigned count, int down)
 {
     unsigned top = s->scroll_top, bottom = s->scroll_bottom;
@@ -573,7 +589,10 @@ static void execute_csi(XTermScreen *s, unsigned char command)
     case 'J':
         if (mode == 0) erase_range(s, cursor, total);
         if (mode == 1) erase_range(s, 0, cursor + 1);
-        if (mode == 2) erase_range(s, 0, total);
+        if (mode == 2) {
+            erase_range(s, 0, total);
+            if (s->apc) s->apc(s->apc_context, XSCREEN_APC_ERASE, NULL, 0);
+        }
         break;
     case 'K':
         if (mode == 0) erase_range(s, cursor, cursor - s->cursor_column + s->columns);

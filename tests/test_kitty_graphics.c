@@ -8,7 +8,7 @@
 #include <string.h>
 
 static const XKittyLimits limits={64,64,64*64*4,3*64*64*4};
-static const XKittyCursor cursor0={2,3,24,80,0,0,8,16};
+static const XKittyCursor cursor0={2,3,24,80,0,0,8,16,0,23};
 
 static char *base64(const unsigned char *data,size_t n)
 {
@@ -276,6 +276,7 @@ static void test_visible_bytes(void)
         screen_write(&s,(const unsigned char *)"\033[15;1H",7);
         c.row=s.cursor_row;c.column=0;c.rows=24;c.columns=80;c.alternate=0;
         c.scroll_count=s.scroll_count;c.cell_width=8;c.cell_height=16;
+        c.scroll_top=0;c.scroll_bottom=23;
         {
             const char *t="Ga=T,f=24,s=2,v=2,i=4;AQIDBAUGBwgJCgsM";
             xkitty_apc_begin(&sink_kitty);
@@ -296,6 +297,176 @@ static void test_visible_bytes(void)
     xkitty_reset(&sink_kitty);
 }
 
+/* One display command at cursor c: keys plus an RGB payload of w x h. */
+static int place_at(XKitty *k,const char *keys,unsigned w,unsigned h,const XKittyCursor *c,XKittyResult *r)
+{
+    static unsigned char zero[64*64*3];
+    char head[96],*data=base64(zero,(size_t)w*h*3);
+    int ok;
+    snprintf(head,sizeof head,"G%s,f=24,s=%u,v=%u,q=2;",keys,w,h);
+    xkitty_apc_begin(k);
+    xkitty_apc_data(k,(const unsigned char *)head,strlen(head));
+    xkitty_apc_data(k,(const unsigned char *)data,strlen(data));
+    free(data);
+    ok=xkitty_apc_end(k,c,r);
+    return ok;
+}
+
+/* Where the cursor goes after a display, and when the screen scrolls. */
+static void test_cursor_edge(void)
+{
+    XKitty k;XKittyResult r;XKittyCursor c=cursor0;
+    xkitty_init(&k,&limits);
+    /* 1x64 pixels at 8x16 cells: 1 column, 4 rows. */
+    c.row=2;c.column=3;
+    assert(place_at(&k,"a=T,i=1",1,64,&c,&r) && r.move_cursor && !r.scroll);
+    assert(r.cursor_row==5 && r.cursor_column==4 && !r.wrap_pending);
+    /* At the bottom: scroll by what does not fit, cursor on the last row. */
+    c.row=22;c.column=0;
+    assert(place_at(&k,"a=T,i=1",1,64,&c,&r) && r.scroll==2 && r.cursor_row==23);
+    c.row=23;
+    assert(place_at(&k,"a=T,i=1",1,64,&c,&r) && r.scroll==3 && r.cursor_row==23);
+    /* C=1: never moves, never scrolls. */
+    assert(place_at(&k,"a=T,i=1,C=1",1,64,&c,&r) && !r.move_cursor && !r.scroll && r.changed);
+    /* Transmit only: no placement change, no movement. */
+    assert(place_at(&k,"a=t,i=2",1,64,&c,&r) && !r.move_cursor && !r.scroll);
+    /* Taller than the screen: the top goes, the bottom shows. */
+    c.rows=3;c.scroll_bottom=2;c.row=1;
+    assert(place_at(&k,"a=T,i=3",1,64,&c,&r) && r.scroll==2 && r.cursor_row==2);
+    c.rows=24;c.scroll_bottom=23;
+    /* Past the right edge: last column, wrap pending; exactly to it: no wrap. */
+    c.row=2;c.column=78;
+    assert(place_at(&k,"a=T,i=4",32,16,&c,&r) && r.cursor_column==79 && r.wrap_pending && r.cursor_row==2);
+    c.column=75;
+    assert(place_at(&k,"a=T,i=4",32,16,&c,&r) && r.cursor_column==79 && !r.wrap_pending);
+    /* A partial scroll region does not move images: clamp to its bottom. */
+    c.column=0;c.scroll_top=5;c.scroll_bottom=15;c.row=14;
+    assert(place_at(&k,"a=T,i=1",1,64,&c,&r) && !r.scroll && r.cursor_row==15);
+    /* Below the region: clamp to the screen. */
+    c.row=22;
+    assert(place_at(&k,"a=T,i=1",1,64,&c,&r) && !r.scroll && r.cursor_row==23);
+    /* Erase: placements on that screen go, images stay transmitted. */
+    c=cursor0;
+    assert(place_at(&k,"a=T,i=5",1,16,&c,&r));
+    c.alternate=1;
+    assert(place_at(&k,"a=T,i=6",1,16,&c,&r));
+    assert(xkitty_erase_screen(&k,1)==1);
+    {
+        unsigned i,main_placed=0,alt_placed=0,alt_ids=0;
+        for(i=0;i<XKITTY_MAX_IMAGES;++i) if(k.images[i].id) {
+            if(k.images[i].placed_alternate) { ++alt_ids;alt_placed+=k.images[i].placed; }
+            else main_placed+=k.images[i].placed;
+        }
+        assert(alt_ids==1 && !alt_placed && main_placed);
+    }
+    assert(xkitty_erase_screen(&k,0)>=1 && !xkitty_erase_screen(&k,0));
+    xkitty_reset(&k);
+}
+
+/* The frontend's side, as aros_xterm.c does it: scroll, then move. */
+static XKitty edge_kitty;static XTermScreen *edge_screen;
+static void edge_sink(void *context,int event,const unsigned char *bytes,size_t n)
+{
+    (void)context;
+    if(event==XSCREEN_APC_BEGIN) xkitty_apc_begin(&edge_kitty);
+    else if(event==XSCREEN_APC_DATA) xkitty_apc_data(&edge_kitty,bytes,n);
+    else if(event==XSCREEN_APC_ABORT) xkitty_apc_abort(&edge_kitty);
+    else if(event==XSCREEN_APC_ERASE) xkitty_erase_screen(&edge_kitty,edge_screen->alternate_active);
+    else {
+        XKittyCursor c;XKittyResult r;XTermScreen *s=edge_screen;
+        c.row=s->cursor_row;c.column=s->cursor_column;c.rows=s->rows;c.columns=s->columns;
+        c.alternate=s->alternate_active;c.scroll_count=s->scroll_count;c.cell_width=8;c.cell_height=16;
+        c.scroll_top=s->scroll_top;c.scroll_bottom=s->scroll_bottom;
+        if(!xkitty_apc_end(&edge_kitty,&c,&r)) return;
+        if(r.scroll) screen_index_lines(s,r.scroll);
+        if(r.move_cursor) { s->cursor_row=r.cursor_row;s->cursor_column=r.cursor_column;s->wrap_pending=r.wrap_pending; }
+    }
+}
+
+static void put(XTermScreen *s,const char *t) { screen_write(s,(const unsigned char *)t,strlen(t)); }
+
+static void put_image(XTermScreen *s,const char *keys,unsigned w,unsigned h)
+{
+    static unsigned char zero[64*64*3];
+    char head[96],*data=base64(zero,(size_t)w*h*3);
+    snprintf(head,sizeof head,"\033_G%s,f=24,s=%u,v=%u,q=2;",keys,w,h);
+    put(s,head);put(s,data);put(s,"\033\\");
+    free(data);
+}
+
+static long image_first(const XTermScreen *s,uint32_t id,unsigned *count)
+{
+    XKittyCursor c;long first;unsigned i;
+    c.row=0;c.column=0;c.rows=s->rows;c.columns=s->columns;c.alternate=s->alternate_active;
+    c.scroll_count=s->scroll_count;c.cell_width=8;c.cell_height=16;c.scroll_top=0;c.scroll_bottom=s->rows-1;
+    for(i=0;i<XKITTY_MAX_IMAGES;++i)
+        if(edge_kitty.images[i].id==id) return xkitty_placement_rows(&edge_kitty.images[i],&c,&first,count)?first:-1000;
+    return -2000;
+}
+
+static void test_screen_edge(void)
+{
+    static XTermCell cells[24*80],history[200*80],alternate[24*80],spare[200*80];
+    XTermScreen s;unsigned count,i;unsigned long scrolled;char line[32];
+    screen_init(&s,cells,24*80,24,80);
+    screen_attach_history(&s,history,200*80);
+    screen_attach_reflow(&s,spare,200*80);
+    screen_attach_alternate(&s,alternate,24*80);
+    edge_screen=&s;xkitty_init(&edge_kitty,&limits);s.apc=edge_sink;
+    for(i=1;i<24;++i) { snprintf(line,sizeof line,"line %u\r\n",i);put(&s,line); }
+    put(&s,"img>");
+    scrolled=s.scroll_count;
+    /* 4 rows on the last row: 3 lines go into the history, all 4 rows show. */
+    put_image(&s,"a=T,i=7",1,64);
+    assert(s.scroll_count==scrolled+3 && s.cursor_row==23 && s.cursor_column==5);
+    assert(image_first(&s,7,&count)==20 && count==4);
+    assert(s.history_count>=3);
+    /* Text after the image: beside its last row, then below it. */
+    put(&s,"A\r\nB");
+    assert(screen_cell(&s,22,5)=='A' && screen_cell(&s,23,0)=='B');
+    assert(image_first(&s,7,&count)==19);
+    /* A fitting image in the middle scrolls nothing. */
+    put(&s,"\033[5;1H");scrolled=s.scroll_count;
+    put_image(&s,"a=T,i=8",1,32);
+    assert(s.scroll_count==scrolled && s.cursor_row==5 && image_first(&s,8,&count)==4 && count==2);
+    /* C=1 at the bottom: nothing moves, the image is cut by the window. */
+    put(&s,"\033[24;1H");scrolled=s.scroll_count;
+    put_image(&s,"a=T,i=9,C=1",1,64);
+    assert(s.scroll_count==scrolled && s.cursor_row==23 && s.cursor_column==0);
+    /* Resize: the image stays on its text row. */
+    {
+        long before=image_first(&s,7,&count);
+        unsigned long sc=s.scroll_count;
+        assert(!screen_resize(&s,20,80));
+        assert(image_first(&s,7,&count)==before-(long)(s.scroll_count-sc));
+    }
+    /* Scrollback: the view moves, the placements do not change. */
+    screen_scroll_view(&s,3);
+    assert(s.view_offset==3);
+    screen_scroll_view(&s,-3);
+    /* The alternate screen starts without images; the main one keeps its. */
+    put(&s,"\033[?1049h");
+    put_image(&s,"a=T,i=10",1,16);
+    assert(image_first(&s,10,&count)>=0 && image_first(&s,7,&count)==-1000);
+    put(&s,"\033[?1049l");
+    assert(image_first(&s,7,&count)!=-1000 && image_first(&s,10,&count)==-1000);
+    put(&s,"\033[?1049h");
+    /* Entering the alternate screen again: the old alternate image is gone. */
+    assert(image_first(&s,10,&count)==-1000);
+    put(&s,"\033[?1049l");
+    /* Clearing the screen clears its images, as `clear` should. */
+    put(&s,"\033[2J");
+    for(i=0;i<XKITTY_MAX_IMAGES;++i) if(edge_kitty.images[i].id && !edge_kitty.images[i].placed_alternate)
+        assert(!edge_kitty.images[i].placed);
+    /* ...and they can be displayed again. */
+    put(&s,"\033_Ga=p,i=7,q=2\033\\");
+    assert(image_first(&s,7,&count)>=0);
+    /* Delete. */
+    put(&s,"\033_Ga=d,d=I,i=7,q=2\033\\");
+    assert(image_first(&s,7,&count)==-2000);
+    xkitty_reset(&edge_kitty);
+}
+
 int main(void)
 {
     test_complete_and_chunked();
@@ -304,9 +475,11 @@ int main(void)
     test_unsupported_and_replies();
     test_limits();
     test_replace_and_delete();
+    test_cursor_edge();
+    test_screen_edge();
     test_ids_and_serials();
     test_model();
     test_visible_bytes();
-    puts("KITTY GRAPHICS HOST PASS: chunks, lengths, interruptions, replies, limits, replace/delete, ids/serials, model sink, visible bytes");
+    puts("KITTY GRAPHICS HOST PASS: chunks, lengths, interruptions, replies, limits, replace/delete, ids/serials, model sink, visible bytes, cursor and scrolling at the edges, erase, alternate screen, resize");
     return 0;
 }
