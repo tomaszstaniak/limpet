@@ -71,7 +71,7 @@ version: `LimpetPresentation` grew again. Details: `doc/versioning.md`.
 
 Built with GCC 10.5 and the ABIv11 2026.09 Developer SDK. SDK 0.3.0:
 `hello`, `title`, `hyperlink` and `image` ran on AROS One 1.3 (ABIv11)
-x86_64 under QEMU in the Limpet 0.3.0 release candidate, 2026-10-11;
+x86_64 under QEMU in Limpet 0.3.0, 2026-10-11;
 host tests check the reply decoding against SDK 0.1 and 0.2 clients. The
 other examples are unchanged since SDK 0.2.0, whose examples all ran on
 AROS ABIv11 2026.09 in Limpet 0.2.0 and in `CON:` (2026-10-07). Not tested

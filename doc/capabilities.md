@@ -4,8 +4,8 @@ This is the single list of what Limpet does, for users and for programmers.
 Each entry says how a program finds out about it, what to send, what to do
 when it is missing, and how far it has been checked.
 
-Applies to **Limpet 0.2.0 and 0.2.1**, the **Limpet 0.3.0 release
-candidate** and **Limpet SDK 0.2.0 and 0.3.0** for **AROS ABIv11,
+Applies to **Limpet 0.2.0, 0.2.1 and 0.3.0** and **Limpet SDK 0.2.0 and
+0.3.0** for **AROS ABIv11,
 x86_64**. The Since column gives the first version with the feature. Other builds are covered in
 [compatibility](compatibility.md).
 
@@ -14,7 +14,7 @@ x86_64**. The Since column gives the first version with the feature. Other build
 | Label | Meaning |
 | --- | --- |
 | **Verified** | Checked on Limpet 0.2.0 running on AROS ABIv11 2026.09 x86_64 under QEMU, 2026-10-07. |
-| **Verified (0.3.0 RC)** | Checked on the Limpet 0.3.0 release candidate on AROS One 1.3 (ABIv11) x86_64 under QEMU, 2026-10-11. Not yet in a published release. |
+| **Verified (0.3.0)** | Checked on Limpet 0.3.0 (the released program, byte for byte) on AROS One 1.3 (ABIv11) x86_64 under QEMU, 2026-10-11. Not checked on ABIv11 2026.09. |
 | **Verified (0.1.0)** | Checked on Limpet 0.1.0 on that system; the code behind it did not change in 0.2.0, and it was not checked again. |
 | **Released, host-tested** | In a release. Its exact bytes are checked by host tests; on AROS it was checked on a development build or a different system, as stated, or not at all. |
 | **Experimental** | In the source tree only, not in any public release. May change or disappear. |
@@ -64,10 +64,10 @@ Shell session does not answer it. See
 | [Unicode text](#unicode-text) | everyone | none | 0.1.0 | Verified |
 | [Hyperlinks (OSC 8)](#hyperlinks) | programs | query success | 0.1.0 | Verified (0.1.0) for display and hover; opening not verified |
 | [Plain URL detection](#hyperlinks) | users | none | 0.1.0 | Released, host-tested |
-| [Inline images (Kitty subset)](#inline-images) | programs | query success, then `a=q` | 0.1.0 | Verified; bottom edge and `clear` changed in 0.3.0: Verified (0.3.0 RC) |
-| [Window title (OSC 0/2)](#window-title) | programs, users | query, `XTY_FEATURE_TITLE` | **0.3.0** | Verified (0.3.0 RC) |
+| [Inline images (Kitty subset)](#inline-images) | programs | query success, then `a=q` | 0.1.0 | Verified; bottom edge and `clear` changed in 0.3.0: Verified (0.3.0) |
+| [Window title (OSC 0/2)](#window-title) | programs, users | query, `XTY_FEATURE_TITLE` | **0.3.0** | Verified (0.3.0) |
 | [Keyboard input, cooked and raw](#keyboard-input) | programs | none | 0.1.0 | Verified |
-| [Ctrl-C](#ctrl-c) | everyone | none | 0.1.0 | Verified, with limits; one prompt after a break: Verified (0.3.0 RC) |
+| [Ctrl-C](#ctrl-c) | everyone | none | 0.1.0 | Verified, with limits; one prompt after a break: Verified (0.3.0) |
 | [Mouse reporting](#mouse-reporting) | raw-mode programs | none | 0.1.0 | Released, host-tested |
 | [Bracketed paste (DEC 2004)](#bracketed-paste) | raw-mode programs | query, `XTY_INPUT_BRACKETED_PASTE` | **0.2.0** | Verified |
 | [Resize reports (DEC 2048)](#resize-reports) | raw-mode programs | query, `XTY_INPUT_RESIZE_REPORT` | **0.2.0** | Verified |
@@ -436,7 +436,7 @@ when the program reports it, what that program is doing:
 | --- | --- |
 | Shell waiting at its prompt | `Shell - Limpet` |
 | a command runs | `Wait - Limpet` (the command's name, without its path) |
-| the program set a title | `Hardcode: waiting for the model - Limpet` |
+| the program set a title | `title demo: receiving - Limpet` |
 | pointer over a link | `Link: https://... - Limpet` |
 | the session ended | `Limpet` |
 
@@ -483,10 +483,11 @@ query. A title sent by a `Run` job ends when the next command starts.
 
 **Example.** [`title`](../sdk/examples/title.c).
 
-**Status.** Verified (0.3.0 RC), 2026-10-11, AROS One 1.3: `Shell`,
+**Status.** Verified (0.3.0), 2026-10-11, AROS One 1.3: `Shell`,
 `Wait` during `Wait 10` and back, an unknown command, Ctrl-C, the `title`
 example's states and the return to `Shell` after it, a link hover, the end
-of the session; hardcode (branch `limpet-title`) showing ready, waiting for
+of the session; a development branch of hardcode built with SDK 0.3.0
+(`limpet-title`, not in a hardcode release) showing ready, waiting for
 the model and replying, and `Shell` again after `/quit`; Limpet 0.2.1 and
 `CON:` running the same hardcode showed no sequence. Host tests:
 `tests/test_osc_title.c`, `tests/test_window_title.c`,
@@ -720,8 +721,8 @@ them, and should not need to.
 | Selection kept during output | a selection stays while a program redraws other rows (a status line, a clock, a reply streaming below it), also during a drag, including selections larger than 1 KB; output that changes or scrolls the selected text clears it | **0.2.0** | Verified (selection kept while hardcode streamed a reply; copy afterwards); host-tested in `tests/test_selection.c` |
 | Themes | dark (built in), light, high contrast | 0.1.0 | Verified (0.1.0) |
 | Line editing | command history, Tab completion of paths and commands | 0.1.0 | Released, host-tested (`tests/test_line_editor.c`, `tests/test_completion.c`) |
-| History search | Ctrl-R searches the last 32 commands ([how](#history-search)) | **0.3.0** | Verified (0.3.0 RC); host-tested in `tests/test_line_editor.c` |
-| Window title | what runs and what it reports ([above](#window-title)) | **0.3.0** | Verified (0.3.0 RC) |
+| History search | Ctrl-R searches the last 32 commands ([how](#history-search)) | **0.3.0** | Verified (0.3.0); host-tested in `tests/test_line_editor.c` |
+| Window title | what runs and what it reports ([above](#window-title)) | **0.3.0** | Verified (0.3.0) |
 | End of input | F5 ends the Shell's input; F4 starts a new Shell | 0.1.0 | Verified (0.1.0) |
 
 ### History search

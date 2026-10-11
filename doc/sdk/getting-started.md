@@ -21,8 +21,8 @@ SDK release ships a library for ABIv11 only. See
 
 ## 1. Unpack
 
-    unzip limpet-sdk-0.2.0.zip
-    cd limpet-sdk-0.2.0
+    unzip limpet-sdk-0.3.0.zip
+    cd limpet-sdk-0.3.0
 
 | Path | Contents |
 | --- | --- |
@@ -109,8 +109,8 @@ int main(void)
 Build it like the examples:
 
     x86_64-aros-gcc -O2 --sysroot=$AROS_SDK -I$AROS_SDK/include \
-        -Ilimpet-sdk-0.2.0/include myprog.c -o myprog \
-        -L$AROS_SDK/lib -Llimpet-sdk-0.2.0/lib/abiv11 -lLimpet
+        -Ilimpet-sdk-0.3.0/include myprog.c -o myprog \
+        -L$AROS_SDK/lib -Llimpet-sdk-0.3.0/lib/abiv11 -lLimpet
 
 Or skip the library and compile the two files in `src/` into your program;
 they need nothing but `dos.library` and the C library.

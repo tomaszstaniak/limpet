@@ -1,8 +1,7 @@
-# Verification record: SDK 0.3.0 release candidate
+# Verification record: SDK 0.3.0
 
 What was checked for SDK 0.3.0, where, and what was not. The terminal side
 (Limpet 0.3.0) is in [verification-0.3.0.md](../verification-0.3.0.md).
-The candidate is not published.
 
 ## Environment
 
@@ -10,10 +9,10 @@ The candidate is not published.
 | --- | --- |
 | Date | 2026-10-11 |
 | System | AROS One 1.3 (ABIv11, x86_64), QEMU (TCG), 1024x768 |
-| Terminal under test | Limpet 0.3.0 candidate, SHA-256 `784a0c88726929d771395bb6926e493aa2b627859eff83ee19831512f3b0ed71` |
+| Terminal under test | Limpet 0.3.0, SHA-256 `784a0c88726929d771395bb6926e493aa2b627859eff83ee19831512f3b0ed71` |
 | Older terminal | Limpet 0.2.1, the published archive (SHA-256 `71dee9c638ba7676e8089f75d65511b71df9d066e0436feabd75ee27230c768d`) |
 | Compiler, AROS SDK | `x86_64-aros-gcc` 10.5.0, ABIv11 2026.09 Developer SDK |
-| Full-screen client | hardcode, branch `limpet-title` (`aa259b6`), built against this SDK |
+| Full-screen client | hardcode, development branch `limpet-title` (`aa259b6`, not in a hardcode release), built against this SDK |
 
 ## Example binaries
 
@@ -42,7 +41,7 @@ presentation reply and the title handling did not change after them.
 | Check | Result |
 | --- | --- |
 | Host: `make test-sdk` | contract tests under ASan and UBSan pass; `limpet.h` compiles as C and C++; SDK 0.1.0 and 0.2.0 clients read the 0.3.0 reply as they read their own terminal's; objects built with their headers fail to link against the 0.3.0 library |
-| `title` in the Limpet 0.3.0 candidate | the states shown in the window title, then `Shell` again |
+| `title` in Limpet 0.3.0 | the states shown in the window title, then `Shell` again |
 | `hello` in a development build of Limpet 0.3.0 | reports `Window title: settable (OSC 0/2)` with the earlier fields |
 | `image` in a development build of Limpet 0.3.0 | drawn in the reserved rows with `C=1`, deleted after a key |
 | `hyperlink` in a development build of Limpet 0.3.0 | the target in the title while hovering |

@@ -4,14 +4,13 @@ Limpet and the SDK have separate version numbers and separate tags.
 
 | | Version | Archive | Git tag |
 | --- | --- | --- | --- |
-| Limpet (the terminal) | 0.2.1 | `Limpet-0.2.1-abiv11.zip` | `v0.2.1` |
-| Limpet SDK | 0.2.0 | `limpet-sdk-0.2.0.zip` | `sdk-v0.2.0` |
-| Limpet, release candidate | 0.3.0 | `Limpet-0.3.0-abiv11.zip` (not published) | none yet |
-| Limpet SDK, release candidate | 0.3.0 | `limpet-sdk-0.3.0.zip` (not published) | none yet |
+| Limpet (the terminal) | 0.3.0 | `Limpet-0.3.0-abiv11.zip` | `v0.3.0` |
+| Limpet SDK | 0.3.0 | `limpet-sdk-0.3.0.zip` | `sdk-v0.3.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
-Limpet 0.2.0 (tag `v0.2.0`) and 0.1.0 (tag `v0.1.0`) are the earlier
-terminal releases. 0.2.1 changes only the bundled HarfBuzz; the protocol
+Limpet 0.2.1 (tag `v0.2.1`), 0.2.0 (tag `v0.2.0`) and 0.1.0 (tag `v0.1.0`)
+are the earlier terminal releases, and SDK 0.2.0 (tag `sdk-v0.2.0`) the
+earlier SDK release. 0.2.1 changes only the bundled HarfBuzz; the protocol
 and the SDK are the same as for 0.2.0. 0.3.0 adds the window title feature
 bit to the presentation reply, and SDK 0.3.0 decodes it. An SDK 0.1.0
 was prepared but never published; its sources are kept in

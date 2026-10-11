@@ -19,7 +19,8 @@ and remote work over SSH.
 | **Limpet 0.2.0** | 0.1.0 plus the input modes for full-screen programs and a selection that stays while other rows are redrawn | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.0), tag `v0.2.0` |
 | **Limpet 0.2.1** | 0.2.0 with HarfBuzz 14.5.0 instead of 11.2.1 | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.1), tag `v0.2.1` |
 | **Limpet SDK 0.2.0** | headers, library and examples for programs that use Limpet | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.2.0), tag `sdk-v0.2.0` |
-| Limpet 0.3.0, SDK 0.3.0 | release candidates these sources build: a window title that names the running program and its state, Ctrl-R history search, one prompt after Ctrl-C, images at the bottom edge | not published |
+| **Limpet 0.3.0** | the terminal these sources build: a window title that names the running command and the state a program reports, Ctrl-R history search, one prompt after Ctrl-C, images at the bottom edge | [releases](https://github.com/tomaszstaniak/limpet/releases/tag/v0.3.0), tag `v0.3.0` |
+| **Limpet SDK 0.3.0** | the SDK these sources build: SDK 0.2.0 plus the window title (`limpet_osc_title()`) | [releases](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.3.0), tag `sdk-v0.3.0` |
 | `main` | development; may be ahead of every release | this repository |
 
 The releases page shows what is actually published. What changed:
@@ -49,7 +50,7 @@ Limpet includes:
 - from 0.2.0: a selection that stays while a program redraws other rows,
   and bracketed paste, resize reports and wheel reports for full-screen
   programs such as hardcode;
-- in the 0.3.0 candidate: a window title that names the running command
+- from 0.3.0: a window title that names the running command
   and, when the program reports it, its state; Ctrl-R search through the
   command history.
 
@@ -101,10 +102,9 @@ thing in either console without configuration.
 | --- | --- |
 | ![hello example in Limpet](doc/screenshots/sdk-hello.png) | ![examples in CON:](doc/screenshots/sdk-con-fallback.png) |
 
-The SDK archive (`limpet-sdk-0.2.0.zip`, tag `sdk-v0.2.0`) contains the
-headers, a prebuilt library for ABIv11, the library sources, seven
-examples and this documentation. `sdk/` here holds the 0.3.0 candidate,
-with an eighth example (`title`).
+The SDK archive (`limpet-sdk-0.3.0.zip`, tag `sdk-v0.3.0`) contains the
+headers, a prebuilt library for ABIv11, the library sources, eight
+examples and this documentation.
 
 - [Getting started](doc/sdk/getting-started.md): build and run the first
   example.

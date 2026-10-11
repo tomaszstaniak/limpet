@@ -3,14 +3,15 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## 0.3.0 (release candidate, 2026-10-11, not published)
+## 0.3.0 (2026-10-11)
 
 For users:
 
 - The window title says what runs in the window: `Shell - Limpet` at the
   prompt, `Wait - Limpet` while a command runs, the program's own state
-  when it reports one (`Hardcode: waiting for the model - Limpet`), then
-  `Shell` again. A link under the pointer still shows its target there.
+  when it reports one (`title demo: receiving - Limpet`), then `Shell`
+  again. A program reports its state only once it is built with SDK 0.3.0
+  or sends the sequence itself. A link under the pointer still shows its target there.
   Terminal messages follow the name (`| Copied`), report-only ones go after
   about four seconds, and key hints moved to the About window. Jobs started
   with `Run` are not shown. [Details](capabilities.md#window-title).

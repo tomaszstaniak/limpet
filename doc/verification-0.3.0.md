@@ -1,11 +1,12 @@
-# Verification record: Limpet 0.3.0 release candidate
+# Verification record: Limpet 0.3.0
 
 Limpet 0.3.0 adds a window title that names the running command and its
 state, Ctrl-R history search, one prompt after Ctrl-C, inline images that
 make room at the bottom edge, and three fixes (title buffer, selection,
 images on resize). SDK 0.3.0 adds the title feature bit and
 `limpet_osc_title()`. This record says what was checked, where, and what
-was not. The candidate is not published.
+was not. The archive checked here is the one published under tag `v0.3.0`
+(see Build).
 
 ## Build
 
@@ -107,7 +108,7 @@ They are covered by hardcode's host test.
 
 ## Not checked
 
-ABIv11 2026.09 (the earlier releases' test system) with this candidate,
+ABIv11 2026.09 (the earlier releases' test system) with this version,
 mainline AROS (no build of this version), real hardware, the mounted
 console handler, the SDK examples `colors`, `progress`, `geometry` and
 `keys` with SDK 0.3.0 (unchanged), any example in `CON:` with SDK 0.3.0,

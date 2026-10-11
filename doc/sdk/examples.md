@@ -56,9 +56,9 @@ Prints the size, then asks twice a second for 20 seconds and prints each
 change. Shows that the size is a snapshot: the program sees a resize only
 because it asks again.
 
-**SDK 0.3.0 (release candidate):** built with GCC 10.5 and the ABIv11
+**SDK 0.3.0:** built with GCC 10.5 and the ABIv11
 2026.09 Developer SDK; `hello`, `title`, `hyperlink` and `image` ran on AROS
-One 1.3 (ABIv11) under QEMU in the Limpet 0.3.0 candidate, 2026-10-11.
+One 1.3 (ABIv11) under QEMU in Limpet 0.3.0, 2026-10-11.
 `colors`, `progress`, `geometry` and `keys` did not change and were not run
 again; no example was run in `CON:` with SDK 0.3.0.
 

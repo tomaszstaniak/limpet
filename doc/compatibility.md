@@ -2,10 +2,10 @@
 
 ## Systems
 
-| System | Limpet 0.1.0 | Limpet 0.2.0 | Limpet 0.3.0 (candidate) | SDK 0.2.0 | SDK 0.3.0 (candidate) |
+| System | Limpet 0.1.0 | Limpet 0.2.0 | Limpet 0.3.0 | SDK 0.2.0 | SDK 0.3.0 |
 | --- | --- | --- | --- | --- | --- |
 | AROS ABIv11 x86_64, 2026.09 | published, tested | tested | built with its SDK, not run there | prebuilt library, examples tested | built, not run there |
-| AROS One 1.3 (ABIv11 x86_64) | published, tested at release | not run | tested | not run | `hello` and `title` tested |
+| AROS One 1.3 (ABIv11 x86_64) | published, tested at release | not run | published, tested | not run | `hello` and `title` tested |
 | AROS mainline x86_64 (ABI v1) | not released (an unpublished preview exists) | not released | not built | no library shipped; the sources contain no ABI-specific code but have not been built or run on mainline | as SDK 0.2.0 |
 | AROS i386, aarch64, ARM | no build | no build | no build | no build | no build |
 | AmigaOS 4, MorphOS, AmigaOS 3 | no build | no build | no build | no build | no build |
@@ -22,7 +22,7 @@ QEMU, results checked on screen. No test ran on real hardware.
 
 | Terminal | Presentation query | Stream features in this documentation |
 | --- | --- | --- |
-| Limpet 0.3.0 (candidate) | answers, with input modes and features | as listed in the [catalogue](capabilities.md) |
+| Limpet 0.3.0 | answers, with input modes and features | as listed in the [catalogue](capabilities.md) |
 | Limpet 0.2.0, 0.2.1 | answers, with input modes | as listed, except entries marked "Since 0.3.0" |
 | Limpet 0.1.0 | answers, without input modes | as listed, except entries marked "Since 0.2.0" |
 | `CON:` (system console) | `ERROR_ACTION_NOT_KNOWN` | the Amiga console sequences, not the ones documented here |
