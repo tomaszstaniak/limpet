@@ -52,6 +52,12 @@ int main(void) {
     assert(console_input_mode(&line,1)==0);
     assert(!console_input_stage(&line,"x",1));
     assert(!console_input_submit(&line,&input));
-    puts("console input PASS: line commit, CRLF, erase, UTF-8 preservation, raw, bounds, backpressure");
+    /* Ctrl-C: an empty line only for a reader or the idle Shell. */
+    assert(console_interrupt_needs_line(1,1,1));    /* a command waiting in Read */
+    assert(console_interrupt_needs_line(1,1,0));    /* the Shell at its prompt */
+    assert(console_interrupt_needs_line(0,1,0));    /* prompt written, Read not yet sent */
+    assert(!console_interrupt_needs_line(0,1,1));   /* a running command: signal only */
+    assert(console_interrupt_needs_line(0,0,0));    /* unknown: never leave a reader waiting */
+    puts("console input PASS: line commit, CRLF, erase, UTF-8 preservation, raw, bounds, backpressure, interrupt line");
     return 0;
 }

@@ -51,3 +51,7 @@ int console_input_byte(XConsoleInput *s,XSessionQueue *input,XSessionQueue *echo
     s->line[s->length++]=c; session_queue_write(echo,&c,1);
     s->skip_lf=0; return 1;
 }
+int console_interrupt_needs_line(int read_pending,int foreground_known,int command_running)
+{
+    return read_pending || !foreground_known || !command_running;
+}

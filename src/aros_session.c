@@ -491,17 +491,22 @@ int aros_session_foreground(ArosSession *s,XForeground *out)
 }
 int aros_session_interrupt(ArosSession *s)
 {
+    XForeground fg;
     if(!s->console || !aros_session_active(s) || s->eof || s->line.raw ||
        XSESSION_CAPACITY-s->output.length<4) return 0;
+    /* Before the signal: a command it ends would look like the idle Shell. */
+    aros_break_foreground(&s->breaker,&fg);
     if(!aros_break_send(&s->breaker)) return 0;
     s->line.length=0; s->line.escape=s->line.skip_lf=0;
     s->input.head=s->input.length=0;
     session_queue_write(&s->output,(const unsigned char *)"^C\r\n",4);
-    /* Queue a blank line even if Read has not arrived yet: a prompt Write can
-     * reach us before the following Read packet. EOF would end the Shell.
-     * After interrupting a command this may produce one extra empty prompt.
+    /* An empty line releases a reader, including a Shell whose prompt Write
+     * reached us before its Read (EOF would end the Shell). A running
+     * command gets only the signal: the line would wait for the Shell's
+     * next Read and print a second prompt (console_interrupt_needs_line).
      * Raw clients receive the Ctrl-C byte instead of entering this path. */
-    session_queue_write(&s->input,(const unsigned char *)"\n",1);
+    if(console_interrupt_needs_line(s->pending_read!=NULL,fg.known,fg.running))
+        session_queue_write(&s->input,(const unsigned char *)"\n",1);
     service(s); return 1;
 }
 void aros_session_stop(ArosSession *s)
