@@ -483,6 +483,12 @@ size_t aros_session_read(ArosSession *s,unsigned char *bytes,size_t n)
 }
 void aros_session_eof(ArosSession *s)
 { s->eof=1; service(s); }
+int aros_session_foreground(ArosSession *s,XForeground *out)
+{
+    memset(out,0,sizeof *out);
+    if(!s->console || !aros_session_active(s)) return 0;
+    return aros_break_foreground(&s->breaker,out);
+}
 int aros_session_interrupt(ArosSession *s)
 {
     if(!s->console || !aros_session_active(s) || s->eof || s->line.raw ||

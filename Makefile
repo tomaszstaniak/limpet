@@ -12,7 +12,7 @@ HB_HEADERS = $(wildcard vendor/harfbuzz/src/*.h vendor/harfbuzz/src/*.hh)
 UNICODE_SRC = vendor/utf8proc/utf8proc.c
 UNICODE_FLAGS = -Ivendor/utf8proc -DUTF8PROC_STATIC
 INPUT_SRC = src/terminal_input.c src/echo_session.c
-EDITOR_SRC = src/line_editor.c src/line_view.c
+EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
 SESSION_SRC = src/aros_session.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
@@ -114,7 +114,7 @@ $(OUT): src/aros_xterm.c $(HYPERLINK_GUI_SRC) src/aros_font.c $(CLUSTER_SRC) src
 	$(AROS_GCC) $(CFLAGS) -o $(OUT) src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
 
 $(OUT): $(SESSION_SRC) $(SESSION_HEADERS) $(THEME_SRC) src/theme.h
-$(OUT): $(EDITOR_SRC) src/line_editor.h src/line_view.h
+$(OUT): $(EDITOR_SRC) src/line_editor.h src/line_view.h src/window_title.h
 $(OUT): $(KITTY_SRC) src/kitty_graphics.h
 $(OUT): $(COMPLETION_SRC) src/completion.h src/aros_completion.h
 $(OUT): src/aros_handler.h
@@ -276,6 +276,8 @@ test: build/test_alternate
 test: build/test_tui_menu
 test: build/test_status_area
 test: build/test_title_buffer
+test: build/test_osc_title
+test: build/test_window_title
 test: build/test_profile_prompt
 test: build/test_theme
 test: build/test_geometry_reply
@@ -293,6 +295,14 @@ test: build/test_mouse_release
 test: build/test_ssh_pump build/test_hyperlink build/test_link_gesture
 
 $(OUT): src/hyperlink.h src/aros_hyperlink.h src/link_gesture.h
+
+build/test_window_title: tests/test_window_title.c src/window_title.c src/window_title.h Makefile
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $< src/window_title.c -o $@
+
+build/test_osc_title: tests/test_osc_title.c src/hyperlink.c src/hyperlink.h src/screen_model.c src/screen_model.h $(UNICODE_SRC) Makefile
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/hyperlink.c src/screen_model.c $(UNICODE_SRC) -o $@
 
 build/test_hyperlink: tests/test_hyperlink.c src/hyperlink.c src/hyperlink.h src/screen_model.c src/screen_model.h $(UNICODE_SRC) Makefile
 	@mkdir -p build
@@ -585,6 +595,8 @@ test: $(HOST_TEST) build/test_replay build/test_graphemes build/test_input_echo 
 	./build/test_tui_menu
 	./build/test_status_area
 	./build/test_title_buffer
+	./build/test_osc_title
+	./build/test_window_title
 	./build/test_profile_prompt
 	./build/test_theme
 	./build/test_geometry_reply

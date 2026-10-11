@@ -18,4 +18,10 @@ void aros_break_bind(ArosBreak *,struct Task *);
 int aros_break_ready(ArosBreak *);
 int aros_break_send(ArosBreak *);
 void aros_break_close(ArosBreak *);
+/* What the bound reader runs, read under the same protection as send: a
+   Shell process runs its commands itself, setting cli_Module and its task
+   name to the command meanwhile (AROS workbench/c/shell/Shell.c). Fills
+   *out (zeroed first); returns out->known. Nothing is kept afterwards. */
+#include "window_title.h"
+int aros_break_foreground(ArosBreak *, XForeground *out);
 #endif

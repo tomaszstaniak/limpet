@@ -33,6 +33,7 @@
 #include <libraries/gadtools.h>
 #include <cybergraphx/cybergraphics.h>
 #include <devices/rawkeycodes.h>
+#include <devices/timer.h>
 #include <intuition/intuition.h>
 #include <graphics/text.h>
 #include <graphics/rpattr.h>
@@ -70,6 +71,14 @@ static XTermCell history[HISTORY_LINES * MAX_COLUMNS];
 static XTermCell history_spare[HISTORY_LINES * MAX_COLUMNS];
 #include "title_buffer.h"
 static XTitleBuffers titles;
+#include "window_title.h"
+/* What runs in the window (read from the Shell's process) and the title a
+   program set for itself, which lasts while that program runs. */
+static XProgramTitle program_title;
+static XForeground foreground;
+/* Ticks left to watch the foreground after a line was submitted: a command
+   that does no I/O (Wait 30) sends no packet that would wake the loop. */
+static unsigned foreground_watch;
 static EchoSession echo;
 static int echo_mode;
 static ArosSession process_session;
@@ -241,6 +250,7 @@ static int editor_submit(void)
     write_text("\r\n");
     selection.active=selection.dragging=0;
     aros_session_poll(&process_session);
+    foreground_watch=8;
     return 1;
 }
 
@@ -285,7 +295,7 @@ static int editor_key(UWORD code,UWORD qualifiers)
             clip_status="TAB: completion exceeds editor bounds";
         else {
             snprintf(completion_status,sizeof completion_status,
-                "TAB %lu/%lu%s | TAB next, Shift+TAB previous",
+                "TAB %lu/%lu%s",
                 (unsigned long)completion.next,(unsigned long)completion.count,
                 completion.limited?" (limited)":"");
             clip_status=completion_status; editor_sync();
@@ -322,7 +332,7 @@ static void completion_finished(void)
         clip_status="TAB: completion exceeds editor bounds";
     else {
         snprintf(completion_status,sizeof completion_status,
-            "TAB %lu/%lu%s | TAB next, Shift+TAB previous",
+            "TAB %lu/%lu%s",
             (unsigned long)completion.next,(unsigned long)completion.count,
             completion.limited?" (limited)":"");
         clip_status=completion_status; editor_sync();
@@ -869,6 +879,16 @@ static const char *const about_lines[]={
     "",
     "MIT licence. Bundled components and fonts:",
     "see the Licenses drawer.",
+    "",
+    "Keys:",
+    "  Drag selects; RAmiga+C / Ctrl+Shift+C copies,",
+    "  RAmiga+V / Ctrl+Shift+V pastes (F3 confirms",
+    "  several lines, Esc cancels a paste).",
+    "  Shift+PgUp/PgDn or the wheel: scrollback.",
+    "  Up/Down: command history; Ctrl-R searches it.",
+    "  TAB / Shift+TAB: complete a path.",
+    "  Ctrl-click a link opens it; Ctrl+Shift-click",
+    "  copies it. Ctrl-C interrupts; F5 ends input.",
 };
 
 /* Modal: the terminal loop waits while it is open, as with a requester. */
@@ -951,6 +971,11 @@ static void close_main_window(struct Window *window)
     CloseWindow(window);
 }
 
+/* Title changes are applied at most once per tick (250 ms): a program
+   that sends a title with every write must not make the title bar flicker
+   or cost a redraw of it per token. The latest text wins. */
+static int title_hold,title_pending;
+
 static void update_title(struct Window *window, unsigned last_key)
 {
     /* Intuition holds the shown buffer and may draw from it at any time
@@ -958,22 +983,22 @@ static void update_title(struct Window *window, unsigned last_key)
        when the text changes. */
     char *next=title_buffers_next(&titles);
     const size_t cap=sizeof titles.text[0];
+    XWindowTitle in;
     (void)last_key;
-    /* The title is the program's name plus what the user needs now: a
-       message, or where the view is in the scrollback. */
-    snprintf(next, cap, "%s", pty_mode?"Limpet (PTY preview)":"Limpet");
     /* The copy hint describes a live selection; whatever cleared the
        selection (typing, output, resize) retires the hint too. */
-    if(clip_status && !selection.active && !strncmp(clip_status,"Selected",8))
+    if(clip_status && !selection.active && !strcmp(clip_status,"Selected"))
         clip_status=NULL;
-    if(clip_status) {
-        size_t used=strlen(next);
-        snprintf(next+used,cap-used," | %s",clip_status);
-    }
-    if(screen.view_offset) {
-        size_t used=strlen(next);
-        snprintf(next+used,cap-used," | scrollback %u/%u",screen.view_offset,screen.history_count);
-    }
+    /* What runs, then what the terminal reports (src/window_title.h). */
+    memset(&in,0,sizeof in);
+    in.terminal=pty_mode?"Limpet (PTY preview)":"Limpet";
+    in.link=link_hovered?hovered_link.url:NULL;
+    in.program=program_title_text(&program_title);
+    in.command=foreground.running?foreground.name:NULL;
+    in.shell=shell_session && echo_mode==2 && !process_session.exited;
+    in.status=clip_status;
+    in.view_offset=screen.view_offset; in.history_count=screen.history_count;
+    window_title_compose(next,cap,&in);
 #ifdef XTERM_PKTWAIT_PROBE
     {
         size_t used=strlen(next);
@@ -993,11 +1018,10 @@ static void update_title(struct Window *window, unsigned last_key)
         snprintf(next+used,cap-used," | img rx %lu drawn %lu %luK",
                  kitty.stats.frames_received,kitty_drawn,(unsigned long)(kitty.stats.memory_bytes/1024));
     }
-    if(link_hovered)
-        snprintf(next,cap,"Link: %.100s%s | Ctrl-click open; +Shift copy",
-            hovered_link.url,strlen(hovered_link.url)>100?"...":"");
-    if(!title_buffers_commit(&titles) && title_cache) { ++title_skipped;return; }
-    ++title_updates;
+    if(title_cache && !strcmp(next,title_buffers_shown(&titles))) { ++title_skipped;title_pending=0;return; }
+    if(title_hold) { title_pending=1;return; }
+    title_buffers_commit(&titles);
+    ++title_updates;title_hold=1;title_pending=0;
     SetWindowTitles(window, (CONST_STRPTR)title_buffers_shown(&titles), (CONST_STRPTR)-1);
 }
 
@@ -1201,6 +1225,80 @@ static void link_action(int action,const char *url)
     }
 }
 
+/* A 250 ms tick, armed only while something time-based is pending:
+   following a running command, a held title change, a message to expire. */
+static struct MsgPort *tick_port;
+static struct timerequest *tick_io;
+static int tick_ready,tick_armed;
+static void tick_open(void)
+{
+    if(!(tick_port=CreateMsgPort())) return;
+    if(!(tick_io=(struct timerequest *)CreateIORequest(tick_port,sizeof *tick_io)) ||
+       OpenDevice((CONST_STRPTR)TIMERNAME,UNIT_VBLANK,(struct IORequest *)tick_io,0)) {
+        if(tick_io) DeleteIORequest((struct IORequest *)tick_io);
+        DeleteMsgPort(tick_port); tick_port=NULL; tick_io=NULL; return;
+    }
+    tick_ready=1;
+}
+static void tick_arm(void)
+{
+    if(!tick_ready || tick_armed) return;
+    tick_io->tr_node.io_Command=TR_ADDREQUEST;
+    tick_io->tr_time.tv_secs=0; tick_io->tr_time.tv_micro=250000;
+    SendIO((struct IORequest *)tick_io); tick_armed=1;
+}
+static int tick_fired(void)
+{
+    if(!tick_armed || !CheckIO((struct IORequest *)tick_io)) return 0;
+    WaitIO((struct IORequest *)tick_io); tick_armed=0;
+    return 1;
+}
+static ULONG tick_signal(void)
+{ return tick_ready?1UL<<tick_port->mp_SigBit:0; }
+static void tick_close(void)
+{
+    if(!tick_ready) return;
+    if(tick_armed) { AbortIO((struct IORequest *)tick_io); WaitIO((struct IORequest *)tick_io); }
+    CloseDevice((struct IORequest *)tick_io);
+    DeleteIORequest((struct IORequest *)tick_io); DeleteMsgPort(tick_port);
+    tick_ready=tick_armed=0;
+}
+
+/* Read the foreground again; a program's title ends when its command does.
+   Returns nonzero when what the title shows may have changed. */
+static int foreground_poll(void)
+{
+    XForeground now;
+    int changed;
+    if(echo_mode==2 && !process_session.exited) aros_session_foreground(&process_session,&now);
+    else memset(&now,0,sizeof now);
+    /* An unreadable moment (no reader bound) is no evidence of a change;
+       keep what was read last until the reader can be read again. */
+    if(!now.known && foreground.known && echo_mode==2 && !process_session.exited) return 0;
+    changed=now.known!=foreground.known || now.running!=foreground.running ||
+            now.module!=foreground.module || strcmp(now.name,foreground.name);
+    foreground=now;
+    if(program_title_follow(&program_title,&foreground)) changed=1;
+    return changed;
+}
+
+/* Messages that report something done go after a few seconds; those that
+   ask for an action or describe one in progress stay until it changes. */
+static const char *status_seen;
+static unsigned status_age;
+static int status_lasting(const char *s)
+{
+    static const char *const lasting[]={"MULTILINE","Pasting","Copying","Reading clipboard",
+        "Closing","TAB: searching","Selected","Session ended","Cannot start session",
+        "Opening link","Copying link"};
+    unsigned i;
+    for(i=0;i<sizeof lasting/sizeof *lasting;++i)
+        if(!strncmp(s,lasting[i],strlen(lasting[i]))) return 1;
+    return 0;
+}
+static int status_expiring(void)
+{ return clip_status && !status_lasting(clip_status); }
+
 int main(int argc,char **argv)
 {
     struct Window *window;
@@ -1326,9 +1424,11 @@ int main(int argc,char **argv)
             clip_status=NULL;
         }
     }
+    tick_open();
     update_title(window, last_key);
     draw_screen(window);
     if(!flood_diag_start(window)) {
+        tick_close();
         close_main_window(window);xfont_close();return RETURN_FAIL;
     }
     while (running) {
@@ -1341,7 +1441,7 @@ int main(int argc,char **argv)
              XSESSION_CAPACITY-process_session.input.length>=1024 &&
              (!shell_session || process_session.line.raw || editor_ready())));
         if(!paste_ready && !keyboard_ready() && !flood_diag_ready() && !(echo_mode==2 && output_ready()))
-            Wait((1UL<<window->UserPort->mp_SigBit)|SIGF_CHILD|
+            Wait((1UL<<window->UserPort->mp_SigBit)|SIGF_CHILD|tick_signal()|
                  aros_session_signals(&process_session)|diag_forward_signal()|flood_diag_signals());
         diag_forward();
         process_session.columns=screen.columns;
@@ -1378,6 +1478,14 @@ int main(int argc,char **argv)
                 dirty=1;
             }
             free(kept);
+            /* A new OSC title belongs to whatever runs right now; read the
+               foreground first, it may have started since the last look. */
+            if(screen.title_serial!=program_title.serial) {
+                foreground_poll();
+                program_title_offer(&program_title,screen.title,screen.title_serial,&foreground);
+                dirty=1;
+            }
+            if(foreground_poll()) dirty=1;
             if(process_session.exited && !process_session.output.length &&
                output_offset==output_length && !process_reported) {
                 if(handler_mode) closing=TRUE;
@@ -1391,7 +1499,7 @@ int main(int argc,char **argv)
                     else
                     snprintf(status,sizeof status,pty_mode?"\r\n[PTY session ended; status: %ld]\r\n":"\r\n[Session ended; Shell status: %ld]\r\n",(long)process_session.result);
                     write_text(status);
-                    clip_status="Process exited | F4 restart, F1 replay, F2 echo";
+                    clip_status="Session ended (F4 restarts)";
                 }
                 process_reported=1;
 #ifdef XTERM_PTY_DIAG
@@ -1401,11 +1509,19 @@ int main(int argc,char **argv)
 #endif
                 /* The session's images end with it; record them first. */
                 kitty_write_stats();xkitty_reset(&kitty);kitty_forget_state();
+                program_title_clear(&program_title); memset(&foreground,0,sizeof foreground);
                 paste_cancel(&paste); key_queue_clear(&keyboard); ++session_generation;
                 dirty=1;
             }
         }
         mouse_flush();
+        if(clip_status!=status_seen) { status_seen=clip_status; status_age=0; }
+        if(tick_fired()) {
+            if(title_pending) dirty=1;
+            title_hold=0;
+            if(foreground_watch) --foreground_watch;
+            if(status_expiring() && ++status_age>=16) { clip_status=status_seen=NULL; dirty=1; }
+        }
         if(aros_clip_job_poll(&clip_job)) { clipboard_completed(closing); dirty=1; }
 #ifdef XTERM_PROCESS_PORT_CLIENTS
         if(aros_completion_job_poll(&completion_job)) {
@@ -1557,7 +1673,7 @@ int main(int argc,char **argv)
                     if(mouse_cell(window,mx,my,&row,&col,0)) {
                         command_editor.selecting=0;
                         selection_start(&selection,display_screen(),row,col);
-                        clip_status="Selected | RAmiga+C or Ctrl+Shift+C";
+                        clip_status="Selected";
                     } else selection.active=selection.dragging=0;
                     dirty=1;
                 } else if(selection.dragging) {
@@ -1681,6 +1797,7 @@ int main(int argc,char **argv)
                         clip_status="Cannot start session/profile | F4 retries"; dirty=1; continue;
                     }
                     output_reset();
+                    program_title_clear(&program_title); memset(&foreground,0,sizeof foreground);
                     echo_session_close(&echo); echo_mode=2; process_reported=0;
                     memset(&command_editor,0,sizeof command_editor);
                     selection.active=selection.dragging=0;
@@ -1696,6 +1813,7 @@ int main(int argc,char **argv)
                     key_queue_clear(&keyboard);
                     aros_session_dispose(&process_session);
                     paste_cancel(&paste); ++session_generation;
+                    program_title_clear(&program_title); memset(&foreground,0,sizeof foreground);
                     echo_session_close(&echo); echo_mode=0; replay();
                 } else if(code==RAWKEY_F2) {
                     output_reset();
@@ -1703,6 +1821,7 @@ int main(int argc,char **argv)
                     aros_session_dispose(&process_session);
                     paste_cancel(&paste); ++session_generation;
                     selection.active=selection.dragging=0;
+                    program_title_clear(&program_title); memset(&foreground,0,sizeof foreground);
                     echo_mode=1; echo_session_init(&echo);
                     screen_init(&screen,cells,MAX_ROWS*MAX_COLUMNS,screen.rows,screen.columns);
                     reset_links();
@@ -1777,7 +1896,10 @@ int main(int argc,char **argv)
            !aros_session_dispose(&process_session))
             running=FALSE;
         if(running && dirty) { update_title(window,last_key); draw_screen(window); }
+        if(running && (title_pending || title_hold || status_expiring() || foreground_watch ||
+                       (echo_mode==2 && foreground.running))) tick_arm();
     }
+    tick_close();
     aros_session_dispose(&process_session);
 #ifdef XTERM_PKTWAIT_PROBE
     aros_handler_probe_stop();

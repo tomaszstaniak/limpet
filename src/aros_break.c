@@ -3,6 +3,7 @@
 #include <exec/execbase.h>
 #include <proto/exec.h>
 #include <dos/dos.h>
+#include <dos/dosextens.h>
 #include <string.h>
 
 /* ABIv11 has no task-removal notification. The system console (con_handler)
@@ -46,6 +47,37 @@ int aros_break_send(ArosBreak *b)
     ReleaseSemaphore(&b->gate);
     return sent;
 }
+
+/* Called with the task protected (listed under Disable, or held by the
+   removal gate under Forbid). Copies a bounded name; keeps no pointer. */
+static void read_foreground(struct Task *task,XForeground *out)
+{
+    struct CommandLineInterface *cli;
+    const char *name;
+    size_t i;
+    if(task->tc_Node.ln_Type!=NT_PROCESS) return;
+    cli=BADDR(((struct Process *)task)->pr_CLI);
+    if(!cli) return;
+    out->known=1;
+    out->running=cli->cli_Module!=BNULL;
+    out->module=(unsigned long)(IPTR)cli->cli_Module;
+    name=task->tc_Node.ln_Name;
+    if(out->running && name)
+        for(i=0;i+1<sizeof out->name && name[i];++i) out->name[i]=name[i];
+}
+int aros_break_foreground(ArosBreak *b,XForeground *out)
+{
+    memset(out,0,sizeof *out);
+    if(!b->registered) return 0;
+    ObtainSemaphore(&b->gate);
+    if(b->target) {
+        Disable();
+        if(task_listed(b->target)) read_foreground(b->target,out);
+        Enable();
+    }
+    ReleaseSemaphore(&b->gate);
+    return out->known;
+}
 void aros_break_close(ArosBreak *b) { b->registered=0; b->target=NULL; }
 #else
 #include <aros/asmcall.h>
@@ -54,6 +86,7 @@ void aros_break_close(ArosBreak *b) { b->registered=0; b->target=NULL; }
 #include <proto/exec.h>
 #include <proto/task.h>
 #include <dos/dos.h>
+#include <dos/dosextens.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -113,6 +146,34 @@ int aros_break_send(ArosBreak *b)
     if(b->target) { Signal(b->target,SIGBREAKF_CTRL_C); sent=1; }
     ReleaseSemaphore(&b->gate);
     return sent;
+}
+
+/* Called with the task protected (listed under Disable, or held by the
+   removal gate under Forbid). Copies a bounded name; keeps no pointer. */
+static void read_foreground(struct Task *task,XForeground *out)
+{
+    struct CommandLineInterface *cli;
+    const char *name;
+    size_t i;
+    if(task->tc_Node.ln_Type!=NT_PROCESS) return;
+    cli=BADDR(((struct Process *)task)->pr_CLI);
+    if(!cli) return;
+    out->known=1;
+    out->running=cli->cli_Module!=BNULL;
+    out->module=(unsigned long)(IPTR)cli->cli_Module;
+    name=task->tc_Node.ln_Name;
+    if(out->running && name)
+        for(i=0;i+1<sizeof out->name && name[i];++i) out->name[i]=name[i];
+}
+int aros_break_foreground(ArosBreak *b,XForeground *out)
+{
+    memset(out,0,sizeof *out);
+    if(!b->registered) return 0;
+    /* Removal notification takes this gate before the task is freed. */
+    ObtainSemaphore(&b->gate);
+    if(b->target) { Forbid(); read_foreground(b->target,out); Permit(); }
+    ReleaseSemaphore(&b->gate);
+    return out->known;
 }
 void aros_break_close(ArosBreak *b)
 {

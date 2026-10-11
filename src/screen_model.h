@@ -5,6 +5,7 @@
 #include "hyperlink.h"
 /* Every synchronous model response fits in this many bytes. */
 #define XSCREEN_REPLY_CAPACITY 64
+#define XSCREEN_TITLE_MAX 255
 enum { XCOLOUR_DEFAULT_FG=1, XCOLOUR_DEFAULT_BG=2, XCOLOUR_SELECTED=4,
        XCOLOUR_RGB_FG=8, XCOLOUR_RGB_BG=16, XCOLOUR_INVERSE=32,
        XCOLOUR_UNDERLINE=64,
@@ -77,6 +78,12 @@ typedef struct XTermScreen {
     uint32_t active_link, saved_link;
     char osc_target[XHYPERLINK_LIMIT];
     unsigned osc_phase, osc_length, osc_invalid, osc_params;
+    /* Window title from OSC 0/2: valid UTF-8 without controls, at most
+     * XSCREEN_TITLE_MAX bytes, NUL-terminated; empty means "none".
+     * title_serial counts every accepted OSC 0/2 (an equal text too), so a
+     * frontend sees a new title even when the text did not change. */
+    char title[XSCREEN_TITLE_MAX + 1], osc_title[XSCREEN_TITLE_MAX];
+    unsigned long title_serial;
 } XTermScreen;
 
 /* Caller owns both storage arrays. Coordinates are zero-based.
@@ -100,7 +107,8 @@ typedef struct XTermScreen {
  * IL/DL affect cursor-through-bottom-margin rows only, start in column one,
  * and do not append to scrollback; outside the margins they have no effect.
  * Colon-form SGR is not implemented.
- * OSC 8 attaches links.
+ * OSC 8 attaches links. OSC 0 and OSC 2 set `title` (see its comment); a
+ * malformed, overlong or control-carrying title is dropped whole.
  * Optional CSI ?1049 h/l snapshots/restores the primary screen, cursor/style
  * and history. Resize crops both screens. Alternate output has no history.
  * CSI ?25 h/l controls cursor visibility. An optional synchronous reply sink

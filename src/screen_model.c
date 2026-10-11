@@ -749,12 +749,19 @@ static void put_scalar(XTermScreen *s, uint32_t scalar)
     s->cluster_active = !overflow;
 }
 
-/* Only the exact OSC 8 command is interpreted. Every other OSC is discarded
- * through its terminator, including malformed and overflowing payloads. */
+/* Only OSC 8 (links) and OSC 0/2 (title) are interpreted. Every other OSC
+ * is discarded through its terminator, including malformed and overflowing
+ * payloads. Phases: 0 command, 1-3 link, 4 discard, 5 title ';', 6 title. */
 static void osc_byte(XTermScreen *s,unsigned char ch)
 {
-    if(ch<32 || ch>=127) s->osc_invalid=1;
-    if(s->osc_phase==0) s->osc_phase=ch=='8'?1:4;
+    /* A title is UTF-8, checked whole when it ends; a link is ASCII. */
+    if(ch<32 || ch==127 || (ch>=128 && s->osc_phase!=6)) s->osc_invalid=1;
+    if(s->osc_phase==0) s->osc_phase=ch=='8'?1:ch=='0' || ch=='2'?5:4;
+    else if(s->osc_phase==5) s->osc_phase=ch==';'?6:4;
+    else if(s->osc_phase==6) {
+        if(s->osc_length<XSCREEN_TITLE_MAX) s->osc_title[s->osc_length++]=(char)ch;
+        else s->osc_invalid=1;
+    }
     else if(s->osc_phase==1) s->osc_phase=ch==';'?2:4;
     else if(s->osc_phase==2) {
         if(ch==';') s->osc_phase=3;
@@ -767,8 +774,38 @@ static void osc_byte(XTermScreen *s,unsigned char ch)
     }
 }
 
+/* Valid UTF-8 with no C1 control (U+0080..U+009F) and no surrogate,
+ * overlong form or value past U+10FFFF. C0 and DEL were refused per byte. */
+static int title_valid(const unsigned char *t,size_t n)
+{
+    size_t i=0,len,k;
+    while(i<n) {
+        uint32_t c;
+        if(t[i]<0x80) { ++i; continue; }
+        if(t[i]>=0xc2 && t[i]<=0xdf) { len=2; c=t[i]&0x1f; }
+        else if(t[i]>=0xe0 && t[i]<=0xef) { len=3; c=t[i]&0x0f; }
+        else if(t[i]>=0xf0 && t[i]<=0xf4) { len=4; c=t[i]&0x07; }
+        else return 0;
+        if(n-i<len) return 0;
+        for(k=1;k<len;++k) {
+            if((t[i+k]&0xc0)!=0x80) return 0;
+            c=(c<<6)|(t[i+k]&0x3f);
+        }
+        if((len==3 && c<0x800) || (len==4 && (c<0x10000 || c>0x10ffff)) ||
+           (c>=0xd800 && c<=0xdfff) || c<=0x9f) return 0;
+        i+=len;
+    }
+    return 1;
+}
+
 static void osc_end(XTermScreen *s)
 {
+    if(s->osc_phase==6 && !s->osc_invalid &&
+       title_valid((const unsigned char *)s->osc_title,s->osc_length)) {
+        memcpy(s->title,s->osc_title,s->osc_length);
+        s->title[s->osc_length]=0;
+        ++s->title_serial;
+    }
     if(s->osc_phase==2 || s->osc_phase==3) {
         s->osc_target[s->osc_length]=0;
         if(s->osc_invalid || s->osc_phase!=3) s->active_link=XHYPERLINK_INVALID;

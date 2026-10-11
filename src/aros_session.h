@@ -61,6 +61,9 @@ int aros_session_active(const ArosSession *);
 /* NULL: optional S:Shell-Startup; "": clean session; otherwise required file. */
 int aros_session_start_shell_profile(ArosSession *,const char *profile);
 int aros_session_interrupt(ArosSession *);
+/* What the console's current reader runs (aros_break_foreground); known
+   is 0 when the session is not a console or no reader is bound. */
+int aros_session_foreground(ArosSession *,XForeground *);
 /* Resolve before entering SystemTags, whose Shell has its own PROGDIR. */
 int aros_session_peer_command(char *command,size_t capacity);
 ULONG aros_session_signals(const ArosSession *);
