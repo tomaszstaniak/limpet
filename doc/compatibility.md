@@ -22,7 +22,7 @@ QEMU, results checked on screen. No test ran on real hardware.
 
 | Terminal | Presentation query | Stream features in this documentation |
 | --- | --- | --- |
-| Limpet 0.2.0 | answers, with input modes | as listed in the [catalogue](capabilities.md) |
+| Limpet 0.2.0, 0.2.1 | answers, with input modes | as listed in the [catalogue](capabilities.md) |
 | Limpet 0.1.0 | answers, without input modes | as listed, except entries marked "Since 0.2.0" |
 | `CON:` (system console) | `ERROR_ACTION_NOT_KNOWN` | the Amiga console sequences, not the ones documented here |
 | other consoles (KingCON and similar) | not tested; expected `ERROR_ACTION_NOT_KNOWN` | unknown |

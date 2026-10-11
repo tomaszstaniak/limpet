@@ -3,7 +3,7 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## Unreleased
+## 0.2.1 (2026-10-11)
 
 - HarfBuzz 14.5.0 (was 11.2.1): maintenance update, with upstream fixes in
   shaping and in handling damaged fonts. No new terminal features. The
@@ -11,7 +11,8 @@ Changes of the terminal. The SDK has its own list in
   whose tables are damaged, a cluster may now fall back to another font or
   lose a ligature where 11.2.1 still used the damaged table. Speed: one
   controlled measurement on AROS found no large slowdown, but it was too
-  unsteady to rule out a small one. Source and build settings:
+  unsteady to rule out a small one. The program grows from 3,199,064 to
+  3,357,536 bytes (+4.95 %). Source and build settings:
   [vendor/README.md](../vendor/README.md).
 - `make test-shaping-corpus`: every cluster of a fixed corpus as the
   renderer draws it, compared with the accepted output.

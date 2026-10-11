@@ -4,11 +4,13 @@ Limpet and the SDK have separate version numbers and separate tags.
 
 | | Version | Archive | Git tag |
 | --- | --- | --- | --- |
-| Limpet (the terminal) | 0.2.0 | `Limpet-0.2.0-abiv11.zip` | `v0.2.0` |
+| Limpet (the terminal) | 0.2.1 | `Limpet-0.2.1-abiv11.zip` | `v0.2.1` |
 | Limpet SDK | 0.2.0 | `limpet-sdk-0.2.0.zip` | `sdk-v0.2.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
-Limpet 0.1.0 (tag `v0.1.0`) is the earlier terminal release. An SDK 0.1.0
+Limpet 0.2.0 (tag `v0.2.0`) and 0.1.0 (tag `v0.1.0`) are the earlier
+terminal releases. 0.2.1 changes only the bundled HarfBuzz; the protocol
+and the SDK are the same as for 0.2.0. An SDK 0.1.0
 was prepared but never published; its sources are kept in
 `sdk/tests/compat-0.1.0` for the compatibility test.
 
@@ -63,7 +65,7 @@ caller's struct at run time.
 
 | SDK | Terminal | What a program can use |
 | --- | --- | --- |
-| 0.2.0 | Limpet 0.2.0 | everything in the [catalogue](capabilities.md) |
+| 0.2.0 | Limpet 0.2.0, 0.2.1 | everything in the [catalogue](capabilities.md) |
 | 0.2.0 | Limpet 0.1.0 | everything marked "Since 0.1.0"; the input modes are reported as unknown, so a program does not turn them on |
 | 0.2.0 | a future Limpet | everything above; newer fields are ignored until a newer SDK decodes them |
 

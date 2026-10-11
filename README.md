@@ -16,7 +16,8 @@ and remote work over SSH.
 | | What it is | Where |
 | --- | --- | --- |
 | **Limpet 0.1.0** | the first terminal release, AROS ABIv11 x86_64 | [releases](https://github.com/tomaszstaniak/limpet/releases), tag `v0.1.0` |
-| **Limpet 0.2.0** | the terminal these sources build: 0.1.0 plus the input modes for full-screen programs and a selection that stays while other rows are redrawn | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.0), tag `v0.2.0` |
+| **Limpet 0.2.0** | 0.1.0 plus the input modes for full-screen programs and a selection that stays while other rows are redrawn | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.0), tag `v0.2.0` |
+| **Limpet 0.2.1** | the terminal these sources build: 0.2.0 with HarfBuzz 14.5.0 instead of 11.2.1 | [releases](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.1), tag `v0.2.1` |
 | **Limpet SDK 0.2.0** | headers, library and examples for programs that use Limpet | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.2.0), tag `sdk-v0.2.0` |
 | `main` | development; may be ahead of every release | this repository |
 
@@ -117,15 +118,15 @@ examples and this documentation. The same files are in `sdk/` here.
 Limpet is built on a host with an AROS ABIv11 cross toolchain (GCC 10.5)
 and the ABIv11 SDK:
 
-    make abiv11-frontend LIMPET_VERSION=0.2.0 LIMPET_DATE=07.10.2026 \
+    make abiv11-frontend LIMPET_VERSION=0.2.1 LIMPET_DATE=11.10.2026 \
          ABIV11_GCC=/path/to/x86_64-aros-gcc \
          ABIV11_SDK=/path/to/SDK/Development
 
 The result is `build/abiv11/aros-xterm` (installed as `Limpet`). The
 version string carries `LIMPET_DATE`; with the date of a release, the build
 of its tag is byte-identical to the released binary (checked for 0.1.0
-with `LIMPET_DATE=03.10.2026`; the 0.2.0 archive is built this way from
-commit `60d3eac`). Host tests
+with `LIMPET_DATE=03.10.2026` and for 0.2.0 with `LIMPET_DATE=07.10.2026`;
+the 0.2.1 archive is built this way from its tag). Host tests
 of the terminal model, the protocols and the SDK need only a C compiler:
 
     make test

@@ -4,7 +4,7 @@ This is the single list of what Limpet does, for users and for programmers.
 Each entry says how a program finds out about it, what to send, what to do
 when it is missing, and how far it has been checked.
 
-Applies to **Limpet 0.2.0** and **Limpet SDK 0.2.0** for **AROS ABIv11,
+Applies to **Limpet 0.2.0 and 0.2.1** and **Limpet SDK 0.2.0** for **AROS ABIv11,
 x86_64**. The Since column gives the first version with the feature. Other builds are covered in
 [compatibility](compatibility.md).
 
