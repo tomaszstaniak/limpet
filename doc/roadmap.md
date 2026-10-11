@@ -14,8 +14,9 @@ development priorities, not announced release dates or completed features.
 - Build for native AROS Raspberry Pi aarch64 using the existing toolchain
   and Developer SDK already used to compile and link FolioPDF. Check
   Limpet's dependencies on that target, then run and package the terminal.
-- Follow with reverse command-history search (Ctrl-R), then file drag
-  and drop.
+- Reverse command-history search (Ctrl-R) is in the 0.3.0 release
+  candidate, with the window title that names the running program and
+  its state. File drag and drop comes next.
 
 ## More architectures
 
@@ -40,8 +41,8 @@ Mainline packaging remains a separate task from ABIv11 ports.
 
 The intended order is:
 
-1. Reverse command-history search with Ctrl-R. This searches commands,
-   not terminal output.
+1. Reverse command-history search with Ctrl-R (0.3.0 candidate). It
+   searches commands, not terminal output.
 2. File drag and drop, inserting a correctly quoted path and handling
    Workbench icons separately from their associated files.
 3. Scrollback search for logs and command output.

@@ -57,6 +57,14 @@ abiv11-frontend:
 	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -o build/abiv11/aros-xterm src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 
 # Shaping benchmark (tools/bench_shaping.c), with the HarfBuzz object of
+# Guest probes for checks that need AROS (doc/verification-0.3.0.md): an
+# inline image at a chosen row with C=0 or C=1, and Ctrl-C/raw Ctrl-R input.
+.PHONY: abiv11-probes
+abiv11-probes:
+	mkdir -p build/abiv11/probes
+	$(ABIV11_GCC) $(OPTFLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -Isdk/include -o build/abiv11/probes/kitty_edge_probe tests/kitty_edge_probe.c sdk/src/limpet_query.c sdk/src/limpet_format.c -L$(ABIV11_SDK)/lib
+	$(ABIV11_GCC) $(OPTFLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/probes/break_probe tests/break_probe.c -L$(ABIV11_SDK)/lib
+
 # abiv11-frontend. Run it from the Limpet drawer: it reads PROGDIR:Fonts.
 .PHONY: abiv11-bench-shaping
 abiv11-bench-shaping:

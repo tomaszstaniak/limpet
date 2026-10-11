@@ -29,6 +29,7 @@ For programmers:
 For maintainers:
 
 - [Building and releasing the SDK](sdk/releasing.md).
+- [Verification record for the Limpet 0.3.0 release candidate](verification-0.3.0.md).
 - [Verification record for Limpet 0.2.1](verification-0.2.1.md).
 - [Verification record for Limpet 0.2.0 and SDK 0.2.0](sdk/verification-0.2.0.md).
 - [Earlier record of the unpublished SDK 0.1.0](sdk/verification-0.1.0.md).

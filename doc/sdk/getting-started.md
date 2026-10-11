@@ -58,7 +58,7 @@ using the prebuilt one, run the same command with `rebuild-lib`, then
 Copy `build/abiv11/` to the AROS machine, start Limpet, and run `hello`
 from the Limpet window:
 
-    Limpet SDK 0.2.0
+    Limpet SDK 0.3.0
     Output is a Limpet console.
       Colours:       24-bit colour (SGR 38;2;r;g;b)
       SGR 30-37:     Workbench screen pens; ANSI colours go as 38;5;0-15
@@ -66,13 +66,15 @@ from the Limpet window:
       Rewrite line:  yes (CR and CSI K)
       Size:          117 columns x 37 rows, when asked
       Input modes:   bracketed paste (2004) resize reports (2048) wheel reports (2100)
+      Window title:  settable (OSC 0/2)
 
-In Limpet 0.1.0 the last line reads
-`Input modes:   unknown (Limpet 0.1.0 does not report them)`.
+In Limpet 0.2.x the last line reads
+`Window title:  unknown (Limpet before 0.3.0 does not report it)`; in Limpet
+0.1.0 the input modes are unknown as well.
 
 Run it again in a normal AROS Shell window (`CON:`):
 
-    Limpet SDK 0.2.0
+    Limpet SDK 0.3.0
     This console does not answer the Limpet query (CON: or another console).
     Nothing is known about it: plain text only.
 

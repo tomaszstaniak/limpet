@@ -2,13 +2,13 @@
 
 ## Systems
 
-| System | Limpet 0.1.0 | Limpet 0.2.0 | SDK 0.2.0 |
-| --- | --- | --- | --- |
-| AROS ABIv11 x86_64, 2026.09 | published, tested | tested | prebuilt library, examples tested |
-| AROS One 1.3 (ABIv11 x86_64) | published, tested at release | not run | not run |
-| AROS mainline x86_64 (ABI v1) | not released (an unpublished preview exists) | not released | no library shipped; the sources contain no ABI-specific code but have not been built or run on mainline |
-| AROS i386, aarch64, ARM | no build | no build | no build |
-| AmigaOS 4, MorphOS, AmigaOS 3 | no build | no build | no build |
+| System | Limpet 0.1.0 | Limpet 0.2.0 | Limpet 0.3.0 (candidate) | SDK 0.2.0 | SDK 0.3.0 (candidate) |
+| --- | --- | --- | --- | --- | --- |
+| AROS ABIv11 x86_64, 2026.09 | published, tested | tested | built with its SDK, not run there | prebuilt library, examples tested | built, not run there |
+| AROS One 1.3 (ABIv11 x86_64) | published, tested at release | not run | tested | not run | `hello` and `title` tested |
+| AROS mainline x86_64 (ABI v1) | not released (an unpublished preview exists) | not released | not built | no library shipped; the sources contain no ABI-specific code but have not been built or run on mainline | as SDK 0.2.0 |
+| AROS i386, aarch64, ARM | no build | no build | no build | no build | no build |
+| AmigaOS 4, MorphOS, AmigaOS 3 | no build | no build | no build | no build | no build |
 
 ABIv11 and mainline binaries do not run on each other's systems, and a
 result on one says nothing about the other. The SDK's sources contain no
@@ -22,7 +22,8 @@ QEMU, results checked on screen. No test ran on real hardware.
 
 | Terminal | Presentation query | Stream features in this documentation |
 | --- | --- | --- |
-| Limpet 0.2.0, 0.2.1 | answers, with input modes | as listed in the [catalogue](capabilities.md) |
+| Limpet 0.3.0 (candidate) | answers, with input modes and features | as listed in the [catalogue](capabilities.md) |
+| Limpet 0.2.0, 0.2.1 | answers, with input modes | as listed, except entries marked "Since 0.3.0" |
 | Limpet 0.1.0 | answers, without input modes | as listed, except entries marked "Since 0.2.0" |
 | `CON:` (system console) | `ERROR_ACTION_NOT_KNOWN` | the Amiga console sequences, not the ones documented here |
 | other consoles (KingCON and similar) | not tested; expected `ERROR_ACTION_NOT_KNOWN` | unknown |
@@ -63,9 +64,12 @@ The exact subsets are in the [protocol reference](protocols.md).
   mode.
 - **SGR 30-37 are pens** in a Shell session. Use `38;5;n` for ANSI colours
   (the SDK does).
-- **Images do not scroll the screen.** Make room first.
+- **Images and the bottom edge.** Limpet 0.3.0 scrolls to show a `C=0`
+  image whole; 0.1.0 to 0.2.1 do not. Make room first to work with all.
 - **Cell size in pixels is not reported.**
 - **Ctrl-C** does not reach jobs started with `Run`.
+- **Window title** (0.3.0): only after the presentation reply confirmed
+  `XTY_FEATURE_TITLE`; a title lasts while the command that sent it runs.
 - **`Run` with output redirected to a file** leaves the file empty. This
   is the system's `Run`, not the terminal; it happens in `CON:` too.
 - **Programs that open `CON:` themselves** get a `CON:` window, not a

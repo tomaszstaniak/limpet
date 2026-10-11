@@ -10,12 +10,13 @@
    Then it draws a 160x96 gradient, waits for a key (at most 30 s), deletes
    the image and frees its memory in the terminal.
 
-   Room for the image is made first. Limpet places an image at the cursor
-   and clips it at the bottom of the window; it does not scroll the text up
-   to fit it, and it does not report its cell size in pixels. So the program
-   prints enough blank lines for the image at a cell height of 12 pixels
-   (Limpet's default font is taller, so a line or two stay empty), moves
-   back up and draws with the cursor kept in place.
+   Room for the image is made first. Limpet 0.1.0 to 0.2.1 place an image
+   at the cursor and clip it at the bottom of the window without scrolling
+   the text up (0.3.0 scrolls for C=0), and no version reports its cell
+   size in pixels. So the program prints enough blank lines for the image
+   at a cell height of 12 pixels (Limpet's default font is taller, so a
+   line or two stay empty), moves back up and draws with the cursor kept
+   in place.
 
    Every exit path after raw mode was entered restores cooked mode, and a
    drawn image is deleted again even when a later step fails. */

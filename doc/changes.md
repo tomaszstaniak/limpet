@@ -3,6 +3,43 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.3.0 (release candidate, 2026-10-11, not published)
+
+For users:
+
+- The window title says what runs in the window: `Shell - Limpet` at the
+  prompt, `Wait - Limpet` while a command runs, the program's own state
+  when it reports one (`Hardcode: waiting for the model - Limpet`), then
+  `Shell` again. A link under the pointer still shows its target there.
+  Terminal messages follow the name (`| Copied`), report-only ones go after
+  about four seconds, and key hints moved to the About window. Jobs started
+  with `Run` are not shown. [Details](capabilities.md#window-title).
+- Ctrl-R searches the commands typed in the window (the last 32): typing
+  narrows, Ctrl-R again goes further back, Enter puts the command on the
+  line without running it, Esc puts back what was there.
+  [How](capabilities.md#history-search).
+- Ctrl-C while a command runs gives one new prompt; it used to give two on
+  one line.
+- An image near the bottom of the window shows whole: with `C=0` the text
+  scrolls up to make room and the cursor ends beside the image's last row.
+  `clear` (`CSI 2 J`) removes images with the text, and a full-screen
+  program starts on an alternate screen without old images.
+- Images stay on their text row when the window is resized with lines in
+  the scrollback; they used to vanish.
+- A selection is dropped when the screen switches between main and
+  alternate or the view moves in the history, even over blank text.
+- The title is composed in a buffer Intuition is not drawing from.
+
+For programs:
+
+- OSC 0 and OSC 2 set the window title while the command that sent them
+  runs, announced by the presentation query (known bit 64, `values[8]`,
+  `XTY_FEATURE_TITLE`); SDK 0.3.0 has `limpet_osc_title()`. Limpet 0.2.x
+  does not confirm the feature, and `CON:` prints the sequence as text.
+
+Size: the program is 3,375,824 bytes, 18,288 more than 0.2.1 (+0.54 %). Checks:
+[verification-0.3.0.md](verification-0.3.0.md).
+
 ## 0.2.1 (2026-10-11)
 
 - HarfBuzz 14.5.0 (was 11.2.1): maintenance update, with upstream fixes in

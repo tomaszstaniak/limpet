@@ -61,9 +61,20 @@ text must be readable there.
 
 ## An image is cut off at the bottom, or text overlaps it
 
-Limpet (0.1.0 and 0.2.0) does not scroll to make room for an image. Print blank lines,
-move back up, draw with `keep_cursor = 1`, then move down, as the `image`
-example does.
+Limpet 0.1.0 to 0.2.1 do not scroll to make room for an image; 0.3.0 does
+for `C=0` (`keep_cursor = 0`). To work with every version, print blank
+lines, move back up, draw with `keep_cursor = 1`, then move down, as the
+`image` example does. With `keep_cursor = 1` text written at the cursor
+goes over the image: that is what the flag asks for.
+
+## The window title does not change, or shows `?`
+
+A program's title (OSC 0/2) is accepted only from Limpet 0.3.0 on, only
+as valid UTF-8 of at most 255 bytes without control characters, and only
+while the command that sent it runs. Send it only when
+`limpet_can_set_title()` says so. The title bar shows Latin-1: other
+characters appear as `?`. A command's own name is read from the Shell; a
+job started with `Run` is not shown.
 
 ## `ERROR_ACTION_NOT_KNOWN` for `XTY_CAPS` or termios calls
 

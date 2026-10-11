@@ -76,10 +76,15 @@ other attributes.
 
 ## Output: OSC
 
-Only OSC 8 is interpreted: `OSC 8 ; params ; URI ST` opens a link,
-`OSC 8 ; ; ST` closes it. BEL also terminates. Every other OSC (window
-title, palette, clipboard) is consumed and ignored. Details and bounds:
-[hyperlinks.md](hyperlinks.md).
+OSC 8 and, from 0.3.0, OSC 0 and OSC 2 are interpreted; BEL also
+terminates. `OSC 8 ; params ; URI ST` opens a link, `OSC 8 ; ; ST` closes
+it; details and bounds in [hyperlinks.md](hyperlinks.md).
+`OSC 0 ; text ST` and `OSC 2 ; text ST` set the window title while the
+command that sent them runs: 1 to 255 bytes of valid UTF-8 without control
+characters, else the whole sequence is ignored; empty text drops the
+program's title. Detection, lifetime and display:
+[capabilities.md](capabilities.md#window-title). Every other OSC (icon
+name, palette, clipboard) is consumed and ignored.
 
 ## Output: APC
 

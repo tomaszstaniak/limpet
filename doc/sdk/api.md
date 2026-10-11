@@ -34,9 +34,9 @@ protocol directly or check what the SDK does.
 
 ```c
 #define LIMPET_SDK_VERSION_MAJOR 0
-#define LIMPET_SDK_VERSION_MINOR 2
+#define LIMPET_SDK_VERSION_MINOR 3
 #define LIMPET_SDK_VERSION_PATCH 0
-#define LIMPET_SDK_VERSION_STRING "0.2.0"
+#define LIMPET_SDK_VERSION_STRING "0.3.0"
 ```
 
 These describe the SDK, not the terminal. The terminal's version is not
@@ -45,20 +45,22 @@ reported by any query; features are.
 ## Building with one SDK version
 
 `LimpetPresentation` is part of the binary interface. SDK 0.2.0 appended
-`input`, so the struct grew from 28 to 32 bytes. Compile every object that
-uses the SDK, and the library, with the same SDK version.
+`input` (28 to 32 bytes) and SDK 0.3.0 `features` (32 to 36 bytes).
+Compile every object that uses the SDK, and the library, with the same SDK
+version.
 
 To make a mix fail safely, `limpet.h` renames the two functions that fill
 the struct:
 
 ```c
-#define limpet_query_presentation limpet_query_presentation_v2
-#define limpet_presentation_decode limpet_presentation_decode_v2
+#define limpet_query_presentation limpet_query_presentation_v3
+#define limpet_presentation_decode limpet_presentation_decode_v3
 ```
 
-Source code keeps using the plain names. An object compiled with the 0.1
-header refers to the old link names, so linking it against the 0.2 library
-fails with an undefined symbol instead of overwriting the caller's stack.
+Source code keeps using the plain names. An object compiled with the 0.1 or
+0.2 header refers to an old link name, so linking it against the 0.3
+library fails with an undefined symbol instead of overwriting the caller's
+stack.
 `sdk/tests/test_sdk_compat.sh` checks that this link fails.
 
 ## Presentation query
@@ -85,6 +87,7 @@ typedef struct {
     uint32_t rows, columns;
     uint32_t interpretation;
     uint32_t input;          /* 0.2.0 */
+    uint32_t features;       /* 0.3.0 */
 } LimpetPresentation;
 ```
 
@@ -96,6 +99,7 @@ typedef struct {
 | `rows`, `columns` | `XTY_PRESENT_KNOWN_GEOMETRY` (8) | both positive |
 | `interpretation` | `XTY_PRESENT_KNOWN_INTERPRETATION` (16) | bit `XTY_COLOR_PENS` (1) |
 | `input` (0.2.0) | `XTY_PRESENT_KNOWN_INPUT` (32) | bits `XTY_INPUT_BRACKETED_PASTE` (1), `XTY_INPUT_RESIZE_REPORT` (2), `XTY_INPUT_WHEEL_REPORT` (4): modes a raw-mode program may turn on |
+| `features` (0.3.0) | `XTY_PRESENT_KNOWN_FEATURES` (64) | bit `XTY_FEATURE_TITLE` (1): OSC 0/2 set the window title (Limpet 0.3.0) |
 
 **Unknown versus unsupported.** A clear bit in `known` means the terminal
 said nothing about that field. A set bit with a zero value means the
@@ -199,6 +203,7 @@ All take a `const LimpetPresentation *` (NULL allowed, treated as
 | `int limpet_can_rewrite_line(p)` | 1 if CR and `CSI K` are both confirmed |
 | `uint32_t limpet_columns(p)` | columns, or 0 if unknown |
 | `uint32_t limpet_rows(p)` | rows, or 0 if unknown |
+| `int limpet_can_set_title(p)` | 1 if OSC 0/2 window titles are confirmed (0.3.0; Limpet 0.2.x answers without confirming) |
 
 ### Input modes (0.2.0)
 
@@ -284,6 +289,29 @@ size_t limpet_osc8_open(char *buf, size_t size, const char *uri);
 (`LIMPET_OSC8_URI_MAX`) of printable ASCII, 0x21 to 0x7E. Spaces, controls
 and non-ASCII bytes return 0: percent-encode them. Limpet makes only
 `http://` and `https://` targets clickable.
+
+### `limpet_osc_title` (0.3.0)
+
+```c
+#define LIMPET_TITLE_MAX 255
+#define LIMPET_TITLE_RESET "\033]2;\033\\"
+size_t limpet_osc_title(char *buf, size_t size, const LimpetPresentation *p,
+                        const char *text);
+```
+
+`ESC ] 2 ; text ESC \`, for a terminal that confirmed `XTY_FEATURE_TITLE`
+only. `text` is 1 to 255 bytes of valid UTF-8 with no control characters
+(C0, DEL, C1); anything else returns 0. An empty `text` builds
+`LIMPET_TITLE_RESET`, which drops the program's title. A buffer of
+`LIMPET_TITLE_MAX + 7` bytes always fits.
+
+Limpet keeps the title while the command that sent it runs and drops it
+when that command ends, so a program does not have to reset it on exit.
+Send a new title when the program's state changes, not with each line of
+output: Limpet applies at most about four changes a second. The title bar
+shows Latin-1; other characters appear as `?`. Example:
+[`title`](../../sdk/examples/title.c); behaviour:
+[window title](../capabilities.md#window-title).
 
 ## Kitty graphics
 

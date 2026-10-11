@@ -63,8 +63,8 @@ target after the label otherwise. See
 
 Two checks, in order: the presentation query (no image bytes to a console
 that fails it), then the Kitty `a=q` query in raw mode with a time limit.
-Make room before drawing, because Limpet does not scroll for the
-image. See [`image`](../../sdk/examples/image.c) and
+Make room before drawing: Limpet 0.1.0 to 0.2.1 do not scroll for the
+image (0.3.0 does with `C=0`). See [`image`](../../sdk/examples/image.c) and
 [inline images](../capabilities.md#inline-images).
 
 ## Single keys and full-screen interfaces

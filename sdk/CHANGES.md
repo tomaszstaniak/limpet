@@ -1,5 +1,34 @@
 # Limpet SDK changes
 
+## 0.3.0 (release candidate, 2026-10-11, not published)
+
+Works with Limpet 0.1.0 to 0.3.0.
+
+Added:
+
+- `LimpetPresentation.features`, appended to the struct, valid with known
+  bit 64 (`XTY_PRESENT_KNOWN_FEATURES`). Bit `XTY_FEATURE_TITLE` (1): OSC 0
+  and OSC 2 set the window title (Limpet 0.3.0). Limpet 0.2.x and earlier
+  leave the bit and the field clear.
+- `limpet_can_set_title()` and `limpet_osc_title()`, which builds
+  `ESC ] 2 ; text ESC \` from 1..255 bytes of valid UTF-8 without control
+  characters, only for a terminal that confirmed the feature;
+  `LIMPET_TITLE_MAX`, `LIMPET_TITLE_RESET`.
+- Example `title`; `hello` reports the feature.
+
+Changed:
+
+- Binary interface: `LimpetPresentation` is 4 bytes longer. Rebuild every
+  object with this SDK. `limpet_query_presentation` and
+  `limpet_presentation_decode` have new link names (`..._v3`); objects
+  built with the 0.1 or 0.2 header fail to link instead of overflowing
+  their struct. Source code is unchanged.
+- `test_sdk_compat.sh` checks SDK 0.1.0 and SDK 0.2.0 clients (vendored in
+  `sdk/tests/compat-0.2.0` from tag `sdk-v0.2.0`) against the current reply.
+
+Protocol header `tty_control.h`: SHA-256
+`80894ef8484a47852fa861cac26cecdc88b9d5bc5b3b41da40b33f0d7034e64b`.
+
 ## 0.2.0 (2026-10-07)
 
 The first SDK release. Works with Limpet 0.1.0 and 0.2.0.

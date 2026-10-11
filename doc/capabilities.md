@@ -4,7 +4,8 @@ This is the single list of what Limpet does, for users and for programmers.
 Each entry says how a program finds out about it, what to send, what to do
 when it is missing, and how far it has been checked.
 
-Applies to **Limpet 0.2.0 and 0.2.1** and **Limpet SDK 0.2.0** for **AROS ABIv11,
+Applies to **Limpet 0.2.0 and 0.2.1**, the **Limpet 0.3.0 release
+candidate** and **Limpet SDK 0.2.0 and 0.3.0** for **AROS ABIv11,
 x86_64**. The Since column gives the first version with the feature. Other builds are covered in
 [compatibility](compatibility.md).
 
@@ -13,6 +14,7 @@ x86_64**. The Since column gives the first version with the feature. Other build
 | Label | Meaning |
 | --- | --- |
 | **Verified** | Checked on Limpet 0.2.0 running on AROS ABIv11 2026.09 x86_64 under QEMU, 2026-10-07. |
+| **Verified (0.3.0 RC)** | Checked on the Limpet 0.3.0 release candidate on AROS One 1.3 (ABIv11) x86_64 under QEMU, 2026-10-11. Not yet in a published release. |
 | **Verified (0.1.0)** | Checked on Limpet 0.1.0 on that system; the code behind it did not change in 0.2.0, and it was not checked again. |
 | **Released, host-tested** | In a release. Its exact bytes are checked by host tests; on AROS it was checked on a development build or a different system, as stated, or not at all. |
 | **Experimental** | In the source tree only, not in any public release. May change or disappear. |
@@ -62,9 +64,10 @@ Shell session does not answer it. See
 | [Unicode text](#unicode-text) | everyone | none | 0.1.0 | Verified |
 | [Hyperlinks (OSC 8)](#hyperlinks) | programs | query success | 0.1.0 | Verified (0.1.0) for display and hover; opening not verified |
 | [Plain URL detection](#hyperlinks) | users | none | 0.1.0 | Released, host-tested |
-| [Inline images (Kitty subset)](#inline-images) | programs | query success, then `a=q` | 0.1.0 | Verified |
+| [Inline images (Kitty subset)](#inline-images) | programs | query success, then `a=q` | 0.1.0 | Verified; bottom edge and `clear` changed in 0.3.0: Verified (0.3.0 RC) |
+| [Window title (OSC 0/2)](#window-title) | programs, users | query, `XTY_FEATURE_TITLE` | **0.3.0** | Verified (0.3.0 RC) |
 | [Keyboard input, cooked and raw](#keyboard-input) | programs | none | 0.1.0 | Verified |
-| [Ctrl-C](#ctrl-c) | everyone | none | 0.1.0 | Verified, with limits |
+| [Ctrl-C](#ctrl-c) | everyone | none | 0.1.0 | Verified, with limits; one prompt after a break: Verified (0.3.0 RC) |
 | [Mouse reporting](#mouse-reporting) | raw-mode programs | none | 0.1.0 | Released, host-tested |
 | [Bracketed paste (DEC 2004)](#bracketed-paste) | raw-mode programs | query, `XTY_INPUT_BRACKETED_PASTE` | **0.2.0** | Verified |
 | [Resize reports (DEC 2048)](#resize-reports) | raw-mode programs | query, `XTY_INPUT_RESIZE_REPORT` | **0.2.0** | Verified |
@@ -75,7 +78,7 @@ Shell session does not answer it. See
 | [Themes](#user-interface-features) | users | not visible to programs | 0.1.0 | Verified (0.1.0) |
 | [termios, PTY, TTY control operations](#terminal-settings-termios-and-pty) | POSIX programs | `XTY_CAPS` on a PTY | | Experimental |
 | [SSH client](#ssh) | users | none | | Experimental |
-| Window title (OSC 0/2), save cursor (DECSC), any-motion mouse, resize signals | | | | Not supported |
+| Title stack (`CSI 22`/`23 t`), icon name (OSC 1), save cursor (DECSC), any-motion mouse, resize signals | | | | Not supported |
 
 The rest of this page has one section per row.
 
@@ -410,6 +413,9 @@ detected without any program change, also across soft line wraps.
 **Fallback.** Print the URL after the label. Never send OSC 8 to `CON:`: it
 prints the sequence as text (see the screenshot above, line 5).
 
+While the pointer is over a link the title shows `Link: <target> - Limpet`;
+it goes back to the window title below when the pointer leaves.
+
 **Example.** [`hyperlink`](../sdk/examples/hyperlink.c).
 
 ![Title bar while hovering a link: Link: https://github.com/tomaszstaniak/limpet](screenshots/sdk-link-title.png)
@@ -418,6 +424,73 @@ prints the sequence as text (see the screenshot above, line 5).
 verified 2026-10-05. Opening through OpenURL: not verified on ABIv11 (it
 needs an installed browser and OpenURL setup). Copying: verified on
 mainline during development. Details: [hyperlinks.md](hyperlinks.md).
+
+---
+
+## Window title
+
+**What it gives you.** The title bar says what runs in the window and,
+when the program reports it, what that program is doing:
+
+| Situation | Title |
+| --- | --- |
+| Shell waiting at its prompt | `Shell - Limpet` |
+| a command runs | `Wait - Limpet` (the command's name, without its path) |
+| the program set a title | `Hardcode: waiting for the model - Limpet` |
+| pointer over a link | `Link: https://... - Limpet` |
+| the session ended | `Limpet` |
+
+Terminal messages come after the name (`Shell - Limpet | Copied`), so a
+narrow title bar cuts the message, not the name. Messages that report
+something done disappear after about four seconds; those that ask for an
+action (a multi-line paste waiting for F3) stay. Key hints are in the About
+window, not in the title.
+
+**What Limpet reads itself.** The Shell runs each command in its own
+process and, while it runs, sets the CLI's module and its task name to the
+command. Limpet reads that from the process reading the console, under the
+same protection it uses for Ctrl-C. Not identified: jobs started with `Run`,
+processes a command starts, and what a program is doing.
+
+**What a program sends.** `ESC ] 2 ; text ESC \` (or BEL instead of `ESC \`;
+OSC 0 works the same). The text must be 1 to 255 bytes of valid UTF-8 with
+no control characters (C0, DEL, C1); otherwise the whole sequence is
+ignored. An empty text drops the program's title. The title lasts while the
+command that sent it runs: it goes when that command ends, another command
+starts, the session ends, or a new title replaces it. A program does not
+need to reset it on exit.
+
+**Detect.** Send it only when the presentation reply has
+`XTY_PRESENT_KNOWN_FEATURES` with `XTY_FEATURE_TITLE` (SDK:
+`limpet_can_set_title()`). Limpet 0.2.x answers the query without that bit
+and ignores the sequence; `CON:` prints it as text.
+
+**Use.**
+
+```c
+char seq[LIMPET_TITLE_MAX + 8];
+size_t n = limpet_osc_title(seq, sizeof seq, &p, "Build: linking");
+if (n) limpet_write_dos((void *)Output(), seq, n);
+```
+
+Send a title when your state changes, never with each line or token:
+Limpet applies at most about four title changes a second and shows the
+latest.
+
+**Limits.** The title bar uses Latin-1: characters outside it show as `?`.
+No title stack (`CSI 22 t` / `CSI 23 t`), no icon name (OSC 1), no title
+query. A title sent by a `Run` job ends when the next command starts.
+
+**Example.** [`title`](../sdk/examples/title.c).
+
+**Status.** Verified (0.3.0 RC), 2026-10-11, AROS One 1.3: `Shell`,
+`Wait` during `Wait 10` and back, an unknown command, Ctrl-C, the `title`
+example's states and the return to `Shell` after it, a link hover, the end
+of the session; hardcode (branch `limpet-title`) showing ready, waiting for
+the model and replying, and `Shell` again after `/quit`; Limpet 0.2.1 and
+`CON:` running the same hardcode showed no sequence. Host tests:
+`tests/test_osc_title.c`, `tests/test_window_title.c`,
+`sdk/tests/test_sdk.c`.
 
 ---
 
@@ -447,11 +520,17 @@ total.
 
 **Things to know before drawing.**
 
-- Limpet does not scroll the screen to make room. An image placed
-  near the bottom of the window is cut off, and `C=0` moves the cursor no
-  further than the last row. Print blank lines first, move back up, draw
-  with `C=1`, then move down. The [`image`](../sdk/examples/image.c)
-  example shows how.
+- With `C=0` (the default) Limpet 0.3.0 makes room: when the image would
+  pass the bottom of the window the text scrolls up first, so the whole
+  image shows, and the cursor ends on its last row, one column past it.
+  Limpet 0.1.0 to 0.2.1 do not scroll: the image is cut off and `C=0`
+  moves the cursor no further than the last row. For every version, print
+  blank lines first, move back up, draw with `C=1`, then move down; the
+  [`image`](../sdk/examples/image.c) example shows how. `C=1` never moves
+  the cursor or scrolls.
+- `ESC [ 2 J` (clear) removes the images on the screen shown, and
+  entering the alternate screen removes that screen's images (0.3.0). The
+  images stay transmitted: `a=p` shows one again.
 - The cell size in pixels is not reported. Reserve rows for a cell height
   smaller than the real one; the cost is a blank line or two.
 - In cooked mode no reply is delivered. Use `q=2` unless you read replies.
@@ -496,6 +575,10 @@ Esc, Ctrl-C, cooked mode afterwards).
   the Shell and the command it runs, as in `CON:`. Programs check it with
   `SetSignal()` or `CheckSignal()`.
 - **Raw mode:** Ctrl-C arrives as byte 3. No signal is sent.
+
+After a break the Shell shows one new prompt (0.3.0; earlier versions
+printed two on one line after interrupting a running command). Ctrl-C at
+an empty prompt shows `^C` and a new prompt.
 
 **Limits.** The break does not reach jobs started with `Run`. On a
 multi-processor system one press can be skipped; press again. A program
@@ -637,7 +720,25 @@ them, and should not need to.
 | Selection kept during output | a selection stays while a program redraws other rows (a status line, a clock, a reply streaming below it), also during a drag, including selections larger than 1 KB; output that changes or scrolls the selected text clears it | **0.2.0** | Verified (selection kept while hardcode streamed a reply; copy afterwards); host-tested in `tests/test_selection.c` |
 | Themes | dark (built in), light, high contrast | 0.1.0 | Verified (0.1.0) |
 | Line editing | command history, Tab completion of paths and commands | 0.1.0 | Released, host-tested (`tests/test_line_editor.c`, `tests/test_completion.c`) |
+| History search | Ctrl-R searches the last 32 commands ([how](#history-search)) | **0.3.0** | Verified (0.3.0 RC); host-tested in `tests/test_line_editor.c` |
+| Window title | what runs and what it reports ([above](#window-title)) | **0.3.0** | Verified (0.3.0 RC) |
 | End of input | F5 ends the Shell's input; F4 starts a new Shell | 0.1.0 | Verified (0.1.0) |
+
+### History search
+
+At the Shell prompt, Ctrl-R searches the commands typed in this window
+(the last 32), not the output:
+
+- type to narrow the search; Backspace removes a character;
+- Ctrl-R again: the next older command that matches and reads differently;
+- Enter puts the command on the line for editing; it does not run it;
+- Esc puts back what was on the line before, cursor included;
+- arrows, Home, End, Delete and Tab take the command and then do their job.
+
+The line shows `(reverse-i-search)` and the query; when nothing matches it
+shows `(failed reverse-i-search)` and the line stays as it was. Matching
+ignores case for ASCII letters. A program in raw mode receives Ctrl-R as
+byte 0x12, as before.
 
 The erased-row change affects only programs that erase a continuation row
 from column 1 and then write there: after a later width change that line

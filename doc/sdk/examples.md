@@ -21,6 +21,7 @@ in Limpet 0.1.0. Details in [the verification record](verification-0.2.0.md).
 | `hyperlink` | OSC 8 links with a fallback | label and URL as text | at once |
 | `image` | the Kitty subset: query, draw, delete | sends nothing | key, or 30 s |
 | `keys` | raw-mode key input in both consoles | works, cursor keys as 0x9B | `q`, Ctrl-C, or 60 s idle |
+| `title` (0.3.0) | the window title following a program's state | the states as text only | after 8 s, or Ctrl-C |
 
 Every program was also run with output redirected to a file, in both
 consoles, and wrote no escape sequence (no ESC byte in any of the 14
@@ -55,6 +56,20 @@ Prints the size, then asks twice a second for 20 seconds and prints each
 change. Shows that the size is a snapshot: the program sees a resize only
 because it asks again.
 
+**SDK 0.3.0 (release candidate):** built with GCC 10.5 and the ABIv11
+2026.09 Developer SDK; `hello`, `title`, `hyperlink` and `image` ran on AROS
+One 1.3 (ABIv11) under QEMU in the Limpet 0.3.0 candidate, 2026-10-11.
+`colors`, `progress`, `geometry` and `keys` did not change and were not run
+again; no example was run in `CON:` with SDK 0.3.0.
+
+## title
+
+Four states, two seconds each, shown as lines and, when the terminal
+confirmed it, in the window title (`title demo: waiting for the server -
+Limpet`). The title is sent only when the state changes. When the program
+ends Limpet shows `Shell` again by itself. In `CON:`, an older Limpet or
+with output to a file the program prints the states as text only.
+
 ## hyperlink
 
 Two links and one invalid URI. In Limpet the labels are links; hover shows
@@ -69,7 +84,9 @@ the AROS system.
    arrive within one second of writing the query; a console that answers
    nothing costs one second.
 3. Prints blank lines for the image, moves back up, draws a 160x96 RGB
-   picture with the cursor kept in place, moves below it.
+   picture with the cursor kept in place, moves below it. Limpet 0.3.0
+   would make room by itself for `C=0`; the example reserves rows so that
+   it works the same in 0.1.0 to 0.2.1.
 4. Raw mode, waits for a key (30 s at most), cooked mode, deletes the image
    and frees its pixels.
 
