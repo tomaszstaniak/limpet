@@ -17,7 +17,7 @@ and remote work over SSH.
 | --- | --- | --- |
 | **Limpet 0.1.0** | the first terminal release, AROS ABIv11 x86_64 | [releases](https://github.com/tomaszstaniak/limpet/releases), tag `v0.1.0` |
 | **Limpet 0.2.0** | 0.1.0 plus the input modes for full-screen programs and a selection that stays while other rows are redrawn | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.0), tag `v0.2.0` |
-| **Limpet 0.2.1** | the terminal these sources build: 0.2.0 with HarfBuzz 14.5.0 instead of 11.2.1 | [releases](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.1), tag `v0.2.1` |
+| **Limpet 0.2.1** | the terminal these sources build: 0.2.0 with HarfBuzz 14.5.0 instead of 11.2.1 | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.1), tag `v0.2.1` |
 | **Limpet SDK 0.2.0** | headers, library and examples for programs that use Limpet | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.2.0), tag `sdk-v0.2.0` |
 | `main` | development; may be ahead of every release | this repository |
 
