@@ -9,9 +9,10 @@ Changes of the terminal. The SDK has its own list in
   shaping and in handling damaged fonts. No new terminal features. The
   clusters of the shaping corpus draw the same as with 11.2.1. With a font
   whose tables are damaged, a cluster may now fall back to another font or
-  lose a ligature where 11.2.1 still used the damaged table. Speed: one
-  controlled measurement on AROS found no large slowdown, but it was too
-  unsteady to rule out a small one. The program grows from 3,199,064 to
+  lose a ligature where 11.2.1 still used the damaged table. Speed is
+  not settled: long sessions showed redraws about 1.8x slower, with the
+  emulator's window state not controlled; a shorter A/B run without that
+  difference was too unsteady to rule out a smaller one. The program grows from 3,199,064 to
   3,357,536 bytes (+4.95 %). Source and build settings:
   [vendor/README.md](../vendor/README.md). Checks:
   [verification-0.2.1.md](verification-0.2.1.md).
