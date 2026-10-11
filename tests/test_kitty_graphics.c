@@ -363,6 +363,9 @@ static void test_cursor_edge(void)
     xkitty_reset(&k);
 }
 
+static int row_of(const XTermScreen *s,const char *text);
+static void test_resize_keeps_row(void);
+
 /* The frontend's side, as aros_xterm.c does it: scroll, then move. */
 static XKitty edge_kitty;static XTermScreen *edge_screen;
 static void edge_sink(void *context,int event,const unsigned char *bytes,size_t n)
@@ -433,13 +436,7 @@ static void test_screen_edge(void)
     put(&s,"\033[24;1H");scrolled=s.scroll_count;
     put_image(&s,"a=T,i=9,C=1",1,64);
     assert(s.scroll_count==scrolled && s.cursor_row==23 && s.cursor_column==0);
-    /* Resize: the image stays on its text row. */
-    {
-        long before=image_first(&s,7,&count);
-        unsigned long sc=s.scroll_count;
-        assert(!screen_resize(&s,20,80));
-        assert(image_first(&s,7,&count)==before-(long)(s.scroll_count-sc));
-    }
+    assert(!screen_resize(&s,20,80));
     /* Scrollback: the view moves, the placements do not change. */
     screen_scroll_view(&s,3);
     assert(s.view_offset==3);
@@ -467,6 +464,41 @@ static void test_screen_edge(void)
     xkitty_reset(&edge_kitty);
 }
 
+static int row_of(const XTermScreen *s,const char *text)
+{
+    unsigned r,i,n=(unsigned)strlen(text);
+    for(r=0;r<s->rows;++r) {
+        for(i=0;i<n && screen_cell(s,r,i)==(uint32_t)(unsigned char)text[i];++i) {}
+        if(i==n) return (int)r;
+    }
+    return -1;
+}
+
+/* A window resize keeps an image on the text row it was placed on, with
+   history above it (taller, shorter, narrower, wider). */
+static void test_resize_keeps_row(void)
+{
+    static XTermCell cells[60*120],history[400*120],alternate[60*120],spare[400*120];
+    XTermScreen s;unsigned count,i;char line[32];
+    static const unsigned sizes[][2]={{30,80},{18,80},{24,60},{40,100},{12,80},{24,80}};
+    screen_init(&s,cells,60*120,24,80);
+    screen_attach_history(&s,history,400*120);
+    screen_attach_reflow(&s,spare,400*120);
+    screen_attach_alternate(&s,alternate,60*120);
+    edge_screen=&s;xkitty_init(&edge_kitty,&limits);s.apc=edge_sink;
+    for(i=1;i<=40;++i) { snprintf(line,sizeof line,"filler %u\r\n",i);put(&s,line); }
+    put(&s,"IMG>");put_image(&s,"a=T,i=11",1,32);
+    put(&s,"\r\nafter 1\r\nafter 2\r\n");
+    assert(s.history_count>10);
+    assert(image_first(&s,11,&count)==row_of(&s,"IMG>"));
+    for(i=0;i<sizeof sizes/sizeof *sizes;++i) {
+        assert(!screen_resize(&s,sizes[i][0],sizes[i][1]));
+        if(row_of(&s,"IMG>")>=0) assert(image_first(&s,11,&count)==row_of(&s,"IMG>"));
+    }
+    assert(row_of(&s,"IMG>")>=0);
+    xkitty_reset(&edge_kitty);
+}
+
 int main(void)
 {
     test_complete_and_chunked();
@@ -477,6 +509,7 @@ int main(void)
     test_replace_and_delete();
     test_cursor_edge();
     test_screen_edge();
+    test_resize_keeps_row();
     test_ids_and_serials();
     test_model();
     test_visible_bytes();

@@ -209,7 +209,7 @@ static void reflow(XTermScreen *s, unsigned rows, unsigned columns)
 {
     Reflow w;
     unsigned r, live_end = 0, old_lines = s->history_lines;
-    unsigned long start, first_kept;
+    unsigned long start, first_kept, top = 0;
     int continues = 0;
     XTermCell *swap;
     memset(&w, 0, sizeof w);
@@ -232,6 +232,9 @@ static void reflow(XTermScreen *s, unsigned rows, unsigned columns)
     }
     for (r = 0; r < live_end; ++r) {
         if (!continues) reflow_begin(&w);
+        /* The new row where the old top row starts: images are anchored to
+           text rows by scroll_count, which must move by the difference only. */
+        if (!r) top = w.rows - 1;
         continues = reflow_source_row(&w, s->cells + (size_t)r * s->columns, s->columns,
                                       r == s->cursor_row ?
                                       (int)(s->cursor_column + (s->wrap_pending ? 1 : 0)) : -1);
@@ -254,7 +257,11 @@ static void reflow(XTermScreen *s, unsigned rows, unsigned columns)
     s->history_count = start > first_kept ? (unsigned)(start - first_kept) : 0;
     s->history_head = (unsigned)(start % w.slots);
     s->view_offset = 0;
-    s->scroll_count += start;
+    /* Rows that came back from the history (a taller window) move the text
+       down: the count goes back by as much. Exact for a height change; after
+       a width change it follows the old top row. */
+    if (start >= top) s->scroll_count += start - top;
+    else s->scroll_count = s->scroll_count > top - start ? s->scroll_count - (top - start) : 0;
     s->cursor_row = (unsigned)((unsigned long)w.cursor_row - start);
     s->cursor_column = w.cursor_column < columns ? w.cursor_column : columns - 1;
 }
