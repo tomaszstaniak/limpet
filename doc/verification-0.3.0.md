@@ -101,6 +101,17 @@ The states "running a tool" and "waiting for your answer" were not seen on
 screen: the test server's tool turns finished faster than a screenshot.
 They are covered by hardcode's host test.
 
+## Update through apkg
+
+After publication, 2026-10-11, AROS One 1.3 (pool v11-1), apkg 0.4.2 with
+the catalogue entry for 0.3.0: 0.2.1 installed from the public catalogue,
+`Themes/light.theme` changed by hand, `apkg upgrade limpet` to 0.3.0 (rc 0;
+`Limpet` and `README.txt` replaced, 13 files unchanged). The changed theme
+stayed byte for byte, `apkg verify` reported it as changed locally, and the
+upgraded Limpet started with it (`--theme`, the changed cursor colour
+shown). `apkg remove` kept the changed theme. Report:
+[arospkg-index `reports/limpet-0.3.0-x86_64-20261011`](https://github.com/tomaszstaniak/arospkg-index/tree/main/reports/limpet-0.3.0-x86_64-20261011).
+
 ## Observed, not changed
 
 - In raw mode Limpet treats a line feed as a line feed only; the system
