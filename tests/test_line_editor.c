@@ -20,6 +20,129 @@ static void commit(const char *expected)
     assert(!memcmp(out, expected, n) && out[n] == '?');
     expect("", 0);
 }
+static void typed(const char *text)
+{ assert(line_editor_search_insert(&editor, text, strlen(text))); }
+static const char *label(size_t *cursor)
+{
+    static char out[XLINE_CAPACITY];
+    assert(line_editor_search_label(&editor, out, sizeof out, cursor));
+    return out;
+}
+
+/* Ctrl-R: reverse search through the command history. */
+static void test_search(void)
+{
+    size_t c;
+    char out[XLINE_CAPACITY];
+    memset(&editor, 0, sizeof editor);
+    insert("Dir RAM:"); commit("Dir RAM:\n");
+    insert("Echo \xc5\xbc\xc3\xb3\xc5\x82w"); commit("Echo \xc5\xbc\xc3\xb3\xc5\x82w\n");
+    insert("List SYS:C"); commit("List SYS:C\n");
+    insert("Echo hello"); commit("Echo hello\n");
+    insert("echo HELLO"); commit("echo HELLO\n");
+    insert("Echo hello"); commit("Echo hello\n");
+
+    /* Start: the typed line is kept and shown until the query matches. */
+    insert("Copy a b"); line_editor_action(&editor, XLINE_LEFT);
+    assert(!line_editor_search_start(&editor) && editor.searching);
+    expect("Copy a b", 7);
+    assert(!strcmp(label(&c), "(reverse-i-search)`': Copy a b"));
+    /* Typing narrows; the newest match first, case ignored for ASCII. */
+    typed("ech"); expect("Echo hello", 10);
+    assert(!strcmp(label(&c), "(reverse-i-search)`ech': Echo hello") && c == 25);
+    typed("o h");
+    expect("Echo hello", 10);
+    /* Ctrl-R again: older, and an identical older text is skipped. */
+    assert(line_editor_search_start(&editor)); expect("echo HELLO", 10);
+    assert(line_editor_search_start(&editor)); expect("Echo hello", 10);
+    assert(editor.match == 3);
+    /* No older one: failed, the match shown stays. */
+    assert(!line_editor_search_start(&editor) && editor.search_failed);
+    expect("Echo hello", 10);
+    assert(!strncmp(label(&c), "(failed reverse-i-search)`echo h': Echo hello", 46));
+    /* Backspace widens the query and starts again from the newest. */
+    assert(line_editor_search_backspace(&editor) && !editor.search_failed);
+    expect("Echo hello", 10); assert(editor.match == 1);
+    /* Esc: the line, cursor and selection from before come back. */
+    line_editor_search_cancel(&editor);
+    assert(!editor.searching); expect("Copy a b", 7);
+
+    /* Unicode query; Enter keeps the match for editing, nothing is run. */
+    assert(!line_editor_search_start(&editor));
+    typed("\xc5\xbc\xc3\xb3");
+    expect("Echo \xc5\xbc\xc3\xb3\xc5\x82w", 12);
+    line_editor_search_accept(&editor);
+    assert(!editor.searching && !editor.browsing);
+    expect("Echo \xc5\xbc\xc3\xb3\xc5\x82w", 12);
+    insert("!"); expect("Echo \xc5\xbc\xc3\xb3\xc5\x82w!", 13);
+    /* Backspace over a two-byte query character removes it whole. */
+    assert(!line_editor_search_start(&editor));
+    typed("\xc5\x82");
+    assert(line_editor_search_backspace(&editor) && !editor.query_length);
+    expect("Echo \xc5\xbc\xc3\xb3\xc5\x82w!", 13);      /* the line from before */
+    assert(!line_editor_search_backspace(&editor));
+    /* Nothing found from the start: the typed line stays and is kept. */
+    typed("zzz");
+    assert(editor.search_failed); expect("Echo \xc5\xbc\xc3\xb3\xc5\x82w!", 13);
+    line_editor_search_accept(&editor);
+    expect("Echo \xc5\xbc\xc3\xb3\xc5\x82w!", 13);
+    /* Invalid query input changes nothing. */
+    assert(!line_editor_search_start(&editor));
+    assert(!line_editor_search_insert(&editor, "a\033", 2));
+    assert(!line_editor_search_insert(&editor, "\xc5", 1));
+    assert(!editor.query_length);
+    memset(out, 'x', XLINE_QUERY_MAX);
+    assert(!line_editor_search_insert(&editor, out, XLINE_QUERY_MAX));
+    assert(line_editor_search_insert(&editor, out, XLINE_QUERY_MAX - 1));
+    assert(!line_editor_search_insert(&editor, "x", 1));
+    line_editor_search_cancel(&editor);
+    /* Not searching: the search calls do nothing. */
+    assert(!line_editor_search_insert(&editor, "a", 1) && !line_editor_search_backspace(&editor));
+    assert(!line_editor_search_label(&editor, out, sizeof out, &c));
+    /* Started while browsing: Esc goes back to the browsed entry. */
+    line_editor_action(&editor, XLINE_CLEAR);
+    line_editor_action(&editor, XLINE_PREVIOUS); line_editor_action(&editor, XLINE_PREVIOUS);
+    expect("echo HELLO", 10); assert(editor.browsing == 2);
+    assert(!line_editor_search_start(&editor)); typed("dir");
+    expect("Dir RAM:", 8);
+    line_editor_search_cancel(&editor);
+    expect("echo HELLO", 10); assert(editor.browsing == 2);
+    /* After an accepted match Up starts again from the newest entry. */
+    assert(!line_editor_search_start(&editor)); typed("dir"); line_editor_search_accept(&editor);
+    assert(line_editor_action(&editor, XLINE_PREVIOUS)); expect("Echo hello", 10);
+    /* Clear and commit end a search. */
+    assert(!line_editor_search_start(&editor)); line_editor_action(&editor, XLINE_CLEAR);
+    assert(!editor.searching);
+    /* Only the 32 kept entries are searched; the oldest went. */
+    memset(&editor, 0, sizeof editor);
+    {
+        unsigned i; char line[32];
+        for (i = 0; i < XLINE_HISTORY + 4; ++i) {
+            snprintf(line, sizeof line, "cmd%02u", i); insert(line);
+            snprintf(line, sizeof line, "cmd%02u\n", i); commit(line);
+        }
+        assert(!line_editor_search_start(&editor)); typed("cmd03");
+        assert(editor.search_failed);
+        line_editor_search_cancel(&editor);
+        assert(!line_editor_search_start(&editor)); typed("cmd04");
+        assert(!editor.search_failed); expect("cmd04", 5);
+        line_editor_search_cancel(&editor);
+    }
+    /* A long match is cut at a scalar boundary in the label. */
+    {
+        char small[40];
+        memset(&editor, 0, sizeof editor);
+        insert("Echo \xc5\xbc\xc3\xb3\xc5\x82w \xc5\xbc\xc3\xb3\xc5\x82w \xc5\xbc\xc3\xb3\xc5\x82w"); commit("Echo \xc5\xbc\xc3\xb3\xc5\x82w \xc5\xbc\xc3\xb3\xc5\x82w \xc5\xbc\xc3\xb3\xc5\x82w\n");
+        assert(!line_editor_search_start(&editor)); typed("E");
+        assert(line_editor_search_label(&editor, small, sizeof small, &c) < sizeof small);
+        assert(((unsigned char)small[strlen(small) - 1] & 0xc0) != 0xc0);
+        line_editor_search_cancel(&editor);
+    }
+    puts("line editor search PASS: start keeps the line, narrowing, case, repeat with duplicates skipped, "
+         "failure visible and harmless, backspace, Esc restores, Enter edits without running, Unicode, "
+         "history limit, label bounds");
+}
+
 int main(void)
 {
     size_t i;
@@ -145,5 +268,6 @@ int main(void)
     line_editor_action(&editor,XLINE_NEXT); expect("bc",1);
     assert(editor.selecting && editor.anchor==0);
     puts("line editor PASS: insertion, grapheme editing, atomic rejection, history, draft, bounds");
+    test_search();
     return 0;
 }

@@ -1,6 +1,7 @@
 #include "line_editor.h"
 #include "utf8proc.h"
 #include <string.h>
+#include <stdio.h>
 
 /* Re-scan a bounded line rather than caching boundaries that an insertion of
  * a combining mark, ZWJ or regional indicator can invalidate on either side. */
@@ -109,6 +110,7 @@ int line_editor_action(XLineEditor *s, XLineAction action)
         if (!s->browsing) return 0;
         --s->browsing; recall(s); return 1;
     case XLINE_CLEAR:
+        s->searching=s->search_failed=0; s->query_length=0; s->match=0;
         if (!s->length && !s->browsing) return 0;
         s->text[0]=s->draft[0]=0;
         s->length=s->cursor=s->browsing=s->draft_cursor=0;
@@ -153,5 +155,162 @@ size_t line_editor_commit(XLineEditor *s, char *out, size_t capacity)
     s->text[0]=s->draft[0]=0;
     s->length=s->cursor=s->browsing=s->draft_cursor=0;
     s->anchor=s->draft_anchor=0; s->selecting=s->draft_selecting=0;
+    s->searching=s->search_failed=0; s->query_length=0; s->match=0;
     return used;
+}
+
+static const char *history_at(const XLineEditor *s, size_t age)
+{
+    return s->history[(s->head+XLINE_HISTORY-age)%XLINE_HISTORY];
+}
+
+static int fold(int c) { return c>='A' && c<='Z'?c+32:c; }
+
+/* Substring on bytes, ASCII case folded. Both sides are valid UTF-8, so a
+ * match never starts inside a multi-byte scalar: the query starts with an
+ * ASCII byte or a lead byte, neither of which is a continuation byte. */
+static const char *find(const char *text, const char *query, size_t n)
+{
+    size_t i,j;
+    if (!n) return text;
+    for (i=0;text[i];++i) {
+        for (j=0;j<n && text[i+j] && fold((unsigned char)text[i+j])==fold((unsigned char)query[j]);++j) {}
+        if (j==n) return text+i;
+    }
+    return NULL;
+}
+
+static void show(XLineEditor *s, const char *text)
+{
+    size_t n=strlen(text);
+    memmove(s->text,text,n+1);
+    s->length=s->cursor=s->anchor=n;
+    s->selecting=0;
+}
+
+/* The first entry at age `from` or older that contains the query and
+ * differs from `skip` (NULL: anything). */
+static size_t search_from(const XLineEditor *s, size_t from, const char *skip)
+{
+    size_t age;
+    for (age=from;age && age<=s->count;++age) {
+        const char *h=history_at(s,age);
+        if (skip && !strcmp(h,skip)) continue;
+        if (find(h,s->query,s->query_length)) return age;
+    }
+    return 0;
+}
+
+static int search_update(XLineEditor *s, size_t from)
+{
+    size_t age=search_from(s,from?from:1,NULL);
+    if (!s->query_length) { s->search_failed=0; return s->match!=0; }
+    if (!age) { s->search_failed=1; return 0; }
+    s->match=age; s->search_failed=0;
+    show(s,history_at(s,age));
+    return 1;
+}
+
+int line_editor_search_start(XLineEditor *s)
+{
+    size_t age;
+    if (!s->searching) {
+        memcpy(s->saved,s->text,s->length+1);
+        s->saved_length=s->length; s->saved_cursor=s->cursor;
+        s->saved_anchor=s->anchor; s->saved_selecting=s->selecting;
+        s->saved_browsing=s->browsing;
+        s->searching=1; s->search_failed=0; s->query_length=0; s->query[0]=0; s->match=0;
+        return 0;
+    }
+    /* Again: the next older match that reads differently. */
+    age=search_from(s,s->match+1,s->match?history_at(s,s->match):NULL);
+    if (!age) { s->search_failed=1; return 0; }
+    s->match=age; s->search_failed=0;
+    show(s,history_at(s,age));
+    return 1;
+}
+
+int line_editor_search_insert(XLineEditor *s, const char *text, size_t n)
+{
+    size_t pos=0;
+    if (!s->searching || !n || !text || n>XLINE_QUERY_MAX-1-s->query_length) return 0;
+    while (pos<n) {
+        utf8proc_int32_t scalar;
+        utf8proc_ssize_t used=utf8proc_iterate((const utf8proc_uint8_t *)text+pos,
+                                               (utf8proc_ssize_t)(n-pos),&scalar);
+        if (used<=0 || scalar<32 || (scalar>=127 && scalar<=159)) return 0;
+        pos+=(size_t)used;
+    }
+    memcpy(s->query+s->query_length,text,n);
+    s->query_length+=n; s->query[s->query_length]=0;
+    /* A longer query still matches the entry shown, if anything does. */
+    search_update(s,s->match);
+    return 1;
+}
+
+int line_editor_search_backspace(XLineEditor *s)
+{
+    if (!s->searching || !s->query_length) return 0;
+    do --s->query_length;
+    while (s->query_length && ((unsigned char)s->query[s->query_length]&0xc0)==0x80);
+    s->query[s->query_length]=0;
+    if (!s->query_length) {
+        /* Nothing to look for: back to the line as it was. */
+        memcpy(s->text,s->saved,s->saved_length+1);
+        s->length=s->saved_length; s->cursor=s->saved_cursor;
+        s->anchor=s->saved_anchor; s->selecting=s->saved_selecting;
+        s->match=0; s->search_failed=0;
+        return 1;
+    }
+    s->match=0;
+    search_update(s,1);
+    return 1;
+}
+
+void line_editor_search_accept(XLineEditor *s)
+{
+    if (!s->searching) return;
+    s->searching=s->search_failed=0; s->query_length=0; s->query[0]=0;
+    if (s->match) {
+        /* An edited match is a new line: Up starts again from the newest. */
+        s->browsing=0;
+        s->cursor=s->anchor=s->length; s->selecting=0;
+    } else s->browsing=s->saved_browsing;
+    s->match=0;
+}
+
+void line_editor_search_cancel(XLineEditor *s)
+{
+    if (!s->searching) return;
+    memcpy(s->text,s->saved,s->saved_length+1);
+    s->length=s->saved_length; s->cursor=s->saved_cursor;
+    s->anchor=s->saved_anchor; s->selecting=s->saved_selecting;
+    s->browsing=s->saved_browsing;
+    s->searching=s->search_failed=0; s->query_length=0; s->query[0]=0; s->match=0;
+}
+
+size_t line_editor_search_label(const XLineEditor *s, char *out, size_t capacity, size_t *cursor)
+{
+    const char *head=s->search_failed?"(failed reverse-i-search)`":"(reverse-i-search)`";
+    size_t used, n, at, room;
+    const char *hit;
+    if (!s->searching || !out || capacity<2) return 0;
+    used=(size_t)snprintf(out,capacity,"%s%s': ",head,s->query);
+    if (used>=capacity) used=capacity-1;
+    n=s->length; room=capacity-1-used;
+    if (n>room) {
+        n=room;
+        while (n && ((unsigned char)s->text[n]&0xc0)==0x80) --n;
+    }
+    memcpy(out+used,s->text,n); out[used+n]=0;
+    hit=s->match?find(s->text,s->query,s->query_length):NULL;
+    at=hit && (size_t)(hit-s->text)<=n?(size_t)(hit-s->text):n;
+    if (cursor) {
+        /* The view places the cursor only on a cluster boundary: a match
+           that starts inside a cluster (a combining mark) shows at its start. */
+        size_t points[XLINE_CAPACITY+1], count=boundaries(s->text,n,points), i, best=0;
+        for (i=0;i<count && points[i]<=at;++i) best=points[i];
+        *cursor=used+(count?best:at);
+    }
+    return used+n;
 }

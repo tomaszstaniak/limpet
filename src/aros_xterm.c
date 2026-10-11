@@ -220,8 +220,22 @@ static int editor_ready(void)
         !process_session.output.length && !process_session.pending_write;
 }
 
+/* The command line while Ctrl-R searches: label, query and match. */
+static XLineEditor search_view;
+
 static const XTermScreen *display_screen(void)
 {
+    if(echo_mode==2 && shell_session && !process_session.line.raw &&
+       !process_session.eof && command_editor.searching && !screen.view_offset) {
+        size_t cursor=0;
+        search_view.length=line_editor_search_label(&command_editor,search_view.text,
+                                                    sizeof search_view.text,&cursor);
+        search_view.cursor=search_view.anchor=cursor; search_view.selecting=0;
+        if(search_view.length &&
+           line_view_build(&command_view,&screen,&search_view,command_cells,
+                           MAX_ROWS*MAX_COLUMNS,command_history,2*XLINE_CAPACITY))
+            return &command_view;
+    }
     if(echo_mode==2 && shell_session && !process_session.line.raw &&
        !process_session.eof && command_editor.length && !screen.view_offset &&
        line_view_build(&command_view,&screen,&command_editor,command_cells,
@@ -258,8 +272,20 @@ static int editor_key(UWORD code,UWORD qualifiers)
 {
     XLineAction action;
     int shift=(qualifiers&(IEQUALIFIER_LSHIFT|IEQUALIFIER_RSHIFT))!=0;
-    if(!editor_ready() || (qualifiers&(IEQUALIFIER_CONTROL|IEQUALIFIER_LALT|
-                                      IEQUALIFIER_RALT|IEQUALIFIER_RCOMMAND))) return 0;
+    if(!editor_ready()) return 0;
+    /* Ctrl-R search: Esc puts the line back, Backspace edits the query,
+       a movement or editing key takes the match and then does its job. */
+    if(command_editor.searching) {
+        switch(code) {
+        case RAWKEY_ESCAPE: line_editor_search_cancel(&command_editor); editor_sync(); return 1;
+        case RAWKEY_BACKSPACE: line_editor_search_backspace(&command_editor); editor_sync(); return 1;
+        case RAWKEY_LEFT: case RAWKEY_RIGHT: case RAWKEY_HOME: case RAWKEY_END:
+        case RAWKEY_UP: case RAWKEY_DOWN: case RAWKEY_DELETE: case RAWKEY_TAB:
+            line_editor_search_accept(&command_editor); editor_sync(); break;
+        default: break;
+        }
+    }
+    if(qualifiers&(IEQUALIFIER_CONTROL|IEQUALIFIER_LALT|IEQUALIFIER_RALT|IEQUALIFIER_RCOMMAND)) return 0;
     if(code==RAWKEY_TAB) {
         if(paste.length || clip_job.task_id) {
             clip_status="TAB unavailable during clipboard operation"; return 1;
@@ -1040,6 +1066,7 @@ static size_t session_bytes(const unsigned char *bytes,size_t count)
         if(shell_session && !process_session.line.raw) {
             if(count==1 && bytes[0]==3) {
                 if(!aros_session_interrupt(&process_session)) return 0;
+                line_editor_search_cancel(&command_editor);
                 screen.cluster_active=0;
                 screen_write(&screen,(const unsigned char *)command_editor.text,command_editor.length);
                 line_editor_action(&command_editor,XLINE_CLEAR);
@@ -1047,6 +1074,15 @@ static size_t session_bytes(const unsigned char *bytes,size_t count)
                 return 1;
             }
             if(!editor_ready()) return 0;
+            /* Searching: text goes to the query; Enter takes the match into
+             * the line for editing and runs nothing. */
+            if(command_editor.searching) {
+                while(used<count && bytes[used]!='\r' && bytes[used]!='\n') ++used;
+                if(used && !line_editor_search_insert(&command_editor,(const char *)bytes,used)) return 0;
+                if(used<count) { line_editor_search_accept(&command_editor); ++used; }
+                editor_sync();
+                return used;
+            }
             /* Paste is fed up to a line boundary. The next command waits for
              * the next cooked Read so it cannot race raw application startup. */
             while(used<count && bytes[used]!='\r' && bytes[used]!='\n') ++used;
@@ -1110,6 +1146,12 @@ static int keyboard_deliver(void *unused,XQueuedKey *key)
     if(!echo_mode || (echo_mode==2 &&
        (!aros_session_active(&process_session) || process_session.eof))) {
         clip_status="Session ended; queued key discarded"; return -1;
+    }
+    /* Ctrl-R in the native line editor: reverse history search. A raw-mode
+       program (editor not ready) gets the byte 0x12 as before. */
+    if(!key->offset && key->length==1 && key->bytes[0]==0x12 && editor_ready()) {
+        completion_active=0;
+        line_editor_search_start(&command_editor); editor_sync(); return 1;
     }
     if(!key->offset && editor_key(key->code,key->qualifiers)) return 1;
     if(!key->length) return 1;
