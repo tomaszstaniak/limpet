@@ -13,7 +13,8 @@ Changes of the terminal. The SDK has its own list in
   controlled measurement on AROS found no large slowdown, but it was too
   unsteady to rule out a small one. The program grows from 3,199,064 to
   3,357,536 bytes (+4.95 %). Source and build settings:
-  [vendor/README.md](../vendor/README.md).
+  [vendor/README.md](../vendor/README.md). Checks:
+  [verification-0.2.1.md](verification-0.2.1.md).
 - `make test-shaping-corpus`: every cluster of a fixed corpus as the
   renderer draws it, compared with the accepted output.
 - `make abiv11-bench-shaping`: a shaping benchmark to run on AROS.
