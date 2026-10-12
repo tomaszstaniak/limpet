@@ -12,7 +12,7 @@ HB_HEADERS = $(wildcard vendor/harfbuzz/src/*.h vendor/harfbuzz/src/*.hh)
 UNICODE_SRC = vendor/utf8proc/utf8proc.c
 UNICODE_FLAGS = -Ivendor/utf8proc -DUTF8PROC_STATIC
 INPUT_SRC = src/terminal_input.c src/echo_session.c
-EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c
+EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
 SESSION_SRC = src/aros_session.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
@@ -122,7 +122,7 @@ $(OUT): src/aros_xterm.c $(HYPERLINK_GUI_SRC) src/aros_font.c $(CLUSTER_SRC) src
 	$(AROS_GCC) $(CFLAGS) -o $(OUT) src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
 
 $(OUT): $(SESSION_SRC) $(SESSION_HEADERS) $(THEME_SRC) src/theme.h
-$(OUT): $(EDITOR_SRC) src/line_editor.h src/line_view.h src/window_title.h
+$(OUT): $(EDITOR_SRC) src/line_editor.h src/line_view.h src/window_title.h src/file_drop.h
 $(OUT): $(KITTY_SRC) src/kitty_graphics.h
 $(OUT): $(COMPLETION_SRC) src/completion.h src/aros_completion.h
 $(OUT): src/aros_handler.h
@@ -265,6 +265,15 @@ test: build/test_session_test_options
 build/test_session_test_options: tests/test_session_test_options.c tests/session_test_options.h Makefile
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $< -o $@
+test: build/test_file_drop
+package: build/test_file_drop_aros
+
+build/test_file_drop: tests/test_file_drop.c src/file_drop.c src/file_drop.h src/line_editor.c src/line_editor.h $(UNICODE_SRC) Makefile
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/file_drop.c src/line_editor.c $(UNICODE_SRC) -o $@
+
+build/test_file_drop_aros: tests/test_file_drop.c src/file_drop.c src/file_drop.h src/line_editor.c src/line_editor.h $(UNICODE_SRC) Makefile
+	$(AROS_GCC) $(CFLAGS) $< src/file_drop.c src/line_editor.c $(UNICODE_SRC) $(LDFLAGS) -o $@
 test: build/test_console_input
 test: build/test_line_editor
 test: build/test_line_view
@@ -598,6 +607,7 @@ test: $(HOST_TEST) build/test_replay build/test_graphemes build/test_input_echo 
 	./build/test_console_input
 	./build/test_line_editor
 	./build/test_completion
+	./build/test_file_drop
 	./build/test_line_view
 	./build/test_alternate
 	./build/test_tui_menu
