@@ -13,6 +13,9 @@ For users:
   an icon without its object, a name that is not UTF-8, a running command,
   a program reading keys itself and an open history search are refused,
   with the reason in the title bar. [Details](capabilities.md#file-drop).
+- A drop that arrives while the window closes is answered at once, so
+  closing the window cannot wait for good on Wanderer (found in review of
+  the candidate; checked with `tests/drop_close.c`).
 
 For programs: nothing changes. The protocol and the SDK are as in 0.3.0.
 

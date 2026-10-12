@@ -74,6 +74,41 @@ name before the `"` name.
 Screens are kept locally in `docs/evidence/file-drop-20261012/` (not
 published).
 
+## The close under drops (after review)
+
+A review of the candidate found that a drop arriving between Limpet's last
+reply and `RemoveAppWindow` left both waiting: Wanderer's
+`SendAppWindowMessage` holds the Workbench semaphore shared until its
+reply, and `RemoveAppWindow` takes it exclusively. Since the fix the
+AppWindow's port is a software interrupt's (`PA_SOFTINT`, set before
+`AddAppWindowA`). It passes drops to the task's inbox, or replies to them
+at once once closing has begun. The ports and the interrupt are freed only
+after `RemoveAppWindow`, when every sender has had its reply.
+
+`make abiv11-drop-tools` builds `drop-close`, and `make
+abiv11-drop-close-old` builds the same check against the candidate's code.
+It opens its own window as an AppWindow and sends drops from processes of
+its own through `SendAppWindowMessage`, so the order of events is its own:
+
+| Check | Fixed code | Candidate (07268aa) |
+| --- | --- | --- |
+| 1 A drop reaches the task with its full path; the sender has its reply | PASS | PASS |
+| 2 A drop sent after closing began, before `RemoveAppWindow`, is answered without the task; the close ends; a drop after it finds no window | PASS | FAIL: the drop waits for the task (`RemoveAppWindow` would wait for good) |
+| 3 Three senders, a tick apart each, while the window closes: every drop with a reply was taken or answered | PASS (78 taken, 21 answered in the close, 99 replies) | not run |
+
+Pool slot v11-1, AROS One 1.3, 2026-10-13, the fixed `aros_drop.c` of
+`8b370de` (the counting was made exact after that, by counting the
+replies of the close's own drains). In the same boot, with that build of
+Limpet: an icon dropped from Wanderer went onto the line, and the window
+closed while hardcode streamed a reply, with neither left in `Status`.
+
+Two runs before the counted one were faults of the check itself: the
+senders called workbench.library through the base that the close sets to
+NULL, and three senders that never paused starved `RemoveAppWindow`, as
+exec gives a shared request the semaphore at once while it is held
+shared, even with an exclusive request waiting. The senders now have their
+own library base and pause a tick between drops.
+
 ## Not checked
 
 - Mainline (the PTY build and `LimpetPTY` do not have the feature, and the
@@ -82,5 +117,7 @@ published).
 - A drop from another program that sends AppMessages (Directory Opus 4 is
   on AROS One; only Wanderer was used).
 - Memory over many drops.
-- A drop at the very moment the window closes. The code answers every
-  message before `RemoveAppWindow`, but that order was not provoked.
+- A drop at the very moment of a real window close from Wanderer.
+  `drop-close` (below) sets that order with its own senders instead.
+- An SMP exec: the close relies on a uniprocessor exec, and `aros_drop.c`
+  does not compile where `__AROSEXEC_SMP__` is defined.

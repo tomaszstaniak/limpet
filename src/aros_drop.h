@@ -41,7 +41,11 @@ int aros_drop_take(ArosDrop *, ArosDropped *out);
 /* Replies every waiting drop unread; returns how many there were. */
 int aros_drop_refuse(ArosDrop *);
 /* Before the window closes: begin, then end. From begin on every drop is
-   answered unread without the task; end returns how many were. */
+   answered unread without the task; end returns how many were, those the
+   task had not taken yet included. Only senders that hold the Workbench
+   semaphore while they wait (SendAppWindowMessage, Wanderer) are covered;
+   one that kept the port and sent later would break the AppWindow
+   contract anyway. */
 void aros_drop_close_begin(ArosDrop *);
 ULONG aros_drop_close_end(ArosDrop *);
 void aros_drop_close(ArosDrop *);

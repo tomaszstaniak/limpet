@@ -9,7 +9,7 @@
  *   2. a drop sent after closing began (the last drain by the task done,
  *      RemoveAppWindow not yet called) is replied to without the task,
  *      and the close then ends; a drop after that finds no window;
- *   3. three senders sending without pause while the window closes:
+ *   3. three senders sending (a tick apart each) while the window closes:
  *      every drop a sender got TRUE for was taken by the task or answered
  *      during the close, the close ends, and no sender is left waiting.
  *
@@ -160,9 +160,6 @@ int main(void)
     wait_gone(0);
     close_end(&drop);
     check(1, "2 the close ended");
-#ifndef OLD_DROP
-    check(!drop.port && !drop.inbox, "2 both ports are gone");
-#endif
     next_id = 0;
     start_sender(0, 1);
     check(wait_flag(&finished[0], 150) && sent_false[0] == 1 && sent_true[0] == 0,

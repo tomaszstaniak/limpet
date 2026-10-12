@@ -65,7 +65,12 @@ abiv11-drop-tools:
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-args tests/drop_args.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-fixture tests/drop_fixture.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -Isrc -o build/abiv11/drop-close tests/drop_close.c src/aros_drop.c -L$(ABIV11_SDK)/lib
-# The same check against the 0.4.0 candidate's close, which it must fail.
+
+# The same check against the 0.4.0 candidate's close, which it must fail
+# (needs this git checkout).
+.PHONY: abiv11-drop-close-old
+abiv11-drop-close-old:
+	@test -n "$(ABIV11_GCC)" || { echo "Set ABIV11_GCC to the x86_64 ABIv11 compiler"; exit 1; }
 	rm -rf build/abiv11/old-drop && mkdir -p build/abiv11/old-drop
 	git show 07268aa:src/aros_drop.c >build/abiv11/old-drop/aros_drop.c
 	git show 07268aa:src/aros_drop.h >build/abiv11/old-drop/aros_drop.h

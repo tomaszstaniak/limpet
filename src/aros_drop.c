@@ -8,6 +8,12 @@
 #include <stdio.h>
 #include <string.h>
 
+/* The close below relies on exec running a software interrupt to its end
+   before any task goes on, which an SMP exec does not do. */
+#if defined(__AROSEXEC_SMP__)
+#error "aros_drop.c: the AppWindow close is written for a uniprocessor exec"
+#endif
+
 /* Opened here, not by the start-up code: Limpet runs without it. */
 struct Library *WorkbenchBase;
 
@@ -77,7 +83,10 @@ int aros_drop_take(ArosDrop *d, ArosDropped *out)
     LONG i;
     if (!d->inbox || !(m = (struct AppMessage *)GetMsg(d->inbox))) return 0;
     memset(out, 0, sizeof *out);
-    if (m->am_Type != AMTYPE_APPWINDOW || m->am_NumArgs <= 0) out->error = ARDROP_GONE;
+    if (m->am_Type != AMTYPE_APPWINDOW || m->am_NumArgs <= 0) {
+        out->error = ARDROP_GONE;
+        snprintf(out->name, sizeof out->name, "an object");
+    }
     else if (m->am_NumArgs > XDROP_MAX_FILES) out->error = ARDROP_TOO_MANY;
     for (i = 0; !out->error && i < m->am_NumArgs; i++) {
         char *p = out->pool + used;
@@ -114,7 +123,7 @@ void aros_drop_close_begin(ArosDrop *d)
     Disable();
     d->closing = 1;
     Enable();
-    aros_drop_refuse(d);            /* those already passed on */
+    d->answered += aros_drop_refuse(d);     /* those already passed on */
 }
 
 ULONG aros_drop_close_end(ArosDrop *d)
@@ -137,8 +146,7 @@ ULONG aros_drop_close_end(ArosDrop *d)
         if (!queued) break;
         Delay(1);
     }
-    aros_drop_refuse(d);
-    answered = d->answered;
+    answered = d->answered + aros_drop_refuse(d);
     DeleteMsgPort(d->port);
     DeleteMsgPort(d->inbox);
     CloseLibrary(WorkbenchBase); WorkbenchBase = NULL;

@@ -1503,7 +1503,11 @@ int main(int argc,char **argv)
         return RETURN_FAIL;
     }
     attach_menu(window);
+#ifndef XTERM_PROCESS_PORT_CLIENTS
+    /* Not in the XTERM: worker: a drop's paths take DOS calls (NameFromLock,
+       Lock), which that process may not make while it serves its own port. */
     aros_drop_open(&file_drop,window);
+#endif
 #ifdef XTERM_PTY_DIAG
     if(diag_exit_stage==3) { close_main_window(window);xfont_close();return RETURN_OK; }
 #endif
