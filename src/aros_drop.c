@@ -9,7 +9,8 @@
 #include <string.h>
 
 /* The close below relies on exec running a software interrupt to its end
-   before any task goes on, which an SMP exec does not do. */
+   before any task goes on, which an SMP exec does not do. Neither SDK
+   exports the macro, so this guards only a build against SMP headers. */
 #if defined(__AROSEXEC_SMP__)
 #error "aros_drop.c: the AppWindow close is written for a uniprocessor exec"
 #endif

@@ -118,6 +118,10 @@ own library base and pause a tick between drops.
   on AROS One; only Wanderer was used).
 - Memory over many drops.
 - A drop at the very moment of a real window close from Wanderer.
-  `drop-close` (below) sets that order with its own senders instead.
-- An SMP exec: the close relies on a uniprocessor exec, and `aros_drop.c`
-  does not compile where `__AROSEXEC_SMP__` is defined.
+  `drop-close` (above) sets that order with its own senders instead.
+- An SMP exec. The close relies on a uniprocessor exec, which AROS One and
+  the mainline SDK in use here have (its `aros/config.h` leaves
+  `__AROSEXEC_SMP__` undefined). `aros_drop.c` refuses to compile where
+  that macro is defined, but neither SDK exports it, so this binary run on
+  an SMP exec would not notice. `KrnGetCPUCount` is no test for it: on PC
+  it counts the APICs found, whether exec uses them or not.
