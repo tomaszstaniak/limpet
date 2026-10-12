@@ -23,6 +23,7 @@
 #include "paint_damage.h"
 #include "key_queue.h"
 #include "kitty_graphics.h"
+#include "aros_drop.h"
 #include <dos/var.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -138,6 +139,9 @@ static int diag_exit_stage;
 #endif
 static unsigned long title_updates,title_skipped,output_redraws,output_quiet;
 static XKeyQueue keyboard;
+static ArosDrop file_drop;
+static ArosDropped dropped;
+static char drop_status[96];
 #include "reply_flow.h"
 #include "resize_report.h"
 static XReplyFlow reply_flow;
@@ -919,7 +923,8 @@ static const char *const about_lines[]={
     "  several lines, Esc cancels a paste).",
     "  Shift+PgUp/PgDn or the wheel: scrollback.",
     "  Up/Down: command history; Ctrl-R searches it.",
-    "  TAB / Shift+TAB: complete a path.",
+    "  TAB / Shift+TAB: complete a path; icons",
+    "  dropped from Workbench give theirs.",
     "  Ctrl-click a link opens it; Ctrl+Shift-click",
     "  copies it. Ctrl-C interrupts; F5 ends input.",
 };
@@ -972,7 +977,9 @@ static void show_about(struct Window *parent)
     }
     for(;;) {
         struct IntuiMessage *m; int done=0;
-        WaitPort(w->UserPort);
+        /* Wanderer waits for a drop's reply: answer it here too. */
+        Wait((1UL<<w->UserPort->mp_SigBit)|aros_drop_signal(&file_drop));
+        if(aros_drop_refuse(&file_drop)) clip_status="Drop: close the About window first";
         while((m=(struct IntuiMessage *)GetMsg(w->UserPort))) {
             if(m->Class==IDCMP_CLOSEWINDOW || m->Class==IDCMP_VANILLAKEY ||
                (m->Class==IDCMP_MOUSEBUTTONS && m->Code==SELECTUP)) done=1;
@@ -999,6 +1006,7 @@ static void attach_menu(struct Window *window)
 
 static void close_main_window(struct Window *window)
 {
+    aros_drop_close(&file_drop);
     if(menu_strip) { ClearMenuStrip(window); FreeMenus(menu_strip); menu_strip=NULL; }
     if(menu_visual) { FreeVisualInfo(menu_visual); menu_visual=NULL; }
     CloseWindow(window);
@@ -1112,6 +1120,58 @@ static size_t session_bytes(const unsigned char *bytes,size_t count)
               screen_write(&screen,output,n); }
     } while(used<count);
     return used;
+}
+
+/* Why the command line cannot take a drop now, or NULL. Only the native
+   editor of a cooked Shell session takes one: a raw-mode program, a PTY
+   session or a running command never receives paths it did not ask for. */
+static const char *drop_refusal(int closing)
+{
+    if(closing) return "Drop: the window is closing";
+    if(!shell_session) return "Drop: only a Shell's command line takes files";
+    if(echo_mode!=2 || !aros_session_active(&process_session) || process_session.eof)
+        return "Drop: the Shell has ended";
+    if(process_session.line.raw) return "Drop: the program here reads keys itself";
+    if(keyboard.count || paste.length || clip_job.task_id) return "Drop: typing or a paste is still going in";
+    if(!editor_ready()) return "Drop: a command is running; drop at the prompt";
+    return NULL;
+}
+
+/* Paths dropped from Workbench go in at the cursor; nothing runs. Every
+   drop is replied before this looks at the line (aros_drop_take). */
+static int drop_files(int closing)
+{
+    int any=0;
+    while(aros_drop_take(&file_drop,&dropped)) {
+        const char *why=drop_refusal(closing);
+        size_t failed;
+        any=1;
+        if(why) { clip_status=why; continue; }
+        switch(dropped.error) {
+        case ARDROP_GONE:
+            snprintf(drop_status,sizeof drop_status,"Drop: %.48s is not there",dropped.name);
+            clip_status=drop_status; continue;
+        case ARDROP_TOO_LONG: clip_status="Drop: a path is too long for the command line"; continue;
+        case ARDROP_TOO_MANY: clip_status="Drop: more than 64 objects"; continue;
+        case ARDROP_OK: break;
+        }
+        switch(file_drop_insert(&command_editor,dropped.paths,dropped.count,&failed)) {
+        case XDROP_OK:
+            editor_sync();
+            snprintf(drop_status,sizeof drop_status,"Dropped %u path%s; Enter runs the line",
+                     (unsigned)dropped.count,dropped.count==1?"":"s");
+            clip_status=drop_status; break;
+        case XDROP_BAD_NAME:
+            snprintf(drop_status,sizeof drop_status,"Drop: %.40s is not UTF-8 text or has a control",
+                     failed<dropped.count?dropped.paths[failed]:"a name");
+            clip_status=drop_status; break;
+        case XDROP_TOO_LONG: clip_status="Drop: the line would be over 1023 bytes"; break;
+        case XDROP_TOO_MANY: clip_status="Drop: more than 64 objects"; break;
+        case XDROP_SEARCHING: clip_status="Drop: end the history search first (Enter or Esc)"; break;
+        case XDROP_SHELL_CUT: clip_status="Drop: the Shell would cut this line at a ; (a name has a \")"; break;
+        }
+    }
+    return any;
 }
 
 static int keyboard_interrupt(const XQueuedKey *key)
@@ -1443,6 +1503,7 @@ int main(int argc,char **argv)
         return RETURN_FAIL;
     }
     attach_menu(window);
+    aros_drop_open(&file_drop,window);
 #ifdef XTERM_PTY_DIAG
     if(diag_exit_stage==3) { close_main_window(window);xfont_close();return RETURN_OK; }
 #endif
@@ -1490,7 +1551,7 @@ int main(int argc,char **argv)
              XSESSION_CAPACITY-process_session.input.length>=1024 &&
              (!shell_session || process_session.line.raw || editor_ready())));
         if(!paste_ready && !keyboard_ready() && !flood_diag_ready() && !(echo_mode==2 && output_ready()))
-            Wait((1UL<<window->UserPort->mp_SigBit)|SIGF_CHILD|tick_signal()|
+            Wait((1UL<<window->UserPort->mp_SigBit)|SIGF_CHILD|tick_signal()|aros_drop_signal(&file_drop)|
                  aros_session_signals(&process_session)|diag_forward_signal()|flood_diag_signals());
         diag_forward();
         process_session.columns=screen.columns;
@@ -1498,6 +1559,7 @@ int main(int argc,char **argv)
         process_session.presentation_enabled=1;
         process_session.amiga_pens=screen.amiga_pens;
         aros_session_poll(&process_session);
+        if(drop_files(closing)) dirty=1;
         flood_diag_queues();
         if(echo_mode==2 && !closing) {
             unsigned long seen=screen.visible_bytes;
