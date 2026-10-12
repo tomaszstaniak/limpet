@@ -1,0 +1,86 @@
+# Verification record: Limpet 0.4.0 (candidate, not published)
+
+Limpet 0.4.0 adds one feature: icons dropped from Workbench put their paths
+on the Shell's command line. The protocol and the SDK are unchanged
+(SDK 0.3.0). This record covers a local candidate. Nothing has been
+published, tagged or added to the apkg catalogue. Design:
+`docs/file-drop.md` in a working checkout (not published).
+
+## Build
+
+| Item | Value |
+| --- | --- |
+| Sources | `main` at `2ad5944` (four commits on `59467e0`: arguments, AppWindow, guest tools, docs) |
+| Build | `make abiv11-frontend LIMPET_VERSION=0.4.0 LIMPET_DATE=12.10.2026`, `x86_64-aros-gcc` 10.5.0, ABIv11 2026.09 Developer SDK |
+| Program | 3,384,040 bytes; 0.3.0 was 3,375,824 (+8,216 bytes, +0.24 %) |
+| Archive | `Limpet-0.4.0-abiv11.zip`, SHA-256 `388b78ab871d68f2cf5ebf1d17bcb9c0efa42cf8cd16cc61ad911bcf133ea6e4`, from `tools/release/make-packages.sh 0.4.0 … abiv11` |
+
+## Host tests
+
+`make test` passes. New: `tests/test_file_drop.c`. It covers:
+
+- quoting of each character the Shell, ReadArgs or the C start-up reads
+  specially, and plain paths left as they are;
+- no POSIX quoting;
+- controls, C1, Latin-1 and empty names refused;
+- spacing at the start, middle and end of a line and between spaces;
+- a selection kept as text, and order kept;
+- all or nothing, and the limits of 1023 bytes and 64 objects;
+- the Ctrl-R refusal;
+- the Shell's quote miscount (below).
+
+The second commit (`33245f9`) builds for ABIv11 on its own, and the first
+passes its test on its own.
+
+## On AROS
+
+Pool slot v11-1, AROS One 1.3 (ABIv11), QEMU TCG. Icons were dragged with
+QMP pointer events in small steps. The guest tools come from
+`make abiv11-drop-tools`:
+
+- `drop-fixture` makes a drawer of awkward names with default icons;
+- `drop-args` prints `argv` and ReadArgs `FILES/M` for each argument, and
+  whether the path locks.
+
+The development build had the same sources as `2ad5944`, with
+`LIMPET_VERSION=0.4.0-dev`.
+
+| Check | Result |
+| --- | --- |
+| One file, run | `"RAM Disk:dt/*$HOME.txt"` on the line; argv and ReadArgs `RAM Disk:dt/$HOME.txt`, exists, same. `$HOME` was set in that Shell |
+| Drop in the middle of a typed line | path before `X`, spaces right; two arguments |
+| A drawer with a space, and the RAM Disk volume icon | `"RAM Disk:dt/drawer with space"`, `"RAM Disk:"`; both exist |
+| Five names at once: `$HOME`, backticks, `par(en)#?`, `quote"d`, `st*ar` | five arguments, each exact in argv and ReadArgs, in Wanderer's order |
+| A UTF-8 name (`zżółw.txt`) and a name with a space | exact, exists |
+| An icon without its file | refused: "Drop: ghost.txt is not there" |
+| A Latin-1 name (`café.txt`) | refused: "is not UTF-8 text or has a control" |
+| During Ctrl-R | refused, the search line unchanged |
+| During `Wait 12` | refused; the prompt came back clean |
+| hardcode's full screen (raw mode) | refused: "the program here reads keys itself"; hardcode received nothing |
+| The About window open | the drop answered at once, Wanderer kept working (an icon selected right after), "close the About window first" |
+| After a resize | typing, a drop and the command work |
+| Ctrl-R and paste after drops | the search works; RAmiga+C / RAmiga+V pasted the selection |
+| Window closed | Limpet gone from `Status`; Wanderer running |
+| Candidate archive | unpacked from the zip, `Version` 0.4.0; two files dropped and run (`plain.txt`, `st**ar`); About shows 0.4.0 and the drop line; closed, gone from `Status` |
+
+The Shell's quote miscount was found here. An early build put `quote"d`
+and `semi;colon` on one line. `argv` ended at `RAM Disk:dt/semi`, and
+ReadArgs failed with error 120. The ABIv11 Shell's `readLine`
+(`workbench/c/shell/readLine.c`) flips its quote state at every `"`,
+including the escaped `*"`, so the quoted `;` was taken for a comment. The
+candidate refuses such a drop. Each name works alone, and so does the `;`
+name before the `"` name.
+
+Screens are kept locally in `docs/evidence/file-drop-20261012/` (not
+published).
+
+## Not checked
+
+- Mainline (the PTY build and `LimpetPTY` do not have the feature, and the
+  ABIv11 frontend is the only build that was run).
+- ABIv11 2026.09 at runtime, real hardware.
+- A drop from another program that sends AppMessages (Directory Opus 4 is
+  on AROS One; only Wanderer was used).
+- Memory over many drops.
+- A drop at the very moment the window closes. The code answers every
+  message before `RemoveAppWindow`, but that order was not provoked.
