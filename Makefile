@@ -64,6 +64,12 @@ abiv11-drop-tools:
 	mkdir -p build/abiv11
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-args tests/drop_args.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-fixture tests/drop_fixture.c -L$(ABIV11_SDK)/lib
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -Isrc -o build/abiv11/drop-close tests/drop_close.c src/aros_drop.c -L$(ABIV11_SDK)/lib
+# The same check against the 0.4.0 candidate's close, which it must fail.
+	rm -rf build/abiv11/old-drop && mkdir -p build/abiv11/old-drop
+	git show 07268aa:src/aros_drop.c >build/abiv11/old-drop/aros_drop.c
+	git show 07268aa:src/aros_drop.h >build/abiv11/old-drop/aros_drop.h
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -DOLD_DROP -Ibuild/abiv11/old-drop -Isrc -o build/abiv11/drop-close-old tests/drop_close.c build/abiv11/old-drop/aros_drop.c -L$(ABIV11_SDK)/lib
 
 # Shaping benchmark (tools/bench_shaping.c), with the HarfBuzz object of
 # Guest probes for checks that need AROS (doc/verification-0.3.0.md): an
