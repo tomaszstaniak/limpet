@@ -56,6 +56,15 @@ abiv11-frontend:
 	$(ABIV11_CXX) $(HB_FLAGS) --sysroot=$(ABIV11_SDK) -c $(HB_SRC) -o build/abiv11/harfbuzz.o
 	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -o build/abiv11/aros-xterm src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 
+# Guest tools for the file drop check (docs/file-drop.md): what a program
+# receives (argv and ReadArgs), and a drawer of awkward names with icons.
+.PHONY: abiv11-drop-tools
+abiv11-drop-tools:
+	@test -n "$(ABIV11_GCC)" || { echo "Set ABIV11_GCC to the x86_64 ABIv11 compiler"; exit 1; }
+	mkdir -p build/abiv11
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-args tests/drop_args.c -L$(ABIV11_SDK)/lib
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-fixture tests/drop_fixture.c -L$(ABIV11_SDK)/lib
+
 # Shaping benchmark (tools/bench_shaping.c), with the HarfBuzz object of
 # Guest probes for checks that need AROS (doc/verification-0.3.0.md): an
 # inline image at a chosen row with C=0 or C=1, and Ctrl-C/raw Ctrl-R input.
