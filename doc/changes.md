@@ -3,6 +3,19 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.4.0 (candidate, not published)
+
+For users:
+
+- Icons dragged from Workbench onto the window put their full paths on the
+  Shell's command line, at the cursor, quoted as the AROS Shell reads them.
+  Nothing runs until Enter. Several icons at once, drawers and disks work;
+  an icon without its object, a name that is not UTF-8, a running command,
+  a program reading keys itself and an open history search are refused,
+  with the reason in the title bar. [Details](capabilities.md#file-drop).
+
+For programs: nothing changes. The protocol and the SDK are as in 0.3.0.
+
 ## 0.3.0 (2026-10-11)
 
 For users:

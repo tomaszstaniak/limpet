@@ -52,7 +52,9 @@ Limpet includes:
   programs such as hardcode;
 - from 0.3.0: a window title that names the running command
   and, when the program reports it, its state; Ctrl-R search through the
-  command history.
+  command history;
+- in `main` (0.4.0 candidate, not published): icons dragged from
+  Workbench put their paths on the command line.
 
 The AROS Shell itself is unchanged: Limpet is the window it runs in.
 Limpet runs alongside the system console for now. Programs that explicitly

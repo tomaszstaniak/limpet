@@ -724,6 +724,7 @@ them, and should not need to.
 | History search | Ctrl-R searches the last 32 commands ([how](#history-search)) | **0.3.0** | Verified (0.3.0); host-tested in `tests/test_line_editor.c` |
 | Window title | what runs and what it reports ([above](#window-title)) | **0.3.0** | Verified (0.3.0) |
 | End of input | F5 ends the Shell's input; F4 starts a new Shell | 0.1.0 | Verified (0.1.0) |
+| File drop | icons dragged from Workbench put their paths on the command line ([how](#file-drop)) | **0.4.0** (candidate) | Verified on AROS One 1.3 (candidate build); host-tested in `tests/test_file_drop.c` |
 
 ### History search
 
@@ -740,6 +741,46 @@ The line shows `(reverse-i-search)` and the query; when nothing matches it
 shows `(failed reverse-i-search)` and the line stays as it was. Matching
 ignores case for ASCII letters. A program in raw mode receives Ctrl-R as
 byte 0x12, as before.
+
+### File drop
+
+Drag one or more icons from a Wanderer drawer or the desktop onto a Limpet
+window at the Shell prompt. The command line gets the full path of each
+object at the cursor, written as Shell arguments. Nothing runs until you
+press Enter.
+
+- Paths are separated by spaces. A path with a space or a character the
+  Shell reads specially is put in double quotes. Inside the quotes, `*"`,
+  `**`, `*$` and `` *` `` stand for `"`, `*`, `$` and the backtick.
+  Programs receive the path exactly, through `ReadArgs` and through C's
+  `argv`.
+- A drawer or a disk gives its own path (`"RAM Disk:docs"`, `Work:`). A
+  file's icon gives the file, never its `.info`.
+- The paths start with the volume name, as the system names the object:
+  `"RAM Disk:..."` for a file in `RAM:`.
+- A command that treats its argument as a pattern (`List`, `Copy`,
+  `Delete`) still reads `#?()[]|~` in a name as pattern characters.
+
+The line stays as it was, and the title bar says why, when the drop
+cannot go in:
+
+- a program in the window reads keys itself (an editor, hardcode's full
+  screen);
+- a command is running, or typing or a paste is still going in;
+- a history search is open;
+- the About window is open;
+- an object is not there (an icon without its file);
+- a name is not UTF-8 text or holds a control character (Limpet sends
+  commands as UTF-8);
+- the line would exceed 1023 bytes, or there are more than 64 objects.
+
+One more refusal comes from the Shell itself. The AROS Shell miscounts
+quotes when a name holds `"`. With such a name on the line, a later `;`
+inside quotes would end the command early. Limpet refuses that drop. Drop
+the two names one after the other with the `;` first, or separately.
+
+`LimpetPTY` sessions (including SSH) do not take drops. Programs cannot
+detect or control the feature.
 
 The erased-row change affects only programs that erase a continuation row
 from column 1 and then write there: after a later width change that line
