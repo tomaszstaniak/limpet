@@ -3,20 +3,23 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## After 0.4.0 (not released)
+## 0.4.1 (2026-10-13)
 
 For users:
 
 - Closing the window while a drop arrives no longer depends on how exec
   schedules interrupts: a small process answers drops while the window
   closes, and the port is freed after it has exited. 0.4.0's close relied
-  on a uniprocessor exec.
+  on a uniprocessor exec. Not tested on an SMP exec; that the new close
+  holds there rests on reading the code.
 
 For programs:
 
 - A program can take back a console read it still has out with
   `XTY_ACTION_CANCEL` (read only, by the packet's identity; see
   [the experimental guide](sdk/experimental.md)). Hardcode uses it at exit.
+  Limpet 0.4.0 and earlier refuse it. The SDK stays 0.3.0: no header or
+  library changed.
 
 ## 0.4.0 (2026-10-13)
 

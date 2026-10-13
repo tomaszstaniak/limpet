@@ -160,6 +160,15 @@ int main(void)
     wait_gone(0);
     close_end(&drop);
     check(1, "2 the close ended");
+#ifndef OLD_DROP
+    {
+        struct Task *t;
+        Forbid();
+        t = FindTask((STRPTR)"Limpet drop answerer");
+        Permit();
+        check(!t, "2 the close's answering process has ended");
+    }
+#endif
     next_id = 0;
     start_sender(0, 1);
     check(wait_flag(&finished[0], 150) && sent_false[0] == 1 && sent_true[0] == 0,
@@ -185,6 +194,13 @@ int main(void)
         check(wait_flag(&finished[i], 250), "3 a sender ended (none left waiting for a reply)");
         wait_gone(i);
         total_true += sent_true[i];
+    }
+    {
+        struct Task *t;
+        Forbid();
+        t = FindTask((STRPTR)"Limpet drop answerer");
+        Permit();
+        check(!t, "3 the close's answering process has ended");
     }
     printf("     taken by the task %lu, answered in the close %lu, senders' TRUE %lu, FALSE after %lu %lu %lu\n",
            (unsigned long)taken, (unsigned long)answered, (unsigned long)total_true,

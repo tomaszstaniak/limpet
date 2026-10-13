@@ -30,7 +30,8 @@ with `ERROR_ACTION_NOT_KNOWN`, and does not accept `XTY_ACTION_TRY_READ` or
 `XTY_ACTION_TRY_WRITE`. A program that sends `XTY_CAPS` there learns
 nothing.
 
-`XTY_ACTION_CANCEL` is the exception, after 0.4.0 (not yet released): the
+`XTY_ACTION_CANCEL` is the exception from Limpet 0.4.1 on (SDK 0.3.0, the
+header is unchanged): the
 session takes back a **read** the same client still has out, by the
 packet's identity, as the header describes. The read is answered first
 (-1, `ERROR_BREAK`), then the cancel (`DOSTRUE`), both to the client's

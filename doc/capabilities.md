@@ -798,7 +798,7 @@ a **mainline** preview build that is not published, together with an
 experimental `posixc.library`.
 
 A Limpet Shell session answers every one of those operations with
-`ERROR_ACTION_NOT_KNOWN`, except that after 0.4.0 it takes back a client's
+`ERROR_ACTION_NOT_KNOWN`, except that from Limpet 0.4.1 it takes back a client's
 own pending read with `XTY_ACTION_CANCEL`. Do not build on them yet. What exists is
 described in [the experimental guide](sdk/experimental.md).
 
