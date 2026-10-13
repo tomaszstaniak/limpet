@@ -111,6 +111,16 @@ exec gives a shared request the semaphore at once while it is held
 shared, even with an exclusive request waiting. The senders now have their
 own library base and pause a tick between drops.
 
+## apkg
+
+The release asset (`Limpet-0.4.0-abiv11.zip` from tag `v0.4.0`, the bytes
+above) is in the apkg catalogue since arospkg-index PR #16 (2026-10-13).
+Before the merge, on pool slot v11-1 (AROS One 1.3) with apkg 0.5.0 and the
+branch's catalogue: 0.3.0 installed from the public catalogue, `upgrade
+limpet` to 0.4.0 (rc 0; 2 files replaced, 13 unchanged), `Version` 0.4.0,
+`verify` 15 as installed; the upgraded program started and took a drop of
+the RAM Disk icon (`List "RAM Disk:"` ran); `remove` left nothing.
+
 ## Not checked
 
 - Mainline (the PTY build and `LimpetPTY` do not have the feature, and the
