@@ -11,7 +11,7 @@ take. Do not ship a program that depends on it.
 | --- | --- | --- |
 | Pseudo-terminal | `src/tty_pair.c`, `src/tty_service.c`, `src/aros_tty_worker.c` | a master/slave pair served as a DOS handler |
 | Control operations 1 to 12 | `sdk/include/limpet/tty_control.h`, `src/tty_control.c` | terminal settings, size, flush, drain, flow control |
-| Cancellation | `XTY_ACTION_CANCEL` | cancel a pending read, write or drain with Ctrl-C |
+| Cancellation | `XTY_ACTION_CANCEL` | cancel a pending read, write or drain; the Shell session cancels reads only (below) |
 | Immediate I/O | `XTY_ACTION_TRY_READ`, `XTY_ACTION_TRY_WRITE` | read or write without waiting for data or space |
 | Client calls | `src/aros_tty_client.c` | `aros_tty_control_break`, `aros_tty_read_try`, ... |
 | termios layer | `src/aros_tty_termios.c` | `tcgetattr`, `tcsetattr`, `tcdrain`, `tcflush`, `tcflow` on a DOS handle |
@@ -25,10 +25,20 @@ program and an SSH client preview have run there.
 
 ## What Limpet 0.1.0 and 0.2.0 do with it
 
-A Limpet Shell session (0.1.0 and 0.2.0) on ABIv11 answers every control operation
-except 13 with `ERROR_ACTION_NOT_KNOWN`, and does not accept
-`XTY_ACTION_CANCEL`, `XTY_ACTION_TRY_READ` or `XTY_ACTION_TRY_WRITE`. A
-program that sends `XTY_CAPS` there learns nothing.
+A Limpet Shell session on ABIv11 answers every control operation except 13
+with `ERROR_ACTION_NOT_KNOWN`, and does not accept `XTY_ACTION_TRY_READ` or
+`XTY_ACTION_TRY_WRITE`. A program that sends `XTY_CAPS` there learns
+nothing.
+
+`XTY_ACTION_CANCEL` is the exception, after 0.4.0 (not yet released): the
+session takes back a **read** the same client still has out, by the
+packet's identity, as the header describes. The read is answered first
+(-1, `ERROR_BREAK`), then the cancel (`DOSTRUE`), both to the client's
+port. A read already answered gives `DOSFALSE` with
+`ERROR_OBJECT_NOT_FOUND`. There is no capability bit for it on this
+endpoint: try it, and treat a refusal (`ERROR_ACTION_NOT_KNOWN` from
+Limpet 0.4.0 and earlier, and from CON:) as "not here", with the read
+still out. Hardcode takes its read back this way at exit.
 
 ## Rules already fixed by the protocol
 

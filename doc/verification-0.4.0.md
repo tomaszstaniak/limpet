@@ -121,6 +121,17 @@ limpet` to 0.4.0 (rc 0; 2 files replaced, 13 unchanged), `Version` 0.4.0,
 `verify` 15 as installed; the upgraded program started and took a drop of
 the RAM Disk icon (`List "RAM Disk:"` ran); `remove` left nothing.
 
+## After the release: the close without a softint
+
+The 0.4.0 close relies on a uniprocessor exec. After the release (not in
+0.4.0) the AppWindow port is the task's own again, and closing starts a
+small process that replies to every drop while the task waits in
+`RemoveAppWindow`; the port is freed once that process has exited
+(`ChildStatus`). `drop-close` on that code (`4b75a7f`, pool v11-1,
+2026-10-13): every check PASS (84 taken, 12 answered in the close, 96
+replies); the candidate's code FAILs check 2 as before. The counter was
+then moved before the reply, so check 2 cannot read it early; not re-run.
+
 ## Not checked
 
 - Mainline (the PTY build and `LimpetPTY` do not have the feature, and the
@@ -131,9 +142,8 @@ the RAM Disk icon (`List "RAM Disk:"` ran); `remove` left nothing.
 - Memory over many drops.
 - A drop at the very moment of a real window close from Wanderer.
   `drop-close` (above) sets that order with its own senders instead.
-- An SMP exec. The close relies on a uniprocessor exec, which AROS One and
-  the mainline SDK in use here have (its `aros/config.h` leaves
-  `__AROSEXEC_SMP__` undefined). `aros_drop.c` refuses to compile where
-  that macro is defined, but neither SDK exports it, so this binary run on
-  an SMP exec would not notice. `KrnGetCPUCount` is no test for it: on PC
-  it counts the APICs found, whether exec uses them or not.
+- An SMP exec. The 0.4.0 close relies on a uniprocessor exec, which AROS
+  One and the mainline SDK in use here have; 0.4.0's `aros_drop.c` refuses
+  to compile where `__AROSEXEC_SMP__` is defined, but neither SDK exports
+  it. The close after the release (above) does not rely on it; no SMP exec
+  was run.

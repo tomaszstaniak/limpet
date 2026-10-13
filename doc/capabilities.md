@@ -797,8 +797,9 @@ I/O) and an experimental termios layer for POSIX programs. They run only in
 a **mainline** preview build that is not published, together with an
 experimental `posixc.library`.
 
-A Limpet Shell session (0.1.0 and 0.2.0) answers every one of those operations with
-`ERROR_ACTION_NOT_KNOWN`. Do not build on them yet. What exists is
+A Limpet Shell session answers every one of those operations with
+`ERROR_ACTION_NOT_KNOWN`, except that after 0.4.0 it takes back a client's
+own pending read with `XTY_ACTION_CANCEL`. Do not build on them yet. What exists is
 described in [the experimental guide](sdk/experimental.md).
 
 **Status.** Experimental.

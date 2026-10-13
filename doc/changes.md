@@ -3,6 +3,21 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## After 0.4.0 (not released)
+
+For users:
+
+- Closing the window while a drop arrives no longer depends on how exec
+  schedules interrupts: a small process answers drops while the window
+  closes, and the port is freed after it has exited. 0.4.0's close relied
+  on a uniprocessor exec.
+
+For programs:
+
+- A program can take back a console read it still has out with
+  `XTY_ACTION_CANCEL` (read only, by the packet's identity; see
+  [the experimental guide](sdk/experimental.md)). Hardcode uses it at exit.
+
 ## 0.4.0 (2026-10-13)
 
 For users:

@@ -97,7 +97,7 @@ static void answerer(void)
     Wait(SIGBREAKF_CTRL_F);         /* until the parent has its task id */
     do {
         last = d->stop;
-        while ((m = GetMsg(d->port))) { ReplyMsg(m); d->answered++; }
+        while ((m = GetMsg(d->port))) { d->answered++; ReplyMsg(m); }
         if (!last) Delay(1);
     } while (!last);
 }

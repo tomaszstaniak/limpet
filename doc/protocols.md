@@ -168,7 +168,9 @@ block untouched. On failure the block is unchanged and the reply is
 | 2-12 | config, geometry, read state, flush, drain, flow | `ERROR_ACTION_NOT_KNOWN` | yes |
 | 13 | `XTY_GET_PRESENTATION` | **yes** | yes, when attached to the renderer |
 
-Operation 13 is described in [presentation.md](presentation.md). Operations
+`XTY_ACTION_CANCEL` is accepted by the Shell session after 0.4.0, for a
+client's own pending read only (no capability bit; a refusal means not
+supported). Operation 13 is described in [presentation.md](presentation.md). Operations
 1 to 12, `XTY_ACTION_CANCEL` and the immediate I/O actions are described in
 the header and in [the experimental guide](sdk/experimental.md).
 
