@@ -286,6 +286,24 @@ void aros_session_poll(ArosSession *s)
             }
             break;
         }
+        case XTY_ACTION_CANCEL:
+            /* The read a client still has out, taken back by its identity
+             * (tty_control.h): the read is answered first, with BREAK, then
+             * this packet, both to the same port, so a client that waits
+             * for this answer has the read's as well. A read already
+             * answered is not found; its answer is already on its way. */
+            if(id<1 || id>3 || !(s->handles&(1UL<<(id-1))))
+                ReplyPkt(p,DOSFALSE,ERROR_INVALID_LOCK);
+            else if(!p->dp_Arg2 || p->dp_Arg3 || p->dp_Arg4!=XTY_PACKET_MAGIC || p->dp_Arg5)
+                ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
+            else if(s->pending_read && (SIPTR)s->pending_read==p->dp_Arg2 &&
+                    s->pending_read->dp_Arg1==p->dp_Arg1 && s->pending_read->dp_Port==p->dp_Port) {
+                struct DosPacket *read=s->pending_read;
+                s->pending_read=NULL;
+                ReplyPkt(read,-1,ERROR_BREAK);
+                ReplyPkt(p,DOSTRUE,0);
+            } else ReplyPkt(p,DOSFALSE,ERROR_OBJECT_NOT_FOUND);
+            break;
         case ACTION_FINDINPUT:
         case ACTION_FINDOUTPUT:
         case ACTION_FINDUPDATE: {
