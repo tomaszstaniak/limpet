@@ -21,7 +21,8 @@ and remote work over SSH.
 | **Limpet SDK 0.2.0** | headers, library and examples for programs that use Limpet | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.2.0), tag `sdk-v0.2.0` |
 | **Limpet 0.3.0** | a window title that names the running command and the state a program reports, Ctrl-R history search, one prompt after Ctrl-C, images at the bottom edge | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/v0.3.0), tag `v0.3.0` |
 | **Limpet SDK 0.3.0** | the SDK these sources build: SDK 0.2.0 plus the window title (`limpet_osc_title()`) | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.3.0), tag `sdk-v0.3.0` |
-| **Limpet 0.4.0** | the terminal these sources build: icons dragged from Workbench put their paths on the Shell's command line | [published 2026-10-13](https://github.com/tomaszstaniak/limpet/releases/tag/v0.4.0), tag `v0.4.0` |
+| **Limpet 0.4.0** | icons dragged from Workbench put their paths on the Shell's command line | [published 2026-10-13](https://github.com/tomaszstaniak/limpet/releases/tag/v0.4.0), tag `v0.4.0` |
+| **Limpet 0.4.1** | the terminal these sources build: a program can take back a console read it has out; closing the window under drops no longer relies on a uniprocessor exec | [published 2026-10-13](https://github.com/tomaszstaniak/limpet/releases/tag/v0.4.1), tag `v0.4.1` |
 | `main` | development; may be ahead of every release | this repository |
 
 The releases page shows what is actually published. What changed:
@@ -126,7 +127,7 @@ examples and this documentation.
 Limpet is built on a host with an AROS ABIv11 cross toolchain (GCC 10.5)
 and the ABIv11 SDK:
 
-    make abiv11-frontend LIMPET_VERSION=0.4.0 LIMPET_DATE=13.10.2026 \
+    make abiv11-frontend LIMPET_VERSION=0.4.1 LIMPET_DATE=13.10.2026 \
          ABIV11_GCC=/path/to/x86_64-aros-gcc \
          ABIV11_SDK=/path/to/SDK/Development
 
