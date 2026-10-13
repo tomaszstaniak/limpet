@@ -2,63 +2,31 @@
 #include <workbench/startup.h>
 #include <workbench/workbench.h>
 #include <dos/dos.h>
+#include <dos/dostags.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/workbench.h>
 #include <stdio.h>
 #include <string.h>
 
-/* The close below relies on exec running a software interrupt to its end
-   before any task goes on, which an SMP exec does not do. Neither SDK
-   exports the macro, so this guards only a build against SMP headers. */
-#if defined(__AROSEXEC_SMP__)
-#error "aros_drop.c: the AppWindow close is written for a uniprocessor exec"
-#endif
-
 /* Opened here, not by the start-up code: Limpet runs without it. */
 struct Library *WorkbenchBase;
-
-/* Exec calls this, in a software interrupt, for each message PutMsg puts
-   on the AppWindow port. Only GetMsg, PutMsg and ReplyMsg here: exec
-   allows those in interrupts. */
-static AROS_INTH1(drop_arrived, ArosDrop *, d)
-{
-    AROS_INTFUNC_INIT
-    struct Message *m;
-    while ((m = GetMsg(d->port))) {
-        if (d->closing) { ReplyMsg(m); d->answered++; }
-        else PutMsg(d->inbox, m);
-    }
-    return 0;
-    AROS_INTFUNC_EXIT
-}
 
 int aros_drop_open(ArosDrop *d, struct Window *window)
 {
     memset(d, 0, sizeof *d);
     if (!(WorkbenchBase = OpenLibrary((CONST_STRPTR)"workbench.library", 0))) return 0;
-    d->intr.is_Node.ln_Type = NT_INTERRUPT;
-    d->intr.is_Node.ln_Name = (char *)"Limpet file drop";
-    d->intr.is_Code = (VOID_FUNC)(APTR)drop_arrived;    /* exec calls it as AROS_INTH */
-    d->intr.is_Data = d;
-    if ((d->port = CreateMsgPort()) && (d->inbox = CreateMsgPort())) {
-        /* Before AddAppWindowA, while no sender knows the port: PutMsg
-           reads the port's action without a lock, so it is never changed
-           once a sender could be in it. */
-        d->port->mp_Flags = PA_SOFTINT;
-        d->port->mp_SoftInt = &d->intr;
-        if ((d->appwindow = AddAppWindowA(0, 0, window, d->port, NULL))) return 1;
-    }
-    if (d->inbox) DeleteMsgPort(d->inbox);
+    if ((d->port = CreateMsgPort()) &&
+        (d->appwindow = AddAppWindowA(0, 0, window, d->port, NULL))) return 1;
     if (d->port) DeleteMsgPort(d->port);
-    d->port = d->inbox = NULL;
+    d->port = NULL;
     CloseLibrary(WorkbenchBase); WorkbenchBase = NULL;
     return 0;
 }
 
 ULONG aros_drop_signal(const ArosDrop *d)
 {
-    return d->inbox ? 1UL << d->inbox->mp_SigBit : 0;
+    return d->port ? 1UL << d->port->mp_SigBit : 0;
 }
 
 /* The object's full path: the lock names the drawer it is in (or, for a
@@ -82,7 +50,7 @@ int aros_drop_take(ArosDrop *d, ArosDropped *out)
     struct AppMessage *m;
     size_t used = 0;
     LONG i;
-    if (!d->inbox || !(m = (struct AppMessage *)GetMsg(d->inbox))) return 0;
+    if (!d->port || !(m = (struct AppMessage *)GetMsg(d->port))) return 0;
     memset(out, 0, sizeof *out);
     if (m->am_Type != AMTYPE_APPWINDOW || m->am_NumArgs <= 0) {
         out->error = ARDROP_GONE;
@@ -112,44 +80,66 @@ int aros_drop_refuse(ArosDrop *d)
 {
     struct Message *m;
     int n = 0;
-    while (d->inbox && (m = GetMsg(d->inbox))) { ReplyMsg(m); ++n; }
+    while (d->port && (m = GetMsg(d->port))) { ReplyMsg(m); ++n; }
     return n;
+}
+
+/* The answerer: a process of its own that replies to every drop while
+   this task waits in RemoveAppWindow. GetMsg and ReplyMsg from another
+   task are exec's ordinary contract; nothing here depends on how exec
+   schedules interrupts. stop is read before each drain, so a drop that
+   came before stop was set is still answered. */
+static void answerer(void)
+{
+    ArosDrop *d = (ArosDrop *)FindTask(NULL)->tc_UserData;
+    struct Message *m;
+    int last;
+    Wait(SIGBREAKF_CTRL_F);         /* until the parent has its task id */
+    do {
+        last = d->stop;
+        while ((m = GetMsg(d->port))) { ReplyMsg(m); d->answered++; }
+        if (!last) Delay(1);
+    } while (!last);
 }
 
 void aros_drop_close_begin(ArosDrop *d)
 {
-    if (!d->port) return;
-    /* The interrupt runs whole between two steps of this task, never
-       inside one: after this every drop is replied to at once. */
-    Disable();
-    d->closing = 1;
-    Enable();
-    d->answered += aros_drop_refuse(d);     /* those already passed on */
+    struct Process *p = NULL;
+    int tries;
+    if (!d->port || d->answerer) return;
+    d->answered += aros_drop_refuse(d);
+    for (tries = 0; !p && tries < 3; tries++) {
+        p = CreateNewProcTags(NP_Entry, (IPTR)answerer, NP_UserData, (IPTR)d,
+            NP_Name, (IPTR)"Limpet drop answerer", NP_StackSize, 16384,
+            NP_NotifyOnDeath, TRUE, NP_Input, 0, NP_Output, 0, NP_Error, 0,
+            NP_WindowPtr, (IPTR)-1, NP_CurrentDir, 0, NP_HomeDir, 0, TAG_DONE);
+        if (!p) Delay(5);
+    }
+    if (!p) return;                 /* close_end replies itself, as before */
+    d->answerer = GetETaskID(&p->pr_Task);
+    Signal(&p->pr_Task, SIGBREAKF_CTRL_F);
 }
 
 ULONG aros_drop_close_end(ArosDrop *d)
 {
     ULONG answered;
     if (!d->port) return 0;
-    if (!d->closing) aros_drop_close_begin(d);
+    if (!d->answerer) aros_drop_close_begin(d);
+    /* Without an answerer (no memory for a process) a drop sent between
+       this reply and RemoveAppWindow would wait: the old, narrow window. */
+    if (!d->answerer) d->answered += aros_drop_refuse(d);
     /* It waits for every sender to let the semaphore go, which a sender
-       does only after its reply and once out of PutMsg; after it no sender
-       can find the window. */
+       does only after its reply; after it no sender can find the window. */
     RemoveAppWindow(d->appwindow);
-    /* exec here (no SMP) runs a software interrupt to its end before any
-       task goes on, so the last one has ended; one still queued would be
-       run at the next Enable, so this waits only if that ever changes. */
-    for (;;) {
-        int queued;
-        Disable();
-        queued = d->intr.is_Node.ln_Type == NT_SOFTINT;
-        Enable();
-        if (!queued) break;
-        Delay(1);
+    if (d->answerer) {
+        /* The port and this code stay until the answerer has exited: its
+           exit, not a flag it sets, is the proof (ChildStatus). */
+        d->stop = 1;
+        while (ChildStatus(d->answerer) != CHILD_EXITED) Delay(1);
+        ChildFree(d->answerer);
     }
     answered = d->answered + aros_drop_refuse(d);
     DeleteMsgPort(d->port);
-    DeleteMsgPort(d->inbox);
     CloseLibrary(WorkbenchBase); WorkbenchBase = NULL;
     memset(d, 0, sizeof *d);
     return answered;

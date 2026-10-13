@@ -1,27 +1,24 @@
 #ifndef XTERM_AROS_DROP_H
 #define XTERM_AROS_DROP_H
 #include <exec/types.h>
-#include <exec/interrupts.h>
 #include "file_drop.h"
 /* The window as a Workbench AppWindow: icons dropped on it arrive as one
  * AppMessage. Wanderer waits for the reply holding the Workbench
  * semaphore, so a message is answered as soon as its paths are copied
  * (docs/file-drop.md). Nothing from a message is kept past the reply.
  *
- * RemoveAppWindow takes that semaphore exclusively, so while it waits no
- * task may be needed for a reply. The AppWindow's port is therefore a
- * software interrupt's from the start: exec runs it for each message,
- * and it passes the message on to the inbox the task waits on, or, once
- * closing has begun, replies to it at once. */
+ * RemoveAppWindow takes that semaphore exclusively, so while it waits a
+ * drop must be answered by someone other than this task: closing starts a
+ * small process that replies to every drop until the AppWindow is gone,
+ * and the port is freed only once that process has exited. */
 struct Window;
 struct MsgPort;
 typedef struct {
-    struct MsgPort *port;       /* the AppWindow's: PA_SOFTINT, never a task's */
-    struct MsgPort *inbox;      /* where the interrupt puts drops for the task */
-    struct Interrupt intr;
-    volatile int closing;       /* the interrupt replies instead of passing on */
-    volatile ULONG answered;    /* drops the interrupt replied to */
+    struct MsgPort *port;
     void *appwindow;
+    ULONG answerer;             /* the answering process's task id, while closing */
+    volatile int stop;          /* the AppWindow is gone: the answerer drains and ends */
+    volatile ULONG answered;    /* drops answered unread while closing */
 } ArosDrop;
 typedef enum { ARDROP_OK, ARDROP_GONE, ARDROP_TOO_LONG, ARDROP_TOO_MANY } ArosDropError;
 typedef struct {
