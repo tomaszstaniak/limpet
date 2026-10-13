@@ -724,7 +724,7 @@ them, and should not need to.
 | History search | Ctrl-R searches the last 32 commands ([how](#history-search)) | **0.3.0** | Verified (0.3.0); host-tested in `tests/test_line_editor.c` |
 | Window title | what runs and what it reports ([above](#window-title)) | **0.3.0** | Verified (0.3.0) |
 | End of input | F5 ends the Shell's input; F4 starts a new Shell | 0.1.0 | Verified (0.1.0) |
-| File drop | icons dragged from Workbench put their paths on the command line ([how](#file-drop)) | **0.4.0** (candidate) | Verified on AROS One 1.3 (candidate build); host-tested in `tests/test_file_drop.c` |
+| File drop | icons dragged from Workbench put their paths on the command line ([how](#file-drop)) | **0.4.0** | Verified on AROS One 1.3 (release archive); host-tested in `tests/test_file_drop.c` |
 
 ### History search
 

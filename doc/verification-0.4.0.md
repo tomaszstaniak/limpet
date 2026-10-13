@@ -1,19 +1,18 @@
-# Verification record: Limpet 0.4.0 (candidate, not published)
+# Verification record: Limpet 0.4.0
 
 Limpet 0.4.0 adds one feature: icons dropped from Workbench put their paths
 on the Shell's command line. The protocol and the SDK are unchanged
-(SDK 0.3.0). This record covers a local candidate. Nothing has been
-published, tagged or added to the apkg catalogue. Design:
+(SDK 0.3.0). Published 2026-10-13 as tag `v0.4.0`. Design notes:
 `docs/file-drop.md` in a working checkout (not published).
 
 ## Build
 
 | Item | Value |
 | --- | --- |
-| Sources | `main` at `2ad5944` (four commits on `59467e0`: arguments, AppWindow, guest tools, docs) |
-| Build | `make abiv11-frontend LIMPET_VERSION=0.4.0 LIMPET_DATE=12.10.2026`, `x86_64-aros-gcc` 10.5.0, ABIv11 2026.09 Developer SDK |
-| Program | 3,384,040 bytes; 0.3.0 was 3,375,824 (+8,216 bytes, +0.24 %) |
-| Archive | `Limpet-0.4.0-abiv11.zip`, SHA-256 `388b78ab871d68f2cf5ebf1d17bcb9c0efa42cf8cd16cc61ad911bcf133ea6e4`, from `tools/release/make-packages.sh 0.4.0 … abiv11` |
+| Sources | `main` at `6540e27`: the candidate (`2ad5944`, four commits on `59467e0`: arguments, AppWindow, guest tools, docs) and the close fix with its review (`8b370de`, `3c3d105`, `6540e27`) |
+| Build | `make abiv11-frontend LIMPET_VERSION=0.4.0 LIMPET_DATE=13.10.2026`, `x86_64-aros-gcc` 10.5.0, ABIv11 2026.09 Developer SDK |
+| Program | 3,385,384 bytes, SHA-256 `2904e99709a07071f8e23db822ebf682b8cd40b2038ebc8cd3b73a49e36959bf`; 0.3.0 was 3,375,824 (+9,560 bytes, +0.28 %) |
+| Archive | `Limpet-0.4.0-abiv11.zip`, 3,653,872 bytes, SHA-256 `49e606fd8609588524c6e69db5537707584965fa4dd08da9bb545609c435c64f`, from `tools/release/make-packages.sh 0.4.0 … abiv11`. The candidate of 2026-10-12 (`388b78ab…`) was not published |
 
 ## Host tests
 
@@ -94,13 +93,16 @@ its own through `SendAppWindowMessage`, so the order of events is its own:
 | --- | --- | --- |
 | 1 A drop reaches the task with its full path; the sender has its reply | PASS | PASS |
 | 2 A drop sent after closing began, before `RemoveAppWindow`, is answered without the task; the close ends; a drop after it finds no window | PASS | FAIL: the drop waits for the task (`RemoveAppWindow` would wait for good) |
-| 3 Three senders, a tick apart each, while the window closes: every drop with a reply was taken or answered | PASS (78 taken, 21 answered in the close, 99 replies) | not run |
+| 3 Three senders, a tick apart each, while the window closes: every drop with a reply was taken or answered | PASS (93 taken, 18 answered in the close, 111 replies) | not run |
 
-Pool slot v11-1, AROS One 1.3, 2026-10-13, the fixed `aros_drop.c` of
-`8b370de` (the counting was made exact after that, by counting the
-replies of the close's own drains). In the same boot, with that build of
-Limpet: an icon dropped from Wanderer went onto the line, and the window
-closed while hardcode streamed a reply, with neither left in `Status`.
+Pool slot v11-1, AROS One 1.3, 2026-10-13. The figures are from the
+release code (`6540e27`, built with the 2026.09 SDK); a run on `8b370de`
+before the review had the same results (78 taken, 21 answered, 99
+replies). In the same boot, with the program from the release archive
+(`Version`: Limpet 0.4.0): an icon dropped from Wanderer after `List `
+gave `List "RAM Disk:dc.script"`, which listed the file; hardcode's turn
+and `/quit` left the Shell clean; and the window closed while hardcode
+streamed a reply, with neither left in `Status`.
 
 Two runs before the counted one were faults of the check itself: the
 senders called workbench.library through the base that the close sets to
