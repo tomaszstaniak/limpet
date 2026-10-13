@@ -35,6 +35,15 @@ program above (`Version`: Limpet 0.4.1).
 The same `read-cancel` in CON: is refused (`ERROR_ACTION_NOT_KNOWN`) with
 the read still out; Limpet 0.4.0 refuses it too.
 
+## apkg
+
+In the catalogue since arospkg-index PR #17 (2026-10-13). Before the
+merge, on pool slot v11-2 with apkg 0.5.0: 0.4.0 installed from the public
+catalogue, `Themes/light.theme` changed locally, `upgrade limpet` to 0.4.1
+(rc 0; 2 files replaced, 13 unchanged); the changed theme kept byte for
+byte, and the started program used it (cursor `#c00000`); `verify` named
+only that file; `remove` kept it.
+
 ## Not checked
 
 - An SMP exec. The new close is meant to be safe there (the port is freed
