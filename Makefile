@@ -1227,6 +1227,15 @@ test: test-output-search
 .PHONY: test-output-search
 test-output-search: build/test_output_search
 	./build/test_output_search
+# The Amiga console's window-bounds and cursor reports (src/screen_model.h).
+build/test_amiga_reports: tests/test_amiga_reports.c src/screen_model.c src/screen_model.h src/hyperlink.c
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) tests/test_amiga_reports.c src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
+test: test-amiga-reports
+.PHONY: test-amiga-reports
+test-amiga-reports: build/test_amiga_reports
+	./build/test_amiga_reports
+
 # CON:-style console names for XTERM: (src/console_name.h).
 build/test_console_name: tests/test_console_name.c src/console_name.c src/console_name.h
 	@mkdir -p build

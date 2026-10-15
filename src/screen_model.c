@@ -485,7 +485,8 @@ static void execute_csi(XTermScreen *s, unsigned char command)
                 s->reply(s->reply_context,(const unsigned char *)"\033[0n",4);
             else if(mode==6) {
                 char response[XSCREEN_REPLY_CAPACITY];
-                int length=snprintf(response,sizeof response,"\033[%s%u;%uR",
+                int length=snprintf(response,sizeof response,"%s%s%u;%uR",
+                    s->csi_c1?"\x9b":"\033[",
                     s->csi_private?"?":"",s->cursor_row+1,s->cursor_column+1);
                 if(length>0 && (size_t)length<sizeof response)
                     s->reply(s->reply_context,(const unsigned char *)response,(size_t)length);
@@ -499,6 +500,18 @@ static void execute_csi(XTermScreen *s, unsigned char command)
             char response[XSCREEN_REPLY_CAPACITY];
             int length=snprintf(response,sizeof response,
                 "\033[8;%u;%ut",s->rows,s->columns);
+            if(length>0 && (size_t)length<sizeof response)
+                s->reply(s->reply_context,(const unsigned char *)response,(size_t)length);
+        }
+        return;
+    }
+    /* The Amiga console's window status request: CSI SPACE q or CSI 0 SPACE q.
+       console.device answers with the 8-bit CSI whatever began the query. */
+    if(command=='q' && s->csi_intermediate==' ' && s->amiga_pens && !s->csi_private &&
+       s->param_count==1 && !s->params[0]) {
+        if(s->reply && s->csi_reply_enabled) {
+            char response[XSCREEN_REPLY_CAPACITY];
+            int length=snprintf(response,sizeof response,"\x9b" "1;1;%u;%u r",s->rows,s->columns);
             if(length>0 && (size_t)length<sizeof response)
                 s->reply(s->reply_context,(const unsigned char *)response,(size_t)length);
         }
@@ -940,10 +953,21 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
         if (ch == 27) {
             s->parser = ESCAPE; s->escape_reply_enabled=s->reply!=NULL; continue;
         }
+        /* An Amiga program's 8-bit CSI. Only between characters: inside a
+           UTF-8 sequence 0x9B is a continuation byte, handled above. */
+        if (ch == 0x9b && s->amiga_pens && s->parser == GROUND) {
+            s->parser = CSI; s->param_count = 1; s->discard = 0;
+            s->csi_private=s->param_started=s->csi_intermediate=0;
+            s->csi_c1=1;
+            s->csi_reply_enabled=s->reply!=NULL;
+            memset(s->params, 0, sizeof s->params);
+            continue;
+        }
         if (s->parser == ESCAPE) {
             if (ch == '[') {
                 s->parser = CSI; s->param_count = 1; s->discard = 0;
                 s->csi_private=s->param_started=s->csi_intermediate=0;
+                s->csi_c1=0;
                 s->csi_reply_enabled=s->escape_reply_enabled && s->reply!=NULL;
                 memset(s->params, 0, sizeof s->params);
             } else if(ch=='_' && s->apc) {
