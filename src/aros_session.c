@@ -119,16 +119,10 @@ static void service(ArosSession *s)
             s->pending_write=NULL; s->write_offset=0;
             ReplyPkt(p,-1,ERROR_BREAK);
         } else {
-            if(s->console && !s->line.raw) {
-                const unsigned char *bytes=(const unsigned char *)p->dp_Arg2;
-                while(s->write_offset<(size_t)p->dp_Arg3) {
-                    unsigned char c=bytes[s->write_offset];
-                    size_t needed=c=='\n'?2:1;
-                    if(XSESSION_CAPACITY-s->output.length<needed) break;
-                    if(c=='\n') session_queue_write(&s->output,(const unsigned char *)"\r",1);
-                    session_queue_write(&s->output,&c,1); ++s->write_offset;
-                }
-            } else s->write_offset+=session_queue_write(&s->output,
+            /* Bytes as written: the line feed mode of the screen (on for a
+               console, as console.device starts; CSI 20 l clears it) adds
+               the carriage return, not this queue. */
+            s->write_offset+=session_queue_write(&s->output,
                     (const unsigned char *)p->dp_Arg2+s->write_offset,
                     (size_t)p->dp_Arg3-s->write_offset);
             if(s->write_offset!=(size_t)p->dp_Arg3) break;
