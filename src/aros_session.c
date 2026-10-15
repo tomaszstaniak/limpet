@@ -92,7 +92,9 @@ static void service(ArosSession *s)
         unsigned i;
         for(i=0;i<XSESSION_WAITERS;++i) if(s->waits[i].packet) {
             int expired=s->waits[i].active && CheckIO((struct IORequest *)s->waits[i].timer)!=NULL;
-            int ready=session_queue_wait(&s->input,s->eof || s->eof_once || s->stopping,expired);
+            /* As CON:, a partly typed line counts as a key there. */
+            int typed=s->console && !s->line.raw && s->line.length;
+            int ready=typed?1:session_queue_wait(&s->input,s->eof || s->eof_once || s->stopping,expired);
             if(ready>=0) {
                 struct DosPacket *waiter=s->waits[i].packet;
                 wait_stop(s,i);
@@ -454,7 +456,7 @@ void aros_session_poll(ArosSession *s)
              * Any number of clients may wait, each with its own timeout,
              * also while reads are out (CON: keeps one and loses others). */
             if(p->dp_Arg1<0) ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
-            else if(s->input.length) ReplyPkt(p,DOSTRUE,0);
+            else if(s->input.length || (s->console && !s->line.raw && s->line.length)) ReplyPkt(p,DOSTRUE,0);
             else if(s->eof || s->eof_once || s->stopping || !p->dp_Arg1) ReplyPkt(p,DOSFALSE,0);
             else if(wait_start(s,p,(LONG)p->dp_Arg1))
                 ReplyPkt(p,DOSFALSE,s->wait_count==XSESSION_WAITERS?ERROR_OBJECT_IN_USE:ERROR_NO_FREE_STORE);
