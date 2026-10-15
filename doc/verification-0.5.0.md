@@ -98,7 +98,19 @@ not established. About 32.5 MiB per open window.
 
 ## apkg
 
-Recorded after the release, below.
+The release asset (`Limpet-0.5.0-abiv11.zip`, 3,666,468 bytes, SHA-256
+`695499c8…`, matching the release's `SHA256SUMS`; the program inside is
+the clean rebuild of the tag) is in the apkg catalogue since
+arospkg-index PR #19 (2026-10-15). Before the merge, on pool slot v11-2
+(AROS One 1.3) with apkg 0.5.0 and the branch's catalogue: 0.4.1 installed
+from the public catalogue; `Themes/light.theme` changed by hand (red
+cursor); `upgrade limpet` to 0.5.0 (rc 0; 2 files replaced, 13 unchanged);
+`verify` 14 as installed and the theme changed locally, byte-identical to
+before the upgrade; the upgraded program started with that theme and a
+settings file (15 px), `winsize-check` 24x80, Find found its match, the
+window closed with nothing left in `Status`; `remove` kept the changed
+theme. The handler archive from the release, unpacked separately, passed
+the contract probe on `LIMPET:` and was removed with `Remove-Handler`.
 
 ## Not checked
 
