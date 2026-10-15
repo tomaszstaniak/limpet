@@ -157,6 +157,30 @@ static void quiet_checks(BPTR h, const char *name)
         say("OBS", "change_signal.old", "%s", old == (SIPTR)me ? "this process" : old ? "another" : "0");
     }
 
+    {   /* The Amiga console's own queries, raw mode: the window bounds
+           (CSI 0 SPACE q) and the cursor (CSI 6 n). What comes back, as hex. */
+        static const struct { const char *id, *query; int n; } q[] = {
+            {"report.bounds", "\x9b" "0 q", 4}, {"report.cursor", "\x9b" "6n", 3}
+        };
+        unsigned i;
+        SetMode(h, 1);
+        for (i = 0; i < 2; ++i) {
+            char got[64], hex[140]; LONG n = 0, k; int j = 0;
+            Write(h, (APTR)q[i].query, q[i].n);
+            while (n < (LONG)sizeof got - 1 && WaitForChar(h, n ? 100000 : 1000000)) {
+                k = Read(h, got + n, 1);
+                if (k != 1) break;
+                n += k;
+                if ((unsigned char)got[n - 1] >= 0x40 && n > 1) break;
+            }
+            for (k = 0; k < n && j < (int)sizeof hex - 3; ++k)
+                j += snprintf(hex + j, sizeof hex - j, "%02x", (unsigned char)got[k]);
+            hex[j] = 0;
+            say(n ? "OBS" : "OBS", q[i].id, "%s", n ? hex : "no answer in 1 s");
+        }
+        SetMode(h, 0);
+    }
+
     {   /* Writers at once: none may fail. */
         int k; LONG failed = 0; ULONG got = 0;
         parent = FindTask(NULL);
@@ -207,6 +231,12 @@ static void key_checks(BPTR h)
     n = Read(h, buf, sizeof buf - 1);
     CHECK("break", (SetSignal(0, SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C) != 0,
           "Ctrl-C reached the reader; Read=%ld", (long)n);
+
+    SetSignal(0, SIGBREAKF_CTRL_D);
+    FPuts(h, (CONST_STRPTR)"Press Ctrl-D, then Return: "); Flush(h);
+    n = Read(h, buf, sizeof buf - 1);
+    say((SetSignal(0, SIGBREAKF_CTRL_D) & SIGBREAKF_CTRL_D) ? "PASS" : "FAIL", "break_d",
+        "Ctrl-D reached the reader; Read=%ld", (long)n);
 
     FPuts(h, (CONST_STRPTR)"End input: Ctrl-\\ in CON:, F5 in Limpet: "); Flush(h);
     n = Read(h, buf, sizeof buf - 1);
