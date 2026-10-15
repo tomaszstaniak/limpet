@@ -79,6 +79,24 @@ Seen on the way, not changed: in raw mode `CON:` turns a line feed into
 CR LF (it sets LF mode, `CSI 20h`), `LIMPET:` does not, so a raw program
 writing bare line feeds prints stepped lines in `LIMPET:`.
 
+## Review
+
+An independent review of the six commits found, and these were fixed:
+
+- Ctrl-\ bypassed the wait for a running TAB search in a LIMPET: window;
+  the Shell could end while the search child read its directories (Ctrl-C
+  had the same window). Both now wait for the search.
+- Ctrl-\ jumped ahead of a paste going in; it now keeps its place.
+- Ctrl-D/E/F were lost before the first read; the opener now gets them, as
+  CON: gives them, and a key with nobody to signal says so.
+- A pending end of input survived Ctrl-C; `--command` sessions ignored
+  Ctrl-D/E/F and Ctrl-\; `WaitForChar` and the status query ignored a
+  pending end; a stray 0x9B could swallow a line end (controls inside a
+  sequence now act, ECMA-48); 0x9B inside a sequence did not restart it.
+
+Host tests cover the parser changes; the session changes were built and
+checked on AROS with the key probe after the fixes (below).
+
 ## Not checked
 
 - Mainline; ABIv11 2026.09; real hardware.
