@@ -552,6 +552,11 @@ int aros_session_interrupt(ArosSession *s)
         session_queue_write(&s->input,(const unsigned char *)"\n",1);
     service(s); return 1;
 }
+int aros_session_break_signal(ArosSession *s,ULONG signals)
+{
+    if(!s->console || !aros_session_active(s) || s->eof || s->line.raw) return 0;
+    return aros_break_send_signal(&s->breaker,signals);
+}
 void aros_session_stop(ArosSession *s)
 {
     s->stopping=1; s->eof=1;

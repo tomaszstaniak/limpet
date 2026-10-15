@@ -17,6 +17,8 @@ void aros_break_bind(ArosBreak *,struct Task *);
 /* Readiness is a synchronized hint; send still revalidates under the gate. */
 int aros_break_ready(ArosBreak *);
 int aros_break_send(ArosBreak *);
+/* The same for any of the break signals (SIGBREAKF_CTRL_C..F). */
+int aros_break_send_signal(ArosBreak *,ULONG signals);
 void aros_break_close(ArosBreak *);
 /* What the bound reader runs, read under the same protection as send: a
    Shell process runs its commands itself, setting cli_Module and its task

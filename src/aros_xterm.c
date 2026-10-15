@@ -1110,6 +1110,12 @@ static size_t session_bytes(const unsigned char *bytes,size_t count)
     if(echo_mode==2) {
         if(replies_enabled() && reply_flow.length) return 0;
         if(shell_session && !process_session.line.raw) {
+            /* Ctrl-D/E/F: a signal to the reader, as in CON:; the line
+               stays as it is. */
+            if(count==1 && bytes[0]>=4 && bytes[0]<=6) {
+                aros_session_break_signal(&process_session,SIGBREAKF_CTRL_D<<(bytes[0]-4));
+                return 1;
+            }
             if(count==1 && bytes[0]==3) {
                 if(!aros_session_interrupt(&process_session)) return 0;
                 line_editor_search_cancel(&command_editor);
@@ -1218,6 +1224,14 @@ static int keyboard_interrupt(const XQueuedKey *key)
         key->length==1 && key->bytes[0]==3;
 }
 
+/* Ctrl-D/E/F in a cooked Shell session: like Ctrl-C they need no Read
+   waiting, so they must not queue behind a running command. */
+static int keyboard_console_key(const XQueuedKey *key)
+{
+    return echo_mode==2 && shell_session && !process_session.line.raw &&
+        key->length==1 && key->bytes[0]>=4 && key->bytes[0]<=6;
+}
+
 static int keyboard_ready(void)
 {
     const XQueuedKey *key;
@@ -1225,6 +1239,7 @@ static int keyboard_ready(void)
     key=&keyboard.events[keyboard.head];
     if(!echo_mode || (echo_mode==2 &&
        (!aros_session_active(&process_session) || process_session.eof))) return 1;
+    if(keyboard_console_key(key)) return 1;
     if(keyboard_interrupt(key))
         return !process_session.breaker.registered ||
             (aros_break_ready(&process_session.breaker) && XSESSION_CAPACITY-process_session.output.length>=4);

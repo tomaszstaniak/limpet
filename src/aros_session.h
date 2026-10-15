@@ -76,6 +76,10 @@ int aros_session_active(const ArosSession *);
 /* NULL: optional S:Shell-Startup; "": clean session; otherwise required file. */
 int aros_session_start_shell_profile(ArosSession *,const char *profile);
 int aros_session_interrupt(ArosSession *);
+/* Ctrl-D, Ctrl-E, Ctrl-F in cooked mode, as CON: does them: the break
+   signal to the console's reader, nothing into the line. Raw clients get
+   the bytes instead. Returns whether a signal went out. */
+int aros_session_break_signal(ArosSession *,ULONG signals);
 /* What the console's current reader runs (aros_break_foreground); known
    is 0 when the session is not a console or no reader is bound. */
 int aros_session_foreground(ArosSession *,XForeground *);

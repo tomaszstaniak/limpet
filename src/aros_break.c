@@ -34,19 +34,20 @@ int aros_break_ready(ArosBreak *b)
     ObtainSemaphore(&b->gate); ready=b->target!=NULL; ReleaseSemaphore(&b->gate);
     return ready;
 }
-int aros_break_send(ArosBreak *b)
+int aros_break_send_signal(ArosBreak *b,ULONG signals)
 {
     int sent=0;
     if(!b->registered) return 0;
     ObtainSemaphore(&b->gate);
     if(b->target) {
         Disable();
-        if(task_listed(b->target)) { Signal(b->target,SIGBREAKF_CTRL_C); sent=1; }
+        if(task_listed(b->target)) { Signal(b->target,signals); sent=1; }
         Enable();
     }
     ReleaseSemaphore(&b->gate);
     return sent;
 }
+int aros_break_send(ArosBreak *b) { return aros_break_send_signal(b,SIGBREAKF_CTRL_C); }
 
 /* Called with the task protected (listed under Disable, or held by the
    removal gate under Forbid). Copies a bounded name; keeps no pointer. */
@@ -137,16 +138,17 @@ int aros_break_ready(ArosBreak *b)
     ObtainSemaphore(&b->gate); ready=b->target!=NULL; ReleaseSemaphore(&b->gate);
     return ready;
 }
-int aros_break_send(ArosBreak *b)
+int aros_break_send_signal(ArosBreak *b,ULONG signals)
 {
     int sent=0;
     if(!b->registered) return 0;
     /* Removal notification acquires this same gate before task memory is freed. */
     ObtainSemaphore(&b->gate);
-    if(b->target) { Signal(b->target,SIGBREAKF_CTRL_C); sent=1; }
+    if(b->target) { Signal(b->target,signals); sent=1; }
     ReleaseSemaphore(&b->gate);
     return sent;
 }
+int aros_break_send(ArosBreak *b) { return aros_break_send_signal(b,SIGBREAKF_CTRL_C); }
 
 /* Called with the task protected (listed under Disable, or held by the
    removal gate under Forbid). Copies a bounded name; keeps no pointer. */
