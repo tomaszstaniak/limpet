@@ -55,6 +55,9 @@ typedef struct {
     LONG result;
     LONG unsupported_action;
     int eof,stopping,exited;
+    /* Ctrl-\ in cooked mode: the next Read returns 0 once, then reads wait
+       again, as CON: does. eof (F5, close) stays for good. */
+    int eof_once;
     char command[512];
 #ifdef XTERM_PROCESS_PORT_CLIENTS
     int borrowed_port; /* port is this process's pr_MsgPort; never deleted */
@@ -80,6 +83,10 @@ int aros_session_interrupt(ArosSession *);
    signal to the console's reader, nothing into the line. Raw clients get
    the bytes instead. Returns whether a signal went out. */
 int aros_session_break_signal(ArosSession *,ULONG signals);
+/* Ctrl-\ in cooked mode: what was typed goes to the reader without a line
+   end, then one Read returns 0 (end of input). Returns 0 when it cannot
+   (raw mode, no room, no console). */
+int aros_session_end_input(ArosSession *);
 /* What the console's current reader runs (aros_break_foreground); known
    is 0 when the session is not a console or no reader is bound. */
 int aros_session_foreground(ArosSession *,XForeground *);

@@ -72,7 +72,7 @@ static void service(ArosSession *s)
     }
     if(s->pending_wait) {
         int expired=s->timer_active && CheckIO((struct IORequest *)s->timer)!=NULL;
-        int ready=session_queue_wait(&s->input,s->eof,expired);
+        int ready=session_queue_wait(&s->input,s->eof || s->eof_once,expired);
         if(ready>=0) {
             struct DosPacket *waiter=s->pending_wait;
             s->pending_wait=NULL;
@@ -84,6 +84,10 @@ static void service(ArosSession *s)
         size_t n=session_queue_read(&s->input,(unsigned char *)p->dp_Arg2,(size_t)p->dp_Arg3);
         s->pending_read=NULL;
         ReplyPkt(p,n,0);
+    } else if(p && s->eof_once) {
+        /* Typed text went first (above); this read is the end of input. */
+        s->eof_once=0; s->pending_read=NULL;
+        ReplyPkt(p,0,0);
     }
     while((p=s->pending_write)) {
         if(s->stopping) {
@@ -550,6 +554,17 @@ int aros_session_interrupt(ArosSession *s)
      * Raw clients receive the Ctrl-C byte instead of entering this path. */
     if(console_interrupt_needs_line(s->pending_read!=NULL,fg.known,fg.running))
         session_queue_write(&s->input,(const unsigned char *)"\n",1);
+    service(s); return 1;
+}
+int aros_session_end_input(ArosSession *s)
+{
+    if(!s->console || !aros_session_active(s) || s->eof || s->line.raw) return 0;
+    if(s->line.length) {
+        if(XSESSION_CAPACITY-s->input.length<s->line.length) return 0;
+        session_queue_write(&s->input,s->line.line,s->line.length);
+        s->line.length=0;
+    }
+    s->eof_once=1;
     service(s); return 1;
 }
 int aros_session_break_signal(ArosSession *s,ULONG signals)
