@@ -863,6 +863,28 @@ static void osc_end(XTermScreen *s)
     s->parser=GROUND;
 }
 
+/* CR, LF, BS, HT and FF: 1 when ch was one of them and is done. */
+static int control(XTermScreen *s, unsigned char ch)
+{
+    if (ch == '\r') { s->cursor_column = 0; s->wrap_pending = 0; }
+    else if (ch == '\n') {
+        s->cells[(size_t)(s->cursor_row + 1) * s->columns - 1].wrap = 0;
+        s->wrap_pending = 0; line_feed(s);
+    }
+    else if (ch == '\b') {
+        s->wrap_pending = 0;
+        if (s->cursor_column) --s->cursor_column;
+    } else if (ch == '\t') {
+        unsigned next=(s->cursor_column/8+1)*8;
+        s->cursor_column=next<s->columns?next:s->columns-1;
+        s->wrap_pending=0;
+    } else if (ch == '\f') {
+        fill(s->cells, (size_t)s->rows * s->columns, s->style);
+        s->cursor_row = s->cursor_column = s->wrap_pending = 0;
+    } else return 0;
+    return 1;
+}
+
 size_t screen_bulk_length(const XTermScreen *s, const unsigned char *bytes, size_t count)
 {
     size_t n = 0;
@@ -955,7 +977,8 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
         }
         /* An Amiga program's 8-bit CSI. Only between characters: inside a
            UTF-8 sequence 0x9B is a continuation byte, handled above. */
-        if (ch == 0x9b && s->amiga_pens && s->parser == GROUND) {
+        if (ch == 0x9b && s->amiga_pens &&
+            (s->parser == GROUND || s->parser == ESCAPE || s->parser == CSI)) {
             s->parser = CSI; s->param_count = 1; s->discard = 0;
             s->csi_private=s->param_started=s->csi_intermediate=0;
             s->csi_c1=1;
@@ -1005,25 +1028,14 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
                 s->csi_intermediate=ch;
             } else if (ch >= 0x40 && ch <= 0x7e) {
                 execute_csi(s, ch); s->parser = GROUND;
+            } else if (ch < 0x20 && control(s, ch)) {
+                /* ECMA-48: a control inside a sequence acts and the sequence
+                   goes on, so a stray CSI cannot eat a line end. */
             } else s->discard = 1;
             continue;
         }
-        if (ch == '\r') { s->cursor_column = 0; s->wrap_pending = 0; }
-        else if (ch == '\n') {
-            s->cells[(size_t)(s->cursor_row + 1) * s->columns - 1].wrap = 0;
-            s->wrap_pending = 0; line_feed(s);
-        }
-        else if (ch == '\b') {
-            s->wrap_pending = 0;
-            if (s->cursor_column) --s->cursor_column;
-        } else if (ch == '\t') {
-            unsigned next=(s->cursor_column/8+1)*8;
-            s->cursor_column=next<s->columns?next:s->columns-1;
-            s->wrap_pending=0;
-        } else if (ch == '\f') {
-            fill(s->cells, (size_t)s->rows * s->columns, s->style);
-            s->cursor_row = s->cursor_column = s->wrap_pending = 0;
-        } else if (ch >= 32 && ch <= 126) put_scalar(s, ch);
+        if (control(s, ch)) {}
+        else if (ch >= 32 && ch <= 126) put_scalar(s, ch);
         else if (ch >= 0xc2 && ch <= 0xf4) {
             s->utf8_remaining = ch < 0xe0 ? 1 : ch < 0xf0 ? 2 : 3;
             s->utf8_value = ch & (ch < 0xe0 ? 0x1f : ch < 0xf0 ? 0x0f : 0x07);

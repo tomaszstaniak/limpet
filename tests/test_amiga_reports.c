@@ -44,6 +44,14 @@ int main(void)
     assert(screen_cell(&s,0,0)==0x49b);
     /* 8-bit CSI also moves the cursor and erases, as console.device does. */
     out("\x9b" "5;10H",6); assert(s.cursor_row==4 && s.cursor_column==9);
+    /* A stray 0x9B in text (CP1252's single right angle quote): it starts a
+       sequence as in console.device, but a line end inside still acts. */
+    init(5,20,1);
+    out("a\x9b\r\nnext",8);
+    /* CR and LF act; 'n' is the sequence's final byte, as in console.device. */
+    assert(s.cursor_row==1 && screen_cell(&s,1,0)=='e' && screen_cell(&s,0,0)=='a');
+    /* 0x9B inside a sequence starts it again. */
+    out("\033[\x9b" "6n",5); assert(REPLY("\x9b" "2;4R"));
     /* VT sessions (no amiga_pens): 0x9B is no CSI, SPACE q is no query. */
     init(24,80,0);
     out("\033[0 q",5); assert(got_length==0);
