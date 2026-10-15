@@ -56,7 +56,10 @@ Limpet includes:
   and, when the program reports it, its state; Ctrl-R search through the
   command history;
 - from 0.4.0: icons dragged from Workbench put their paths on the
-  command line.
+  command line;
+- in the 0.5.0 candidate (not published): finding text in the output, and
+  a settings file for the font, theme, scrollback and command history
+  ([details](doc/search-and-settings.md)).
 
 The AROS Shell itself is unchanged: Limpet is the window it runs in.
 Limpet runs alongside the system console for now. Programs that explicitly

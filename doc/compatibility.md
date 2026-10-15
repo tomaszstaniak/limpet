@@ -44,12 +44,13 @@ following is claimed:
 
 The exact subsets are in the [protocol reference](protocols.md).
 
-## Limits of Limpet 0.1.0 and 0.2.0
+## Limits of Limpet 0.1.0 to 0.4.1
 
 | Item | Limit |
 | --- | --- |
 | Text grid | 80 rows, 160 columns at most |
-| Scrollback | 256 lines at 160 columns, 512 at 80 columns |
+| Scrollback | 256 lines at 160 columns, 512 at 80 columns; from the 0.5.0 candidate set by `scrollback` (100 to 1000 lines at 160 columns, [settings](search-and-settings.md#settings)) |
+| Command history | 32 commands; from the 0.5.0 candidate set by `history` (1 to 500) |
 | Images | 16 per terminal, 1024x1024 pixels and 4 MiB each, 16 MiB together |
 | Link targets | 2047 bytes, 64 remembered per terminal |
 | Kitty control data | 512 bytes per command |
