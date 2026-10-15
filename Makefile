@@ -132,7 +132,7 @@ abiv11-handler:
 	@test -f build/abiv11/harfbuzz.o || { echo "Run make abiv11-frontend first (ABIv11 HarfBuzz object)"; exit 1; }
 	mkdir -p build/abiv11/harness
 	$(ABIV11_CXX) $(HB_FLAGS) -DHB_NO_GETENV --sysroot=$(ABIV11_SDK) -c $(HB_SRC) -o build/abiv11/harfbuzz-handler.o
-	$(ABIV11_GCC) $(ABIV11_CFLAGS) $(ABIV11_WORKER_FLAGS) -o build/abiv11/aros-xterm-worker $(ABIV11_WORKER_SRC) $(ABIV11_LDFLAGS) -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
+	$(ABIV11_GCC) $(ABIV11_CFLAGS) $(VERSION_FLAGS) $(ABIV11_WORKER_FLAGS) -o build/abiv11/aros-xterm-worker $(ABIV11_WORKER_SRC) $(ABIV11_LDFLAGS) -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 	$(ABIV11_GCC) $(ABIV11_CFLAGS) -nostartfiles tools/xterm_handler.c $(ABIV11_LDFLAGS) -o build/abiv11/xterm-handler
 	cp build/abiv11/xterm-handler build/abiv11/harness/xterm-handler
 	$(ABIV11_GCC) $(ABIV11_CFLAGS) -nostartfiles -DXHANDLER_WORKER='"limpet-console"' tools/xterm_handler.c $(ABIV11_LDFLAGS) -o build/abiv11/limpet-handler
