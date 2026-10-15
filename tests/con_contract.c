@@ -287,12 +287,12 @@ static void lf_mode(BPTR h)
 static BPTR shared_handle[SHARED_MAX];
 static volatile LONG shared_result[SHARED_MAX], shared_done[SHARED_MAX];
 static volatile char shared_text[SHARED_MAX][16];
-static volatile int shared_kind[SHARED_MAX]; /* 0 read, 1 wait 3 s */
+static volatile int shared_kind[SHARED_MAX]; /* 0 read, 1 wait 3 s, 2 wait 10 s */
 static void sharer(void)
 {
     struct Process *me = (struct Process *)FindTask(NULL);
     int k = (int)(IPTR)me->pr_Task.tc_UserData;
-    if (shared_kind[k]) shared_result[k] = WaitForChar(shared_handle[k], 3000000);
+    if (shared_kind[k]) shared_result[k] = WaitForChar(shared_handle[k], shared_kind[k] == 2 ? 10000000 : 3000000);
     else {
         char buf[16]; LONG n = Read(shared_handle[k], buf, sizeof buf - 1), i;
         shared_result[k] = n;
@@ -335,9 +335,9 @@ static void shared_reads(BPTR h)
     if (shared_done[0]) Close(shared_handle[0]);
 
     /* A waiter and a reader at once: a key ends both. */
-    ok = start_sharer(h, 1, 1);
+    ok = start_sharer(h, 1, 2);
     Delay(10);
-    FPuts(h, (CONST_STRPTR)"Waiter and reader: type w and Return within 3 s: "); Flush(h);
+    FPuts(h, (CONST_STRPTR)"Waiter and reader: type w and Return within 10 s: "); Flush(h);
     n = Read(h, buf, sizeof buf - 1);
     ok = ok && await_sharer(1, 500);
     CHECK("wait.with_read", ok && shared_result[1] != 0 && n == 2,
