@@ -37,16 +37,19 @@ grep -q 'rc[0-9]\|@VERSION@' $d/README.txt && [[ $ver != *rc* ]] && { print -u2 
 # the drawer's own icon, beside it at the archive root (apkg installs it)
 cp $root/assets/icon/Limpet.info.png $out/stage-abiv11/Limpet.info
 (cd $out/stage-abiv11 && zip -qrX $out/Limpet-$ver-abiv11.zip Limpet Limpet.info)
-# The experimental XTERM: console: a separate archive that unpacks into the
-# same drawer. The main archive must never carry the handler.
-x=$out/stage-xterm/Limpet; mkdir -p $x
-for f in xterm-handler aros-xterm-worker xterm-remove; do cp $root/build/abiv11/$f $x/; done
-v=$(strings $x/aros-xterm-worker | sed -n 's/^\$VER: Limpet \([^ ]*\) .*/\1/p' | head -1)
-[[ $v == $ver ]] || { print -u2 "aros-xterm-worker is version '$v', not $ver"; exit 1; }
-cp $root/tools/xterm-console/{XTERM.mountlist,Install-XTERM,Remove-XTERM} $x/
-sed "s/@VERSION@/$ver/g" $root/tools/xterm-console/README.txt > $x/README-XTERM.txt
-(cd $out/stage-xterm && zip -qrX $out/Limpet-XTERM-experimental-$ver-abiv11.zip Limpet)
-unzip -l $out/Limpet-$ver-abiv11.zip | grep -q 'xterm\|XTERM' && { print -u2 "main archive carries XTERM: files"; exit 1; }
+# The experimental LIMPET: console handler: a separate archive that unpacks
+# into the same drawer. The main archive must never carry the handler.
+x=$out/stage-handler/Limpet; mkdir -p $x
+cp $root/build/abiv11/limpet-handler $x/limpet-handler
+cp $root/build/abiv11/aros-xterm-worker $x/limpet-console
+cp $root/build/abiv11/xterm-remove $x/limpet-handler-remove
+v=$(strings $x/limpet-console | sed -n 's/^\$VER: Limpet \([^ ]*\) .*/\1/p' | head -1)
+[[ $v == $ver ]] || { print -u2 "the worker is version '$v', not $ver"; exit 1; }
+strings $x/limpet-handler | grep -qx limpet-console || { print -u2 "limpet-handler does not look for limpet-console"; exit 1; }
+cp $root/tools/xterm-console/{LIMPET.mountlist,Install-Handler,Remove-Handler} $x/
+sed "s/@VERSION@/$ver/g" $root/tools/xterm-console/README-Handler.txt > $x/README-Handler.txt
+(cd $out/stage-handler && zip -qrX $out/Limpet-handler-experimental-$ver-abiv11.zip Limpet)
+unzip -l $out/Limpet-$ver-abiv11.zip | grep -qi 'handler\|limpet-console\|mountlist\|xterm' && { print -u2 "main archive carries handler files"; exit 1; }
 if [[ $only != abiv11 ]]; then
 # mainline PTY preview
 d=$out/stage-pty/LimpetPTY; common $d
@@ -57,6 +60,6 @@ sed "s/@VERSION@/$ver/g" $root/tools/release/README-pty-preview.txt > $d/README.
 fi
 (cd $out && shasum -a 256 *.zip > SHA256SUMS
  (cd stage-abiv11 && find Limpet -type f | sort | xargs shasum -a 256 > ../contents-abiv11.sha256)
- (cd stage-xterm && find Limpet -type f | sort | xargs shasum -a 256 > ../contents-xterm.sha256)
+ (cd stage-handler && find Limpet -type f | sort | xargs shasum -a 256 > ../contents-handler.sha256)
  [[ ! -d stage-pty ]] || (cd stage-pty && find LimpetPTY -type f | sort | xargs shasum -a 256 > ../contents-pty.sha256))
 cat $out/SHA256SUMS

@@ -1,8 +1,11 @@
 # Verification record: Limpet 0.5.0 candidate and XTERM: stage 1
 
 Not published. Two tracks with their own acceptance: Find in output and
-the settings file (the 0.5.0 candidate), and the experimental `XTERM:`
-console handler (stage 1, outside the package).
+the settings file (the 0.5.0 candidate), and the experimental console
+handler (stage 1, outside the package). The handler was tested under its
+working name `XTERM:`; it is published as `LIMPET:`
+([details](limpet-handler.md)), and the record below keeps the name the
+tests used.
 
 ## Build
 

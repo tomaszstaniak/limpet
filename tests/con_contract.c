@@ -1,5 +1,5 @@
 /* Guest probe: the console contract of a CON:-style handler, checked the same
- * way for CON: and XTERM: (doc/xterm-console.md). The program opens the
+ * way for CON: and Limpet's handler, LIMPET: (doc/limpet-handler.md). The program opens the
  * console itself, by the name it is given, as any program that opens CON:
  * does.
  *

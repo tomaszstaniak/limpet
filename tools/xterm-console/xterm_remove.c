@@ -1,5 +1,5 @@
-/* Takes Limpet's XTERM: off the DOS list again (Remove-XTERM). It refuses
- * while an XTERM: window is open. Not Assign DISMOUNT: on a device without a
+/* Takes Limpet's LIMPET: handler off the DOS list again (Remove-Handler).
+ * It refuses while a LIMPET: window is open. Not Assign DISMOUNT: on a device without a
  * resident task its DeviceProc would start a new handler, which opens a
  * window (workbench/c/Assign.c).
  *
@@ -26,7 +26,7 @@ static int window_open(void)
     for (i = 0; i < 2 && !found; ++i)
         for (n = lists[i]->lh_Head; n->ln_Succ; n = n->ln_Succ) {
             const char *a = n->ln_Name;
-            if (a && a[0] == 'X' && a[1] == 'T' && a[2] == 'E' && a[3] == 'R' && a[4] == 'M' && !a[5]) {
+            if (a && a[0] == 'L' && a[1] == 'I' && a[2] == 'M' && a[3] == 'P' && a[4] == 'E' && a[5] == 'T' && !a[6]) {
                 found = 1; break;
             }
         }
@@ -45,22 +45,22 @@ int main(void)
     struct DosList *dl;
     struct DeviceNode *dn;
     const char *why = NULL;
-    /* While this holds the list for writing, no Open can find XTERM: and
+    /* While this holds the list for writing, no Open can find LIMPET: and
        start another window. */
     dl = LockDosList(LDF_DEVICES | LDF_WRITE);
-    dn = (struct DeviceNode *)FindDosEntry(dl, (CONST_STRPTR)"XTERM", LDF_DEVICES);
-    if (!dn) why = "XTERM: is not mounted";
-    else if (!dn->dn_Handler || !ends_with((const char *)AROS_BSTR_ADDR(dn->dn_Handler), "xterm-handler"))
-        why = "XTERM: is not Limpet's; left alone";
-    else if (dn->dn_Task) why = "XTERM: has a resident task; left alone";
-    else if (window_open()) why = "an XTERM: window is open; close it first";
+    dn = (struct DeviceNode *)FindDosEntry(dl, (CONST_STRPTR)"LIMPET", LDF_DEVICES);
+    if (!dn) why = "LIMPET: is not mounted";
+    else if (!dn->dn_Handler || !ends_with((const char *)AROS_BSTR_ADDR(dn->dn_Handler), "limpet-handler"))
+        why = "LIMPET: is not this handler; left alone";
+    else if (dn->dn_Task) why = "LIMPET: has a resident task; left alone";
+    else if (window_open()) why = "a LIMPET: window is open; close it first";
     if (why) {
         UnLockDosList(LDF_DEVICES | LDF_WRITE);
-        Printf((CONST_STRPTR)"Remove-XTERM: %s\n", (IPTR)why);
+        Printf((CONST_STRPTR)"Remove-Handler: %s\n", (IPTR)why);
         return RETURN_WARN;
     }
     RemDosEntry((struct DosList *)dn);
     UnLockDosList(LDF_DEVICES | LDF_WRITE);
-    PutStr((CONST_STRPTR)"XTERM: removed\n");
+    PutStr((CONST_STRPTR)"LIMPET: removed\n");
     return RETURN_OK;
 }

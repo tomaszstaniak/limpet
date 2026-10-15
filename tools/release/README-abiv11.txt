@@ -16,7 +16,8 @@ and mainline binaries do not run here.
 
 Limpet does not replace the system console (CON:): programs that open
 CON: themselves still get the system console window. An experimental
-XTERM: console comes as a separate archive and is not part of this one.
+console handler, LIMPET:, comes as a separate archive and is not part of
+this one.
 
 Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet

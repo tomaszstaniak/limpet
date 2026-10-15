@@ -779,7 +779,7 @@ quotes when a name holds `"`. With such a name on the line, a later `;`
 inside quotes would end the command early. Limpet refuses that drop. Drop
 the two names one after the other with the `;` first, or separately.
 
-`LimpetPTY` sessions (including SSH) and the experimental `XTERM:` worker
+`LimpetPTY` sessions (including SSH) and the experimental `LIMPET:` handler
 do not take drops. Programs cannot detect or control the feature.
 
 The erased-row change affects only programs that erase a continuation row

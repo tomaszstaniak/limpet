@@ -29,7 +29,7 @@ For programs:
   request. Up to 0.4.1 the C library read through a null pointer.
 - Several processes writing to one Limpet console at once wait their turn
   instead of the later ones getting an error.
-- Experimental, not in the package: [XTERM:](xterm-console.md), a Limpet
+- Experimental, not in the package: [LIMPET:](limpet-handler.md), a Limpet
   window where a program would open `CON:`.
 
 ## 0.4.1 (2026-10-13)

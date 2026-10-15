@@ -1,0 +1,12 @@
+; Takes LIMPET: off again; refuses while a LIMPET: window is open.
+; A reboot does the same.
+Assign >NIL: LimpetHandler: EXISTS
+If WARN
+  Echo "Remove-Handler: LimpetHandler: is not assigned; was Install-Handler run?"
+  Quit 5
+EndIf
+LimpetHandler:limpet-handler-remove
+If WARN
+  Quit 5
+EndIf
+Assign LimpetHandler: REMOVE

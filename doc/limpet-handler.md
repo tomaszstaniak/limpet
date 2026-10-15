@@ -1,11 +1,15 @@
-# XTERM: — Limpet as a console handler (experimental)
+# LIMPET: — Limpet as a console handler (experimental)
 
-`XTERM:` is a DOS device that opens a Limpet window wherever a program
-would open `CON:`: `NewShell WINDOW XTERM:`, or a program that opens
-`XTERM:0/0/640/200/Title` itself. It is the first stage towards letting
+`LIMPET:` is a DOS device that opens a Limpet window wherever a program
+would open `CON:`: `NewShell WINDOW LIMPET:`, or a program that opens
+`LIMPET:0/0/640/200/Title` itself. It is the first stage towards letting
 Limpet take over what `CON:` does. It is **experimental**: it does not
 replace `CON:`, programs that open `CON:` keep getting `CON:`, and the
 table below lists what works, what works in part and what does not.
+
+Released separately from Limpet, as `Limpet-handler-experimental-<version>-abiv11.zip`;
+the Limpet archive and apkg do not install it. The tests of 2026-10-15
+ran under the handler's earlier working name, XTERM:.
 
 Scope of this stage: AROS ABIv11 x86_64, tested on AROS One 1.3 under
 QEMU. Not built or run on mainline, not run on ABIv11 2026.09 or real
@@ -13,36 +17,35 @@ hardware.
 
 ## Install and remove
 
-The files come from a build (`make abiv11-frontend abiv11-handler
-abiv11-xterm-console`, see [Building](#building)); they go into the Limpet
-drawer, beside `Limpet` and its `Fonts`:
-`xterm-handler`, `aros-xterm-worker`, `xterm-remove`, `XTERM.mountlist`,
-`Install-XTERM`, `Remove-XTERM`.
+The archive unpacks into the Limpet drawer, beside `Limpet` and its
+`Fonts`: `limpet-handler`, `limpet-console`, `limpet-handler-remove`,
+`LIMPET.mountlist`, `Install-Handler`, `Remove-Handler` and
+`README-Handler.txt`.
 
-    Execute SYS:Utilities/Limpet/Install-XTERM SYS:Utilities/Limpet
-    NewShell WINDOW XTERM:
+    Execute SYS:Utilities/Limpet/Install-Handler SYS:Utilities/Limpet
+    NewShell WINDOW LIMPET:
 
-`Install-XTERM` assigns `LimpetXT:` to the drawer and mounts `XTERM:` until
+`Install-Handler` assigns `LimpetHandler:` to the drawer and mounts `LIMPET:` until
 the next reboot. It writes nothing to `S:`, `DEVS:`, `ENVARC:` or the
 startup, and `CON:` is not touched.
 
-    Execute SYS:Utilities/Limpet/Remove-XTERM
+    Execute SYS:Utilities/Limpet/Remove-Handler
 
-takes `XTERM:` off the DOS list again. It refuses while an `XTERM:` window
+takes `LIMPET:` off the DOS list again. It refuses while a `LIMPET:` window
 is open. The device's node and handler segment stay in memory (a few KB)
 until the next reboot: an open that found the device a moment before may
-still be starting from them. A reboot removes it as well. (`Assign XTERM: DISMOUNT` is
+still be starting from them. A reboot removes it as well. (`Assign LIMPET: DISMOUNT` is
 not used: on a device without a resident task it would start a new
 handler, which opens a window.)
 
 ## Names
 
-`XTERM:` reads the name as `CON:` does
+`LIMPET:` reads the name as `CON:` does
 (`rom/filesys/console_handler/support.c`, `parse_filename`):
 
-    XTERM:left/top/width/height/title/option/option...
+    LIMPET:left/top/width/height/title/option/option...
 
-| Part | XTERM: |
+| Part | LIMPET: |
 | --- | --- |
 | left, top, width, height | pixels, as `CON:`; empty keeps the default (a 80x24 cell window at 40/60); a non-digit makes the name bad (`ERROR_BAD_STREAM_NAME`) |
 | title | the window's title, instead of `Limpet` |
@@ -52,7 +55,7 @@ handler, which opens a window.)
 | `WAIT` | after the program closes its last handle, the window stays until you close it (the title may show another message than "Ended (WAIT)" then) |
 | `AUTO` | accepted; the window opens at once (CON: waits for the first read or write) |
 | `SIMPLE`, `SMART`, `ALT`, `BOOT` | accepted and ignored, as `CON:` does with the first three |
-| `WINDOW`0x... | refused (`ERROR_BAD_STREAM_NAME`): XTERM: draws its own window |
+| `WINDOW`0x... | refused (`ERROR_BAD_STREAM_NAME`): LIMPET: draws its own window |
 
 Options match by prefix in `CON:`'s order, so `C` is `CLOSE` and `S` is
 `SIMPLE`, as in `CON:`.
@@ -62,18 +65,18 @@ Options match by prefix in `CON:`'s order, so `C` is `CLOSE` and `S` is
 The window is a Limpet window: Limpet's line editor (history, Ctrl-R, TAB
 completion), selection, copy and paste, scrollback and Find in output, and
 the [settings file](search-and-settings.md) read when the window opens.
-There is no Project > Reload settings in an XTERM: window. Ctrl-C breaks
+There is no Project > Reload settings in an LIMPET: window. Ctrl-C breaks
 the program reading; **F5** ends input (EOF), where `CON:` uses Ctrl-\.
 
 ## Compatibility with CON:
 
 Measured with `tests/con_contract.c`, which opens the console by the name
-it is given and runs the same checks against `CON:` and `XTERM:`
+it is given and runs the same checks against `CON:` and `LIMPET:`
 (`make abiv11-xterm-console` builds it as `con-contract`). "Test" names the
 check in its log, or the runtime step of the [verification
 record](verification-0.5.0-candidate.md#xterm-stage-1).
 
-| Contract | XTERM: | Where | Test |
+| Contract | LIMPET: | Where | Test |
 | --- | --- | --- | --- |
 | One window per open; `*` and `CONSOLE:` reach it | supported | DOS starts a handler per open; `aros_session.c` FIND | `open_star`, `open_console` |
 | Name: geometry and title | supported | `console_name.c`, `aros_xterm.c` | `test_console_name`; NewShell at 300/200 700x420 |
@@ -100,8 +103,8 @@ record](verification-0.5.0-candidate.md#xterm-stage-1).
 | Amiga console reports in raw mode: window bounds (`CSI 0 SPACE q`), cursor (`CSI 6 n`) | not supported: no answer | | `report.bounds`, `report.cursor` (CON: answers both, 0-based) |
 | Amiga raw input events (`CSI n {`) | not supported (ABIv11 CON: does not report them either) | | none |
 | Output: Amiga console sequences | partly: Limpet's VT subset with SGR 30-37/40-47 as pens; not checked one by one against console.device's set | `screen_model.c` | Shell prompt, `List`, `Search` |
-| Memory per window | about 32.5 MiB (fonts read per window) | `font_cache.c` | earlier measurement, `docs` 2026-09-25 |
-| Open and close cycles | about 109 B per cycle after the first ones | | 10 cycles, `Avail FLUSH` |
+| Memory per window | about 32.5 MiB (fonts read per window) | `font_cache.c` | measured 2026-09-25 on ABIv11 2026.09 |
+| Open and close cycles | not established: free memory 86,864 B lower after the first 5 windows, 544 B lower after the next 5 (about 109 B each). Whether that is the handler leaking, memory the system keeps for libraries and segments, or neither, was not found | | 10 cycles from a script, `Avail FLUSH` |
 
 Not compatibility in the sense of this table: modern VT sequences that
 Limpet understands (colours, Unicode, images) are not the Amiga console
@@ -121,12 +124,12 @@ protocol, and a program written for `CON:` does not need them.
 - **Limpet's window**: `src/aros_xterm.c` (`-DXTERM_DOS_HANDLER`): the
   renderer, editor and keys of an ordinary Limpet window.
 
-## Gaps before XTERM: could stand in for CON:
+## Gaps before LIMPET: could stand in for CON:
 
 Each with how to see it and what it breaks.
 
 1. **No window-bounds or cursor report.** `con-contract` `report.bounds`:
-   `CON:` answers `CSI 1;1;15;75 r`, `XTERM:` nothing. A program that asks
+   `CON:` answers `CSI 1;1;15;75 r`, `LIMPET:` nothing. A program that asks
    the console for its size this way waits or guesses (UnZip's screen-size
    query is one). High impact for console-aware Amiga programs.
 2. **Ctrl-D, Ctrl-E, Ctrl-F are not signalled.** `break_d`. Scripts use
@@ -152,14 +155,14 @@ Each with how to see it and what it breaks.
 Not built; a design for review.
 
 - **Opt-in, after boot only.** A command (`LimpetCON ON`) swaps the
-  handler of the `CON` device node for `xterm-handler` under the DOS list
+  handler of the `CON` device node for `limpet-handler` under the DOS list
   lock, after saving the original handler, segment, startup value and
   stack. `LimpetCON OFF` puts the saved values back. Windows already open
   keep running on the handler that opened them; neither segment is
   unloaded while windows of it may run. Nothing goes into the startup in
   this stage; a later one may offer a line in `S:User-Startup`, never
   `S:Startup-Sequence`.
-- **Per open, the original stays one step away.** When `XTERM:` cannot
+- **Per open, the original stays one step away.** When `LIMPET:` cannot
   serve a name (`WINDOW`, `BOOT`, a screen it cannot open, no memory for
   fonts), its launcher passes the startup packet to the saved `CON:`
   handler instead of failing, so that program gets the system console.
@@ -177,9 +180,12 @@ Not built; a design for review.
     make abiv11-frontend abiv11-handler abiv11-xterm-console \
         ABIV11_GCC=.../x86_64-aros-gcc ABIV11_SDK=.../Development
 
-`build/abiv11/` then holds `aros-xterm` (Limpet), `aros-xterm-worker`,
-`xterm-handler`, `xterm-remove`, `con-contract` and `tty-winsize`; the
-scripts and the mountlist are in `tools/xterm-console/`.
+`build/abiv11/` then holds `aros-xterm` (Limpet), `aros-xterm-worker`
+(packed as `limpet-console`), `limpet-handler`, `xterm-remove` (packed as
+`limpet-handler-remove`), `con-contract`, `tty-winsize` and
+`winsize-check`; the scripts and the mountlist are in
+`tools/xterm-console/`. `tools/release/make-packages.sh` makes both
+archives.
 
 ## Sources read
 

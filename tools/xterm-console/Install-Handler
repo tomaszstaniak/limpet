@@ -1,0 +1,27 @@
+.key DRAWER/A
+.bra {
+.ket }
+; Mounts Limpet's experimental console handler LIMPET: until the next
+; reboot. Writes nothing to S:, DEVS: or ENVARC:, and CON: stays as it is.
+;   Execute SYS:Utilities/Limpet/Install-Handler SYS:Utilities/Limpet
+If NOT EXISTS "{DRAWER}/limpet-handler"
+  Echo "Install-Handler: {DRAWER} has no limpet-handler"
+  Quit 20
+EndIf
+If NOT EXISTS "{DRAWER}/limpet-console"
+  Echo "Install-Handler: {DRAWER} has no limpet-console"
+  Quit 20
+EndIf
+Assign >NIL: LIMPET: EXISTS
+If NOT WARN
+  Echo "Install-Handler: LIMPET: is already mounted"
+  Quit 5
+EndIf
+Assign LimpetHandler: "{DRAWER}"
+Mount LIMPET: FROM LimpetHandler:LIMPET.mountlist
+If WARN
+  Assign LimpetHandler: REMOVE
+  Echo "Install-Handler: Mount failed"
+  Quit 20
+EndIf
+Echo "LIMPET: is mounted until the next reboot. Try: NewShell WINDOW LIMPET:"

@@ -121,5 +121,5 @@ the title bar says when font, size, scrollback or history differ, which
 apply to windows opened after that. A file that is wrong is ignored as at
 start, and the window keeps what it has.
 
-The experimental `XTERM:` console windows read the same file when they
-open; they have no Reload settings (see [XTERM:](xterm-console.md)).
+Windows of the experimental `LIMPET:` handler read the same file when they
+open; they have no Reload settings (see [LIMPET:](limpet-handler.md)).

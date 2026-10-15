@@ -6,6 +6,12 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 
+/* The GUI worker beside this launcher. The ABIv11 LIMPET: handler is built
+ * with -DXHANDLER_WORKER=\"limpet-console\" (Makefile abiv11-handler). */
+#ifndef XHANDLER_WORKER
+#define XHANDLER_WORKER "aros-xterm-worker"
+#endif
+
 __startup AROS_PROCH(XTermHandler,argstr,argsize,SysBase)
 {
     AROS_PROCFUNC_INIT
@@ -49,7 +55,7 @@ __startup AROS_PROCH(XTermHandler,argstr,argsize,SysBase)
     part=FilePart((CONST_STRPTR)filename);
     *part=0; dir=Lock((CONST_STRPTR)filename,SHARED_LOCK);
     if(!dir) { error=IoErr(); goto done; }
-    if(!AddPart((STRPTR)filename,(CONST_STRPTR)"aros-xterm-worker",sizeof filename)) {
+    if(!AddPart((STRPTR)filename,(CONST_STRPTR)XHANDLER_WORKER,sizeof filename)) {
         error=IoErr(); goto done;
     }
     worker=LoadSeg((CONST_STRPTR)filename);

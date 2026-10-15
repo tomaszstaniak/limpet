@@ -66,8 +66,10 @@ abiv11-drop-tools:
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-fixture tests/drop_fixture.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -Isrc -o build/abiv11/drop-close tests/drop_close.c src/aros_drop.c -L$(ABIV11_SDK)/lib
 
-# XTERM: install tools (tools/xterm-console, doc/xterm-console.md) and the
-# console contract probe run against CON: and XTERM: (tests/con_contract.c).
+# XTERM: install tools (tools/xterm-console, doc/xterm-console.md), the
+# console contract probe run against CON: and XTERM: (tests/con_contract.c),
+# and the TIOCGWINSZ regression check run in a Limpet window before a
+# release (tests/winsize_check.c).
 .PHONY: abiv11-xterm-console
 abiv11-xterm-console:
 	@test -n "$(ABIV11_GCC)" || { echo "Set ABIV11_GCC to the x86_64 ABIv11 compiler"; exit 1; }
@@ -75,6 +77,7 @@ abiv11-xterm-console:
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/xterm-remove tools/xterm-console/xterm_remove.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/con-contract tests/con_contract.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/tty-winsize tests/tty_winsize_probe.c -L$(ABIV11_SDK)/lib
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/winsize-check tests/winsize_check.c -L$(ABIV11_SDK)/lib
 
 # A console read taken back with XTY_ACTION_CANCEL (tests/read_cancel.c).
 .PHONY: abiv11-read-cancel
@@ -132,6 +135,7 @@ abiv11-handler:
 	$(ABIV11_GCC) $(ABIV11_CFLAGS) $(ABIV11_WORKER_FLAGS) -o build/abiv11/aros-xterm-worker $(ABIV11_WORKER_SRC) $(ABIV11_LDFLAGS) -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 	$(ABIV11_GCC) $(ABIV11_CFLAGS) -nostartfiles tools/xterm_handler.c $(ABIV11_LDFLAGS) -o build/abiv11/xterm-handler
 	cp build/abiv11/xterm-handler build/abiv11/harness/xterm-handler
+	$(ABIV11_GCC) $(ABIV11_CFLAGS) -nostartfiles -DXHANDLER_WORKER='"limpet-console"' tools/xterm_handler.c $(ABIV11_LDFLAGS) -o build/abiv11/limpet-handler
 	$(ABIV11_GCC) $(ABIV11_CFLAGS) -DXTERM_DOS_HANDLER tests/test_handler_worker.c src/aros_handler.c $(SESSION_SRC) $(ABIV11_LDFLAGS) -o build/abiv11/harness/aros-xterm-worker
 	$(ABIV11_GCC) $(ABIV11_CFLAGS) tests/test_handler_launch.c $(ABIV11_LDFLAGS) -o build/abiv11/harness/test_handler_launch
 

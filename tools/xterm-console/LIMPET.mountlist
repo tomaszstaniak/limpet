@@ -1,0 +1,10 @@
+/* Limpet's experimental console handler, LIMPET: (doc/limpet-handler.md).
+ * Install-Handler assigns LimpetHandler: to the Limpet drawer and mounts
+ * this until the next reboot; nothing is written to DEVS:, S: or ENVARC:.
+ * Every Open of LIMPET:... starts its own window, as CON: does. */
+LIMPET:
+    Handler = LimpetHandler:limpet-handler
+    StackSize = 65536
+    Priority = 5
+    GlobVec = -1
+#
