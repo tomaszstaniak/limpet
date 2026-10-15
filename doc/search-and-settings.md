@@ -118,8 +118,9 @@ most 4096 bytes.
 
 Project > Reload settings reads the file again. The theme changes at once;
 the title bar says when font, size, scrollback or history differ, which
-apply to windows opened after that. A file that is wrong is ignored as at
-start, and the window keeps what it has.
+apply to windows opened after that. A file that is wrong is ignored, the
+window keeps what it has, and the title bar names the line and says
+`nothing changed`.
 
 Windows of the experimental `LIMPET:` handler read the same file when they
 open; they have no Reload settings (see [LIMPET:](limpet-handler.md)).

@@ -1383,6 +1383,7 @@ static void clipboard_completed(int closing)
         while(n<length && clip_text[n]!='\r' && clip_text[n]!='\n') ++n;
         search_note=n && output_search_insert(&output_search,&screen,(const char *)clip_text,n)?
             NULL:"paste not taken";
+        clip_status=NULL;   /* "Reading clipboard..." would otherwise stay */
         return;
     }
     if(paste_prepare(&paste,clip_text,length)) { clip_status="Paste rejected: invalid text or controls"; return; }
@@ -1614,7 +1615,13 @@ static void settings_reload(void)
     XSettings next; unsigned later;
     settings_default(&next);
     settings_message[0]=0;
-    if(settings_load(&next)) { clip_status=settings_message; return; }
+    if(settings_load(&next)) {
+        /* At start a wrong file means the built-in settings; here the
+           window keeps what it has. */
+        char *tail=strstr(settings_message,"; built-in settings used");
+        if(tail) snprintf(tail,sizeof settings_message-(size_t)(tail-settings_message),"; nothing changed");
+        clip_status=settings_message; return;
+    }
     later=strcmp(next.font,settings.font) || next.font_size!=settings.font_size ||
           next.scrollback!=settings.scrollback || next.history!=settings.history;
     strcpy(settings.theme,next.theme);
