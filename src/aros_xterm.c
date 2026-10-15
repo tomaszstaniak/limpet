@@ -24,6 +24,8 @@
 #include "key_queue.h"
 #include "kitty_graphics.h"
 #include "aros_drop.h"
+#include "output_search.h"
+#include "settings.h"
 #include <dos/var.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -61,15 +63,24 @@ static const int pty_mode=0;
 
 #define MAX_ROWS 80
 #define MAX_COLUMNS 160
-#define HISTORY_LINES 256
 #define MARGIN 12
 
 static XTermScreen screen;
+/* Scrollback search (src/output_search.h). While it is open it holds the
+   keys and the view; typeahead and pastes wait until it closes. */
+static XOutputSearch output_search;
+static char search_label[XSCREEN_TITLE_MAX];
+static const char *search_note;
+static unsigned char search_marks[MAX_ROWS*MAX_COLUMNS];
 static XTermCell cells[MAX_ROWS * MAX_COLUMNS];
 static XTermCell alternate[MAX_ROWS * MAX_COLUMNS];
-static XTermCell history[HISTORY_LINES * MAX_COLUMNS];
-/* Reflow writes the rewrapped history here and swaps the two. */
-static XTermCell history_spare[HISTORY_LINES * MAX_COLUMNS];
+/* Scrollback, sized by the settings at start (src/settings.h): lines at the
+   widest window, so history_cells is lines * MAX_COLUMNS. Reflow writes the
+   rewrapped history into the spare and swaps the two. */
+static XTermCell *history, *history_spare;
+static size_t history_cells;
+static char (*command_ring)[XLINE_CAPACITY];
+static size_t command_ring_size;
 #include "title_buffer.h"
 static XTitleBuffers titles;
 #include "window_title.h"
@@ -173,11 +184,12 @@ static void replay(void)
     unsigned i;
     char line[100];
     memset(&selection,0,sizeof selection);
+    output_search.open=0;
     screen_init(&screen, cells, MAX_ROWS * MAX_COLUMNS,
                 screen.rows, screen.columns);
     reset_links();
-    screen_attach_history(&screen, history, HISTORY_LINES * MAX_COLUMNS);
-    screen_attach_reflow(&screen, history_spare, HISTORY_LINES * MAX_COLUMNS);
+    screen_attach_history(&screen, history, history_cells);
+    screen_attach_reflow(&screen, history_spare, history_cells);
     screen_attach_alternate(&screen, alternate, MAX_ROWS * MAX_COLUMNS);
     for (i = 1; i <= 32; ++i) {
         snprintf(line, sizeof line, "  replay history %02u  |  streamed bytes -> terminal cells\r\n", i);
@@ -226,6 +238,7 @@ static int editor_ready(void)
 
 /* The command line while Ctrl-R searches: label, query and match. */
 static XLineEditor search_view;
+
 
 static const XTermScreen *display_screen(void)
 {
@@ -707,6 +720,9 @@ static void kitty_count_drawn(const XTermScreen *s)
 static void draw_screen(struct Window *window)
 {
     const XTermScreen *display=display_screen();
+    /* Marks come from the terminal's text, not the command line drawn over it. */
+    const int finding=output_search.open;
+    if(finding) output_search_marks(&output_search,&screen,search_marks,sizeof search_marks);
     XTermScreen screen=*display;
     struct RastPort *rp = window->RPort;
     unsigned row, col;
@@ -735,13 +751,14 @@ static void draw_screen(struct Window *window)
         unsigned pitch=screen.columns*w*3, y,x, images;
         for (col = 0; col < screen.columns; ++col) {
             XTermCell cell = screen_view_cell(&screen, row, col);
-            int selected=selection_contains(&selection,&screen,row,col);
+            int found=finding?search_marks[row*screen.columns+col]:0;
+            int selected=found==2 || selection_contains(&selection,&screen,row,col);
             paint_row[col].cell=cell;
             paint_row[col].fg=selected?theme.selection_fg:theme_fg(&theme,&cell);
             paint_row[col].bg=selected?theme.selection_bg:theme_bg(&theme,&cell);
             paint_row[col].cursor_colour=theme.cursor;
             paint_row[col].flags=(cursor && row==screen.cursor_row && col==cursor_col?XPAINT_CURSOR:0)|
-                ((cell.colour_flags&XCOLOUR_UNDERLINE ||
+                ((cell.colour_flags&XCOLOUR_UNDERLINE || found==1 ||
                   (link_hovered && hyperlink_contains(&screen,&hovered_link,row,col)))
                  ?XPAINT_UNDERLINE:0);
         }
@@ -872,16 +889,23 @@ static void read_switches(void)
 #endif
 static const char version_tag[] __attribute__((used))="$VER: Limpet " LIMPET_VERSION " (" LIMPET_DATE ")";
 
-enum { MENU_ABOUT=1, MENU_CLOSE, MENU_COPY, MENU_PASTE };
+enum { MENU_ABOUT=1, MENU_CLOSE, MENU_COPY, MENU_PASTE, MENU_FIND, MENU_RELOAD };
 static struct NewMenu menu_spec[]={
     {NM_TITLE,(UBYTE *)"Project",NULL,0,0,NULL},
     {NM_ITEM,(UBYTE *)"About Limpet...",NULL,0,0,(APTR)MENU_ABOUT},
+#ifndef XTERM_DOS_HANDLER
+    /* Not in the XTERM: worker, which may make no DOS call once it serves
+       its port; it takes the settings when its window opens. */
+    {NM_ITEM,(UBYTE *)"Reload settings",NULL,0,0,(APTR)MENU_RELOAD},
+#endif
     {NM_ITEM,NM_BARLABEL,NULL,0,0,NULL},
     {NM_ITEM,(UBYTE *)"Close window",(UBYTE *)"Q",0,0,(APTR)MENU_CLOSE},
     {NM_TITLE,(UBYTE *)"Edit",NULL,0,0,NULL},
     /* the same RAmiga+C/V that worked before the menu existed */
     {NM_ITEM,(UBYTE *)"Copy",(UBYTE *)"C",0,0,(APTR)MENU_COPY},
     {NM_ITEM,(UBYTE *)"Paste",(UBYTE *)"V",0,0,(APTR)MENU_PASTE},
+    {NM_ITEM,NM_BARLABEL,NULL,0,0,NULL},
+    {NM_ITEM,(UBYTE *)"Find in output...",(UBYTE *)"F",0,0,(APTR)MENU_FIND},
     {NM_END,NULL,NULL,0,0,NULL}
 };
 
@@ -922,6 +946,8 @@ static const char *const about_lines[]={
     "  RAmiga+V / Ctrl+Shift+V pastes (F3 confirms",
     "  several lines, Esc cancels a paste).",
     "  Shift+PgUp/PgDn or the wheel: scrollback.",
+    "  RAmiga+F / Ctrl+Shift+F finds text in it",
+    "  (Up/Down: older/newer, Esc: back).",
     "  Up/Down: command history; Ctrl-R searches it.",
     "  TAB / Shift+TAB: complete a path; icons",
     "  dropped from Workbench give theirs.",
@@ -1038,6 +1064,12 @@ static void update_title(struct Window *window, unsigned last_key)
     in.command=foreground.running?foreground.name:NULL;
     in.shell=shell_session && echo_mode==2 && !process_session.exited;
     in.status=clip_status;
+    if(output_search.open) {
+        size_t n=output_search_label(&output_search,search_label,sizeof search_label);
+        if(search_note && n+strlen(search_note)+3<sizeof search_label)
+            snprintf(search_label+n,sizeof search_label-n," (%s)",search_note);
+        in.status=search_label;
+    }
     in.view_offset=screen.view_offset; in.history_count=screen.history_count;
     window_title_compose(next,cap,&in);
 #ifdef XTERM_PKTWAIT_PROBE
@@ -1246,7 +1278,51 @@ static int clipboard_shortcut(const ArosRawKey *key)
     if(q&(IEQUALIFIER_LALT|IEQUALIFIER_RALT)) return 0;
     mapped.event.ie_Qualifier=0;
     if(aros_input_encode(&mapped,bytes,sizeof bytes)!=1) return 0;
-    return bytes[0]=='c'?1:bytes[0]=='v'?2:0;
+    return bytes[0]=='c'?1:bytes[0]=='v'?2:bytes[0]=='f'?3:0;
+}
+
+/* RAmiga+F (the menu) or Ctrl+Shift+F opens the search; while open, the
+   same key goes to the next older result, as Ctrl-R does in its list. */
+static void find_start(void)
+{
+    search_note=NULL;
+    if(output_search.open) {
+        if(!output_search_step(&output_search,&screen,1)) search_note="oldest";
+        return;
+    }
+    switch(output_search_open(&output_search,&screen)) {
+    case XSEARCH_OPENED: selection.dragging=0; break;
+    case XSEARCH_ALTERNATE:
+        clip_status="Find: a full-screen program has the screen; use its own search"; break;
+    case XSEARCH_NO_HISTORY: clip_status="Find: no scrollback in this window"; break;
+    }
+}
+
+/* Keys while the search is open edit it, and none reaches the program.
+   Shift+PgUp/PgDn and the wheel still scroll; Ctrl-C closes the search
+   and then interrupts as usual. Returns 1 when the key was taken. */
+static int find_key(UWORD code,UWORD q,const unsigned char *bytes,size_t count)
+{
+    if(!output_search.open) return 0;
+    if(code==RAWKEY_NM_WHEEL_UP || code==RAWKEY_NM_WHEEL_DOWN) return 0;
+    if((code==RAWKEY_PAGEUP || code==RAWKEY_PAGEDOWN) && (q&(IEQUALIFIER_LSHIFT|IEQUALIFIER_RSHIFT)))
+        return 0;
+    if(code&IECODE_UP_PREFIX) return 1;
+    search_note=NULL;
+    switch(code) {
+    case RAWKEY_ESCAPE: output_search_close(&output_search,&screen,1); return 1;
+    case RAWKEY_RETURN: case RAWKEY_KP_ENTER: output_search_close(&output_search,&screen,0); return 1;
+    case RAWKEY_UP: if(!output_search_step(&output_search,&screen,1)) search_note="oldest"; return 1;
+    case RAWKEY_DOWN: if(!output_search_step(&output_search,&screen,0)) search_note="newest"; return 1;
+    case RAWKEY_BACKSPACE: output_search_backspace(&output_search,&screen); return 1;
+    default: break;
+    }
+    if(count==1 && bytes[0]==3) { output_search_close(&output_search,&screen,1); return 0; }
+    if(count && bytes[0]>=0x20 && bytes[0]!=0x7f && bytes[0]!=0x9b &&
+       !(q&(IEQUALIFIER_CONTROL|IEQUALIFIER_RCOMMAND)) &&
+       !output_search_insert(&output_search,&screen,(const char *)bytes,count))
+        search_note="query full or not text";
+    return 1;
 }
 
 static void clipboard_action(int action)
@@ -1294,6 +1370,14 @@ static void clipboard_completed(int closing)
     if(!clip_job.length) { clip_status="Clipboard empty"; return; }
     if(clip_decode_text(clip_job.bytes,clip_job.length,clip_text,sizeof clip_text,&length,&format)) {
         clip_status="Clipboard is not supported text"; return;
+    }
+    if(output_search.open) {
+        /* The first line goes into the query, nothing to the program. */
+        size_t n=0;
+        while(n<length && clip_text[n]!='\r' && clip_text[n]!='\n') ++n;
+        search_note=n && output_search_insert(&output_search,&screen,(const char *)clip_text,n)?
+            NULL:"paste not taken";
+        return;
     }
     if(paste_prepare(&paste,clip_text,length)) { clip_status="Paste rejected: invalid text or controls"; return; }
     /* A raw-mode client that turned on DEC 2004 receives the paste framed
@@ -1397,7 +1481,9 @@ static const char *status_seen;
 static unsigned status_age;
 static int status_lasting(const char *s)
 {
-    static const char *const lasting[]={"MULTILINE","Pasting","Copying","Reading clipboard",
+    /* "Settings: " is what went wrong with Limpet.conf: it stays until
+       another message takes its place (success messages do not start so). */
+    static const char *const lasting[]={"Settings: ","MULTILINE","Pasting","Copying","Reading clipboard",
         "Closing","TAB: searching","Selected","Session ended","Cannot start session",
         "Opening link","Copying link"};
     unsigned i;
@@ -1407,6 +1493,135 @@ static int status_lasting(const char *s)
 }
 static int status_expiring(void)
 { return clip_status && !status_lasting(clip_status); }
+
+/* Settings (src/settings.h). Font, size, scrollback and history are taken
+   when a window opens; the theme also on Project > Reload settings. */
+static XSettings settings;
+static int theme_from_command_line;
+static char settings_message[160];
+
+/* 1 with the file's text, 0 when there is none, -1 when it is too large. */
+static int settings_read(char *text,size_t *length)
+{
+    static const char *const places[]={"ENV:Limpet/Limpet.conf","ENVARC:Limpet/Limpet.conf"};
+    struct Process *self=(struct Process *)FindTask(NULL);
+    APTR window=self->pr_WindowPtr;
+    unsigned i; int result=0;
+    /* A missing ENVARC: is no reason for a requester. */
+    self->pr_WindowPtr=(APTR)-1;
+    for(i=0;i<2 && !result;++i) {
+        BPTR f=Open((CONST_STRPTR)places[i],MODE_OLDFILE);
+        LONG n;
+        if(!f) continue;
+        n=Read(f,text,XSETTINGS_FILE_MAX+1);
+        Close(f);
+        if(n<0) continue;
+        *length=(size_t)n;
+        result=n>XSETTINGS_FILE_MAX?-1:1;
+    }
+    self->pr_WindowPtr=window;
+    return result;
+}
+
+/* Read and check the file; on any error keep `into` and say why. */
+static int settings_load(XSettings *into)
+{
+    static char text[XSETTINGS_FILE_MAX+1];
+    size_t length=0; const char *why=NULL; int line;
+    switch(settings_read(text,&length)) {
+    case 0: return 0;
+    case -1:
+        snprintf(settings_message,sizeof settings_message,
+                 "Settings: Limpet.conf is over 4096 bytes; not used"); return -1;
+    }
+    line=settings_parse(into,text,length,&why);
+    if(line) {
+        snprintf(settings_message,sizeof settings_message,
+                 "Settings: Limpet.conf line %d: %s; built-in settings used",line,why);
+        return -1;
+    }
+    return 0;
+}
+
+static void settings_theme(void)
+{
+    if(theme_from_command_line) return;
+    theme_default(&theme);
+    if(settings.theme[0] && theme_load(&theme,settings.theme)) {
+        theme_default(&theme);
+        snprintf(settings_message,sizeof settings_message,
+                 "Settings: theme %.80s cannot be read; built-in dark theme",settings.theme);
+    }
+}
+
+/* Main font at the chosen size; if that fails, Vera Mono at that size, then
+   Vera Mono at 13 px, which is what Limpet always had. */
+static int settings_font(void)
+{
+    xfont_set_size(settings.font_size);
+    if(!xfont_open_main(settings.font[0]?settings.font:NULL)) return 0;
+    if(settings.font[0]) {
+        snprintf(settings_message,sizeof settings_message,
+                 "Settings: font %.80s is not a usable monospace font; Vera Mono",settings.font);
+        if(!xfont_open_main(NULL)) return 0;
+    }
+    xfont_set_size(XSETTINGS_FONT_SIZE_DEFAULT);
+    if(settings.font_size!=XSETTINGS_FONT_SIZE_DEFAULT)
+        snprintf(settings_message,sizeof settings_message,
+                 "Settings: font size %u does not fit a cell; 13",settings.font_size);
+    return xfont_open_main(NULL);
+}
+
+static void settings_free(void)
+{
+    free(history); free(history_spare); free(command_ring);
+    history=history_spare=NULL; command_ring=NULL;
+}
+
+/* Scrollback and command history as set; the defaults if that much memory
+   is not there. */
+static int settings_buffers(void)
+{
+    unsigned lines=settings.scrollback, commands=settings.history;
+    for(;;) {
+        history_cells=(size_t)lines*MAX_COLUMNS;
+        history=malloc(history_cells*sizeof *history);
+        history_spare=malloc(history_cells*sizeof *history_spare);
+        command_ring=malloc((size_t)commands*sizeof *command_ring);
+        if(history && history_spare && command_ring) break;
+        settings_free();
+        if(lines==XSETTINGS_SCROLLBACK_DEFAULT && commands==XSETTINGS_HISTORY_DEFAULT) return -1;
+        snprintf(settings_message,sizeof settings_message,
+                 "Settings: not enough memory for %u lines and %u commands; defaults used",lines,commands);
+        lines=XSETTINGS_SCROLLBACK_DEFAULT; commands=XSETTINGS_HISTORY_DEFAULT;
+    }
+    command_ring_size=commands;
+    line_editor_attach_history(&command_editor,command_ring,command_ring_size);
+    atexit(settings_free);
+    return 0;
+}
+
+#ifndef XTERM_DOS_HANDLER
+/* Project > Reload settings: the theme now, the rest in new windows. */
+static void settings_reload(void)
+{
+    XSettings next; unsigned later;
+    settings_default(&next);
+    settings_message[0]=0;
+    if(settings_load(&next)) { clip_status=settings_message; return; }
+    later=strcmp(next.font,settings.font) || next.font_size!=settings.font_size ||
+          next.scrollback!=settings.scrollback || next.history!=settings.history;
+    strcpy(settings.theme,next.theme);
+    settings_theme();
+    paint_damage_invalidate(&paint_damage);
+    if(settings_message[0]) clip_status=settings_message;
+    else clip_status=theme_from_command_line?
+        (later?"Reloaded; --theme keeps its theme; font, scrollback and history apply to new windows":
+               "Reloaded; --theme keeps its theme"):
+        later?"Reloaded: theme applied; font, scrollback and history apply to new windows":
+              "Settings reloaded";
+}
+#endif
 
 int main(int argc,char **argv)
 {
@@ -1431,6 +1646,7 @@ int main(int argc,char **argv)
         }
         if(theme_load(&theme,argv[2]))
             puts("Cannot load theme; using built-in dark theme");
+        theme_from_command_line=1;
         for(i=1;i<argc-2;++i) argv[i]=argv[i+2];
         argc-=2;
     }
@@ -1472,10 +1688,19 @@ int main(int argc,char **argv)
     diag_exit_stage=(int)env_number("XTERM_DIAG_EXIT_STAGE",0);
     if(diag_exit_stage==1) return RETURN_OK;
 #endif
+    settings_default(&settings);
+    settings_load(&settings);
+    settings_theme();
+    if(settings_buffers()) {
+        if(handler_mode) SetIoErr(ERROR_NO_FREE_STORE);
+        else puts("Not enough memory for the scrollback");
+        return RETURN_FAIL;
+    }
+    output_search.open=0;
     screen_init(&screen, cells, MAX_ROWS * MAX_COLUMNS, 24, 80);
     reset_links();
     if(!handler_mode) replay();
-    if (xfont_open()) {
+    if (settings_font()) {
         /* FreeType/Intuition do not establish DOS IoErr for the launcher. */
         if(handler_mode) SetIoErr(ERROR_OBJECT_WRONG_TYPE);
         return RETURN_FAIL;
@@ -1529,15 +1754,17 @@ int main(int argc,char **argv)
 #endif
         {
             echo_mode=2;
+            output_search.open=0;
             screen_init(&screen,cells,MAX_ROWS*MAX_COLUMNS,screen.rows,screen.columns);
             screen.amiga_pens=!pty_mode;
             reset_links();
-            screen_attach_history(&screen,history,HISTORY_LINES*MAX_COLUMNS);
-            screen_attach_reflow(&screen,history_spare,HISTORY_LINES*MAX_COLUMNS);
+            screen_attach_history(&screen,history,history_cells);
+            screen_attach_reflow(&screen,history_spare,history_cells);
             screen_attach_alternate(&screen,alternate,MAX_ROWS*MAX_COLUMNS);
             clip_status=NULL;
         }
     }
+    if(settings_message[0]) clip_status=settings_message;
     tick_open();
     update_title(window, last_key);
     draw_screen(window);
@@ -1670,6 +1897,10 @@ int main(int argc,char **argv)
                     case MENU_CLOSE: close_now=1; break;
                     case MENU_COPY: if(!closing) clipboard_action(1); break;
                     case MENU_PASTE: if(!closing) clipboard_action(2); break;
+                    case MENU_FIND: if(!closing) find_start(); break;
+#ifndef XTERM_DOS_HANDLER
+                    case MENU_RELOAD: if(!closing) settings_reload(); break;
+#endif
                     }
                     pick=item->NextSelect;
                 }
@@ -1678,6 +1909,7 @@ int main(int argc,char **argv)
                 event=IDCMP_CLOSEWINDOW;
             }
             if (event == IDCMP_CLOSEWINDOW) {
+                output_search.open=0;
                 output_reset();
                 link_gesture_cancel(&link_gesture); link_hovered=0;
                 closing=TRUE; paste_cancel(&paste); key_queue_clear(&keyboard); ++session_generation;
@@ -1824,7 +2056,11 @@ int main(int argc,char **argv)
                 UWORD q=key.event.ie_Qualifier;
                 int action=clipboard_shortcut(&key);
                 size_t count=aros_input_encode(&key,bytes,sizeof bytes);
+                if(action==3) { find_start(); dirty=1; continue; }
+                /* Copy and paste work during Find too (a paste goes into
+                   the search text, see clipboard_completed). */
                 if(action) { clipboard_action(action); dirty=1; continue; }
+                if(find_key(code,q,bytes,count)) { dirty=1; continue; }
                 if((code==RAWKEY_PAGEUP || code==RAWKEY_PAGEDOWN) &&
                    (q&(IEQUALIFIER_LSHIFT|IEQUALIFIER_RSHIFT))) {
                     screen_scroll_view(&screen,code==RAWKEY_PAGEUP?(int)screen.rows-1:1-(int)screen.rows);
@@ -1834,7 +2070,7 @@ int main(int argc,char **argv)
                     if(mouse_releases.count) continue;
                     /* Mode 2100 (hardcode L5): wheel steps go to the program,
                        buttons stay with the terminal, so a plain drag still selects. */
-                    if(process_session.console && process_session.line.raw &&
+                    if(process_session.console && process_session.line.raw && !output_search.open &&
                        (screen.mouse_tracking || screen.wheel_report) &&
                        !(q&(IEQUALIFIER_LSHIFT|IEQUALIFIER_RSHIFT))) {
                         unsigned row,col; unsigned char report[64];
@@ -1915,12 +2151,14 @@ int main(int argc,char **argv)
                     program_title_clear(&program_title); memset(&foreground,0,sizeof foreground);
                     echo_session_close(&echo); echo_mode=2; process_reported=0;
                     memset(&command_editor,0,sizeof command_editor);
+                    line_editor_attach_history(&command_editor,command_ring,command_ring_size);
                     selection.active=selection.dragging=0;
+                    output_search.open=0;
                     screen_init(&screen,cells,MAX_ROWS*MAX_COLUMNS,screen.rows,screen.columns);
                     screen.amiga_pens=!pty_mode;
                     reset_links();
-                    screen_attach_history(&screen,history,HISTORY_LINES*MAX_COLUMNS);
-                    screen_attach_reflow(&screen,history_spare,HISTORY_LINES*MAX_COLUMNS);
+                    screen_attach_history(&screen,history,history_cells);
+                    screen_attach_reflow(&screen,history_spare,history_cells);
                     screen_attach_alternate(&screen,alternate,MAX_ROWS*MAX_COLUMNS);
                     clip_status=NULL;
                 } else if (code==RAWKEY_F1) {
@@ -1938,10 +2176,11 @@ int main(int argc,char **argv)
                     selection.active=selection.dragging=0;
                     program_title_clear(&program_title); memset(&foreground,0,sizeof foreground);
                     echo_mode=1; echo_session_init(&echo);
+                    output_search.open=0;
                     screen_init(&screen,cells,MAX_ROWS*MAX_COLUMNS,screen.rows,screen.columns);
                     reset_links();
-                    screen_attach_history(&screen,history,HISTORY_LINES*MAX_COLUMNS);
-                    screen_attach_reflow(&screen,history_spare,HISTORY_LINES*MAX_COLUMNS);
+                    screen_attach_history(&screen,history,history_cells);
+                    screen_attach_reflow(&screen,history_spare,history_cells);
                     screen_attach_alternate(&screen,alternate,MAX_ROWS*MAX_COLUMNS);
                     write_text("\033[1;36mLimpet / byte-stream echo\033[0m\r\n");
                     write_text("Keyboard -> UTF-8/VT -> EchoSession -> parser\r\n");
@@ -1956,7 +2195,7 @@ int main(int argc,char **argv)
                 dirty=1;
             }
         }
-        if(!closing && keyboard_ready()) {
+        if(!closing && !output_search.open && keyboard_ready()) {
             if(key_queue_drain(&keyboard,16,keyboard_deliver,NULL)) dirty=1;
         }
         /* Another reader, another session or no raw client: a bracketed
@@ -1985,7 +2224,7 @@ int main(int argc,char **argv)
                 link_gesture_cancel(&link_gesture); link_hovered=0;
             }
         }
-        if(!closing && !reply_flow.length && paste.length && !paste.confirmation &&
+        if(!closing && !output_search.open && !reply_flow.length && paste.length && !paste.confirmation &&
            !input_order_paste_busy(&input_order) && input_order_plain_paste_may_send(&input_order) &&
            (echo_mode!=2 || !shell_session || process_session.line.raw || editor_ready())) {
             const unsigned char *bytes;
@@ -2010,6 +2249,14 @@ int main(int argc,char **argv)
            !aros_session_active(&process_session) &&
            !aros_session_dispose(&process_session))
             running=FALSE;
+        if(output_search.open) {
+            unsigned offset=screen.view_offset;
+            unsigned long index=output_search.index,total=output_search.total;
+            if(output_search_follow(&output_search,&screen)) {
+                clip_status="Find closed: a full-screen program took the screen"; dirty=1;
+            } else if(offset!=screen.view_offset || index!=output_search.index ||
+                      total!=output_search.total) dirty=1;
+        }
         if(running && dirty) { update_title(window,last_key); draw_screen(window); }
         if(running && (title_pending || title_hold || status_expiring() || foreground_watch ||
                        (echo_mode==2 && foreground.running))) tick_arm();

@@ -93,10 +93,16 @@ int xfont_open_paths(const char *const paths[4])
     return xfont_open_extended(extended);
 }
 
+static unsigned primary_size = 13;
+void xfont_set_size(unsigned pixels) { primary_size = pixels >= 2 ? pixels : 13; }
+
 int xfont_open_extended(const char *const paths[5])
 {
     unsigned i;
-    const unsigned sizes[5] = {13, 13, 12, 16, 16};
+    /* At the default 13 px these are the sizes Limpet always used:
+       Unifont's 16 px grid scales with the main font. */
+    const unsigned sizes[5] = {primary_size, primary_size, primary_size - 1,
+                               (primary_size * 16 + 6) / 13, 16};
     xfont_close();
     if (!paths || FT_Init_FreeType(&library)) return -1;
     for (i = 0; i < 5; ++i) {

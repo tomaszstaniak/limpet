@@ -12,14 +12,14 @@ HB_HEADERS = $(wildcard vendor/harfbuzz/src/*.h vendor/harfbuzz/src/*.hh)
 UNICODE_SRC = vendor/utf8proc/utf8proc.c
 UNICODE_FLAGS = -Ivendor/utf8proc -DUTF8PROC_STATIC
 INPUT_SRC = src/terminal_input.c src/echo_session.c
-EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c
+EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c src/output_search.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
 SESSION_SRC = src/aros_session.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
 CLUSTER_SRC = src/font_cache.c src/cluster_font.c
-THEME_SRC = src/theme.c
+THEME_SRC = src/theme.c src/settings.c
 KITTY_SRC = src/kitty_graphics.c
 HYPERLINK_GUI_SRC = src/aros_hyperlink.c src/link_gesture.c
 
@@ -149,7 +149,7 @@ $(OUT): src/aros_xterm.c $(HYPERLINK_GUI_SRC) src/aros_font.c $(CLUSTER_SRC) src
 	$(AROS_GCC) $(CFLAGS) -o $(OUT) src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
 
 $(OUT): $(SESSION_SRC) $(SESSION_HEADERS) $(THEME_SRC) src/theme.h
-$(OUT): $(EDITOR_SRC) src/line_editor.h src/line_view.h src/window_title.h src/file_drop.h src/aros_drop.c src/aros_drop.h
+$(OUT): $(EDITOR_SRC) src/line_editor.h src/line_view.h src/window_title.h src/file_drop.h src/output_search.h src/aros_drop.c src/aros_drop.h
 $(OUT): $(KITTY_SRC) src/kitty_graphics.h
 $(OUT): $(COMPLETION_SRC) src/completion.h src/aros_completion.h
 $(OUT): src/aros_handler.h
@@ -1196,6 +1196,23 @@ test: test-reflow
 .PHONY: test-reflow
 test-reflow: build/test_reflow
 	./build/test_reflow
+
+# Scrollback search (src/output_search.h), with the sanitizers on.
+build/test_output_search: tests/test_output_search.c src/output_search.c src/output_search.h src/screen_model.c src/screen_model.h src/hyperlink.c
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) tests/test_output_search.c src/output_search.c src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
+# Settings file (src/settings.h).
+build/test_settings: tests/test_settings.c src/settings.c src/settings.h
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined tests/test_settings.c src/settings.c -o $@
+test: test-settings
+.PHONY: test-settings
+test-settings: build/test_settings
+	./build/test_settings
+test: test-output-search
+.PHONY: test-output-search
+test-output-search: build/test_output_search
+	./build/test_output_search
 
 # Public SDK (sdk/): its contract tests run against the terminal's own
 # presentation reply code, plus the SDK's host compile check.

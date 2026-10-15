@@ -268,6 +268,33 @@ int main(void)
     line_editor_action(&editor,XLINE_NEXT); expect("bc",1);
     assert(editor.selecting && editor.anchor==0);
     puts("line editor PASS: insertion, grapheme editing, atomic rejection, history, draft, bounds");
+    { /* A configured history length: the caller's ring, oldest dropped. */
+      static char ring3[3][XLINE_CAPACITY], line[8];
+      static XLineEditor e; char run[16]; unsigned k;
+      line_editor_attach_history(&e,ring3,3);
+      for(k=1;k<=5;++k) {
+          snprintf(line,sizeof line,"c%u",k);
+          assert(line_editor_insert(&e,line,strlen(line)));
+          assert(line_editor_commit(&e,run,sizeof run)==3);
+      }
+      assert(e.count==3);
+      assert(line_editor_action(&e,XLINE_PREVIOUS) && !strcmp(e.text,"c5"));
+      assert(line_editor_action(&e,XLINE_PREVIOUS) && !strcmp(e.text,"c4"));
+      assert(line_editor_action(&e,XLINE_PREVIOUS) && !strcmp(e.text,"c3"));
+      assert(!line_editor_action(&e,XLINE_PREVIOUS) && !strcmp(e.text,"c3"));
+      line_editor_action(&e,XLINE_NEXT); line_editor_action(&e,XLINE_NEXT); line_editor_action(&e,XLINE_NEXT);
+      line_editor_search_start(&e);
+      assert(line_editor_search_insert(&e,"c4",2) && !strcmp(e.text,"c4"));
+      assert(!line_editor_search_start(&e));      /* c2 and c1 are gone */
+      line_editor_search_cancel(&e);
+      /* One entry. */
+      line_editor_attach_history(&e,ring3,1);
+      assert(!e.count);
+      assert(line_editor_insert(&e,"x",1) && line_editor_commit(&e,run,sizeof run));
+      assert(line_editor_insert(&e,"y",1) && line_editor_commit(&e,run,sizeof run));
+      assert(e.count==1 && line_editor_action(&e,XLINE_PREVIOUS) && !strcmp(e.text,"y"));
+      assert(!line_editor_action(&e,XLINE_PREVIOUS));
+      puts("line editor PASS: attached history of 3 and of 1 entries"); }
     test_search();
     return 0;
 }

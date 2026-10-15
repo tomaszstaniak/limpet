@@ -3,6 +3,24 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.5.0 (candidate, not published)
+
+For users:
+
+- Find in output: RAmiga+F or Ctrl+Shift+F finds text in the scrollback
+  and on the screen; Up and Down go to older and newer matches, Esc goes
+  back to where you were. Output that arrives meanwhile does not move the
+  view. The alternate screen of a full-screen program is not searched.
+  [Details](search-and-settings.md#find-in-output).
+- A settings file, `ENV:Limpet/Limpet.conf` (or `ENVARC:`): font and font
+  size, theme, scrollback lines and command history length. A wrong file is
+  ignored whole, with the line named in the title bar.
+  Project > Reload settings applies the theme at once.
+  [Details](search-and-settings.md#settings).
+- The scrollback and the command history are allocated when the window
+  opens, at the size set; with no settings they are as before (256 lines at
+  160 columns, 32 commands).
+
 ## 0.4.1 (2026-10-13)
 
 For users:

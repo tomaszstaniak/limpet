@@ -70,6 +70,12 @@ typedef struct XTermScreen {
     void *apc_context;
     /* Full-screen upward scrolls so far, for anchoring images to text. */
     unsigned long scroll_count;
+    /* Rows pushed into the primary history so far, and changes of its layout
+     * (a resize, a reflow). Within one layout, logical row r is line
+     * history_pushed - history_count + r of everything ever kept, so a
+     * position stays put while output arrives and old lines fall out.
+     * Scrollback search (output_search.h) counts on it. */
+    unsigned long history_pushed, layout_serial;
     /* Bytes that may change what is shown. APC payload and discarded
      * control strings do not count, so a frontend can skip redrawing while
      * an image is still arriving. Only differences are meaningful. */
@@ -164,4 +170,7 @@ void screen_scroll_view(XTermScreen *, int);
 XTermCell screen_view_cell(const XTermScreen *, unsigned, unsigned);
 /* Logical rows: oldest retained history first, then live rows. */
 XTermCell screen_line_cell(const XTermScreen *, unsigned, unsigned);
+/* The same logical row's cells (columns of them), or NULL past the end.
+ * Valid until the next write, resize or attach. */
+const XTermCell *screen_line_row(const XTermScreen *, unsigned);
 #endif

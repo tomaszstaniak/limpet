@@ -60,6 +60,18 @@ int line_editor_insert(XLineEditor *s, const char *text, size_t n)
     return replace(s,s->cursor,s->cursor,text,n);
 }
 
+static char (*entries(XLineEditor *s))[XLINE_CAPACITY]
+{ return s->history_store?s->history_store:s->history_builtin; }
+static size_t ring(const XLineEditor *s)
+{ return s->history_store?s->history_capacity:XLINE_HISTORY; }
+
+void line_editor_attach_history(XLineEditor *s, char (*store)[XLINE_CAPACITY], size_t count)
+{
+    s->history_store=store && count?store:NULL;
+    s->history_capacity=s->history_store?count:0;
+    s->count=s->head=s->browsing=0;
+}
+
 static void recall(XLineEditor *s)
 {
     if (!s->browsing) {
@@ -68,8 +80,8 @@ static void recall(XLineEditor *s)
         s->cursor=s->draft_cursor;
         s->anchor=s->draft_anchor; s->selecting=s->draft_selecting;
     } else {
-        size_t slot=(s->head+XLINE_HISTORY-s->browsing)%XLINE_HISTORY;
-        strcpy(s->text,s->history[slot]);
+        size_t slot=(s->head+ring(s)-s->browsing)%ring(s);
+        strcpy(s->text,entries(s)[slot]);
         s->cursor=s->length=strlen(s->text);
         s->anchor=s->cursor; s->selecting=0;
     }
@@ -147,10 +159,10 @@ size_t line_editor_commit(XLineEditor *s, char *out, size_t capacity)
     if (!out || capacity<used) return 0;
     memcpy(out,s->text,s->length); out[s->length]='\n';
     if (s->length && (!s->count || strcmp(s->text,
-        s->history[(s->head+XLINE_HISTORY-1)%XLINE_HISTORY]))) {
-        strcpy(s->history[s->head],s->text);
-        s->head=(s->head+1)%XLINE_HISTORY;
-        if (s->count<XLINE_HISTORY) ++s->count;
+        entries(s)[(s->head+ring(s)-1)%ring(s)]))) {
+        strcpy(entries(s)[s->head],s->text);
+        s->head=(s->head+1)%ring(s);
+        if (s->count<ring(s)) ++s->count;
     }
     s->text[0]=s->draft[0]=0;
     s->length=s->cursor=s->browsing=s->draft_cursor=0;
@@ -161,7 +173,8 @@ size_t line_editor_commit(XLineEditor *s, char *out, size_t capacity)
 
 static const char *history_at(const XLineEditor *s, size_t age)
 {
-    return s->history[(s->head+XLINE_HISTORY-age)%XLINE_HISTORY];
+    const char (*e)[XLINE_CAPACITY]=s->history_store?(const char (*)[XLINE_CAPACITY])s->history_store:s->history_builtin;
+    return e[(s->head+ring(s)-age)%ring(s)];
 }
 
 static int fold(int c) { return c>='A' && c<='Z'?c+32:c; }

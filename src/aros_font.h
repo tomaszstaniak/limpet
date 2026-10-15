@@ -14,6 +14,10 @@ typedef struct XFontGlyph {
 } XFontGlyph;
 /* Single UI-thread owner. Native FreeType faces, fixed grid, bounded cache. */
 int xfont_open(void);
+/* The same with another main (monospace) face, NULL for Vera Mono, and the
+ * pixel size of the main face (13 by default); for a later xfont_open*. */
+int xfont_open_main(const char *primary);
+void xfont_set_size(unsigned pixels);
 /* Paths in XFontSource order. The first two faces are required. */
 int xfont_open_paths(const char *const paths[4]);
 int xfont_open_extended(const char *const paths[5]);

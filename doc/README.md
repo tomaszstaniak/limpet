@@ -5,6 +5,7 @@ For users:
 - [Why Limpet](why-limpet.md): what it is, what it adds to the Shell, and a
   tested comparison with `CON:`.
 - [Compatibility and limits](compatibility.md).
+- [Finding text and settings](search-and-settings.md) (0.5.0 candidate).
 - [Changes](changes.md) of the terminal, release by release.
 - [Roadmap](roadmap.md): ports and features planned after 0.1.
 

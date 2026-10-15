@@ -13,7 +13,11 @@ typedef struct {
     size_t length, cursor;
     size_t anchor;
     int selecting;
-    char history[XLINE_HISTORY][XLINE_CAPACITY];
+    /* Commands run, a ring: the built-in XLINE_HISTORY entries, or the
+     * caller's storage after line_editor_attach_history. */
+    char history_builtin[XLINE_HISTORY][XLINE_CAPACITY];
+    char (*history_store)[XLINE_CAPACITY];
+    size_t history_capacity;
     size_t count, head, browsing;
     char draft[XLINE_CAPACITY];
     size_t draft_cursor;
@@ -34,6 +38,10 @@ typedef enum {
     XLINE_BACKSPACE, XLINE_DELETE, XLINE_PREVIOUS, XLINE_NEXT, XLINE_CLEAR,
     XLINE_SELECT_LEFT, XLINE_SELECT_RIGHT, XLINE_SELECT_HOME, XLINE_SELECT_END
 } XLineAction;
+/* Keep up to count commands in caller-owned storage instead of the built-in
+ * XLINE_HISTORY; the history so far is dropped. NULL or 0 returns to the
+ * built-in ring. Zeroing the editor (memset) also returns to it. */
+void line_editor_attach_history(XLineEditor *, char (*entries)[XLINE_CAPACITY], size_t count);
 /* Complete UTF-8 spans only; rejects controls, malformed/incomplete encoding,
  * clusters over 16 scalars and overflow atomically. Source may alias text.
  * Empty insertion succeeds without changing state. */
