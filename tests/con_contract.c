@@ -5,6 +5,7 @@
  *
  *   con-contract NAME LOG            checks that need no keys
  *   con-contract NAME LOG keys       then the ones that need someone typing
+ *   con-contract NAME LOG shared     several readers and waiters at once (keys)
  *
  * Every line of LOG is "PASS id ...", "FAIL id ..." or "OBS id ..." (an
  * observation where the two consoles are allowed to differ). Pointers the
@@ -128,6 +129,7 @@ static void reports(BPTR h, const char *tag)
     SetMode(h, 0);
 }
 
+static void lf_mode(BPTR h);
 static void quiet_checks(BPTR h, const char *name)
 {
     struct FileHandle *fh = BADDR(h);
@@ -218,6 +220,7 @@ static void quiet_checks(BPTR h, const char *name)
     }
 
     reports(h, "");
+    lf_mode(h);
 
     {   /* Writers at once: none may fail. */
         int k; LONG failed = 0; ULONG got = 0;
@@ -246,6 +249,111 @@ static void quiet_checks(BPTR h, const char *name)
               (long)failed, (unsigned long)got);
     }
     (void)name;
+}
+
+/* Line feed mode (console.device M_LNM, RKM: on by default; CSI 20 h sets
+   it, CSI 20 l clears it): with it a line feed also returns the carriage.
+   Measured with the cursor report after a line feed from column 10. */
+static int column_after_lf(BPTR h)
+{
+    char got[64], hex[140]; int n, row, col;
+    Write(h, "\x9b" "1;10H\n", 7);
+    n = ask(h, "\x9b" "6n", 3, got, sizeof got, hex, sizeof hex);
+    if (n && sscanf(got + 1, "%d;%dR", &row, &col) == 2) return col;
+    return -1;
+}
+static void lf_mode(BPTR h)
+{
+    int c1, c2, c3;
+    SetMode(h, 1);
+    c1 = column_after_lf(h);
+    Write(h, "\x9b" "20l", 4);
+    c2 = column_after_lf(h);
+    Write(h, "\x9b" "20h", 4);
+    c3 = column_after_lf(h);
+    Write(h, "\r\n", 2);
+    SetMode(h, 0);
+    /* Column 1 (0 on ABIv11's CON:, which reports one lower) is the left. */
+    say("OBS", "lf.default", "column %d after LF from 10: %s", c1, c1 <= 1 && c1 >= 0 ? "returns (LF mode on)" : "stays (LF mode off)");
+    say("OBS", "lf.reset", "after CSI 20l: column %d: %s", c2, c2 >= 9 ? "stays" : "returns");
+    say("OBS", "lf.set", "after CSI 20h: column %d: %s", c3, c3 <= 1 && c3 >= 0 ? "returns" : "stays");
+    CHECK("lf.control", c1 >= 0 && c1 <= 1 && c2 >= 9 && c3 >= 0 && c3 <= 1,
+          "on by default, CSI 20l clears it, CSI 20h sets it (%d/%d/%d)", c1, c2, c3);
+}
+
+/* Several clients reading and waiting at once. Each child has its own
+   handle on the console (DupLockFromFH), as Run and SystemTags make them. */
+#define SHARED_MAX 2
+static BPTR shared_handle[SHARED_MAX];
+static volatile LONG shared_result[SHARED_MAX], shared_done[SHARED_MAX];
+static volatile char shared_text[SHARED_MAX][16];
+static volatile int shared_kind[SHARED_MAX]; /* 0 read, 1 wait 3 s */
+static void sharer(void)
+{
+    struct Process *me = (struct Process *)FindTask(NULL);
+    int k = (int)(IPTR)me->pr_Task.tc_UserData;
+    if (shared_kind[k]) shared_result[k] = WaitForChar(shared_handle[k], 3000000);
+    else {
+        char buf[16]; LONG n = Read(shared_handle[k], buf, sizeof buf - 1), i;
+        shared_result[k] = n;
+        for (i = 0; i < n && i < 15; ++i) shared_text[k][i] = buf[i];
+    }
+    shared_done[k] = 1;
+    Signal(parent, SIGBREAKF_CTRL_F);
+}
+static int start_sharer(BPTR h, int k, int kind)
+{
+    BPTR l = DupLockFromFH(h);
+    shared_handle[k] = l ? OpenFromLock(l) : 0;
+    if (l && !shared_handle[k]) UnLock(l);
+    shared_done[k] = 0; shared_result[k] = -9; shared_kind[k] = kind;
+    memset((char *)shared_text[k], 0, sizeof shared_text[k]);
+    return shared_handle[k] && CreateNewProcTags(NP_Entry, (IPTR)sharer, NP_Name, (IPTR)"con-contract sharer",
+        NP_UserData, (IPTR)k, NP_Output, 0, NP_Input, 0, NP_CloseOutput, FALSE, NP_CloseInput, FALSE,
+        NP_CurrentDir, 0, NP_HomeDir, 0, TAG_DONE) != NULL;
+}
+/* Wait for a child up to ticks/50 s; 0 if it never came back. */
+static int await_sharer(int k, LONG ticks)
+{
+    while (!shared_done[k] && ticks > 0) { Delay(10); ticks -= 10; }
+    return shared_done[k] != 0;
+}
+static void shared_reads(BPTR h)
+{
+    char buf[32]; LONG n; int ok;
+    parent = FindTask(NULL);
+    /* A child reads first, then this process: the first line is the child's. */
+    ok = start_sharer(h, 0, 0);
+    Delay(25);
+    FPuts(h, (CONST_STRPTR)"\nTwo readers: type one, Return, then two, Return: "); Flush(h);
+    n = Read(h, buf, sizeof buf - 1);
+    if (n >= 0) buf[n] = 0;
+    ok = ok && await_sharer(0, 500);
+    CHECK("readers.fifo", ok && shared_result[0] == 4 && !memcmp((char *)shared_text[0], "one\n", 4) && n == 4 && !memcmp(buf, "two\n", 4),
+          "child Read=%ld \"%.6s\", this Read=%ld \"%.6s\"%s", (long)shared_result[0], (char *)shared_text[0],
+          (long)n, n > 0 ? buf : "", ok ? "" : ", child never answered");
+    if (shared_done[0]) Close(shared_handle[0]);
+
+    /* A waiter and a reader at once: a key ends both. */
+    ok = start_sharer(h, 1, 1);
+    Delay(10);
+    FPuts(h, (CONST_STRPTR)"Waiter and reader: type w and Return within 3 s: "); Flush(h);
+    n = Read(h, buf, sizeof buf - 1);
+    ok = ok && await_sharer(1, 500);
+    CHECK("wait.with_read", ok && shared_result[1] != 0 && n == 2,
+          "child WaitForChar=%ld, this Read=%ld%s", (long)shared_result[1], (long)n, ok ? "" : ", child never answered");
+    if (shared_done[1]) Close(shared_handle[1]);
+
+    /* Two waiters, no key: both time out and both are answered. CON: keeps
+       one waiting packet and loses the first. */
+    ok = start_sharer(h, 1, 1);
+    Delay(10);
+    n = WaitForChar(h, 1000000);
+    ok = ok && await_sharer(1, 400);
+    CHECK("wait.two", ok && shared_result[1] == 0 && n == 0,
+          "child WaitForChar=%ld, this WaitForChar(1 s)=%ld%s", (long)shared_result[1], (long)n,
+          ok ? "" : ", the child's wait was never answered (left out)");
+    if (shared_done[1]) Close(shared_handle[1]);
 }
 
 static void key_checks(BPTR h)
@@ -311,6 +419,7 @@ int main(int argc, char **argv)
     if (h) {
         quiet_checks(h, argv[1]);
         if (argc > 3 && !strcmp(argv[3], "keys")) key_checks(h);
+        if (argc > 3 && !strcmp(argv[3], "shared")) shared_reads(h);
         Close(h);
         say("PASS", "close", "Close returned");
     }
