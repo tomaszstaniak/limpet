@@ -6,6 +6,7 @@ For users:
   tested comparison with `CON:`.
 - [Compatibility and limits](compatibility.md).
 - [Finding text and settings](search-and-settings.md) (0.5.0 candidate).
+- [XTERM:](xterm-console.md): Limpet as a console handler (experimental).
 - [Changes](changes.md) of the terminal, release by release.
 - [Roadmap](roadmap.md): ports and features planned after 0.1.
 
@@ -30,6 +31,7 @@ For programmers:
 For maintainers:
 
 - [Building and releasing the SDK](sdk/releasing.md).
+- [Verification record for the 0.5.0 candidate and XTERM: stage 1](verification-0.5.0-candidate.md).
 - [Verification record for Limpet 0.3.0 and SDK 0.3.0](verification-0.3.0.md).
 - [Verification record for Limpet 0.2.1](verification-0.2.1.md).
 - [Verification record for Limpet 0.2.0 and SDK 0.2.0](sdk/verification-0.2.0.md).

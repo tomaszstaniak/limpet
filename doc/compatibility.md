@@ -74,4 +74,10 @@ The exact subsets are in the [protocol reference](protocols.md).
 - **`Run` with output redirected to a file** leaves the file empty. This
   is the system's `Run`, not the terminal; it happens in `CON:` too.
 - **Programs that open `CON:` themselves** get a `CON:` window, not a
-  Limpet one. Limpet does not replace the system console.
+  Limpet one. Limpet does not replace the system console. A program that
+  takes a console name from you can be given `XTERM:` instead, which is
+  [experimental](xterm-console.md).
+- **`ioctl(TIOCGWINSZ)`** in a Limpet window crashed a POSIX program up to
+  0.4.1 (the C library reads the console's size through a pointer Limpet
+  left empty). From the 0.5.0 candidate it returns the window's rows and
+  columns.

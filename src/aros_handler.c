@@ -48,7 +48,9 @@ int aros_handler_accept(XHandlerContext *c,ArosSession *s)
     if(!c || !s->external || !s->port) { SetIoErr(ERROR_OBJECT_WRONG_TYPE); return -1; }
     path=c->startup->dp_Arg1?(const char *)AROS_BSTR_ADDR((BSTR)c->startup->dp_Arg1):NULL;
     colon=path?strchr(path,':'):NULL;
-    if(!colon || colon==path || colon[1]) { SetIoErr(ERROR_BAD_NUMBER); return -1; }
+    /* What follows the colon (geometry, title, options) was read before the
+       window opened (src/console_name.h). */
+    if(!colon || colon==path) { SetIoErr(ERROR_BAD_STREAM_NAME); return -1; }
     c->replied=1;
     ReplyPkt(c->startup,DOSTRUE,0);
 #ifdef XTERM_PROCESS_PORT_CLIENTS

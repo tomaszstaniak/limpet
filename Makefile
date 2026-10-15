@@ -14,7 +14,7 @@ UNICODE_FLAGS = -Ivendor/utf8proc -DUTF8PROC_STATIC
 INPUT_SRC = src/terminal_input.c src/echo_session.c
 EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c src/output_search.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
-SESSION_SRC = src/aros_session.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
+SESSION_SRC = src/aros_session.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
@@ -65,6 +65,16 @@ abiv11-drop-tools:
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-args tests/drop_args.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/drop-fixture tests/drop_fixture.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -Isrc -o build/abiv11/drop-close tests/drop_close.c src/aros_drop.c -L$(ABIV11_SDK)/lib
+
+# XTERM: install tools (tools/xterm-console, doc/xterm-console.md) and the
+# console contract probe run against CON: and XTERM: (tests/con_contract.c).
+.PHONY: abiv11-xterm-console
+abiv11-xterm-console:
+	@test -n "$(ABIV11_GCC)" || { echo "Set ABIV11_GCC to the x86_64 ABIv11 compiler"; exit 1; }
+	mkdir -p build/abiv11
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/xterm-remove tools/xterm-console/xterm_remove.c -L$(ABIV11_SDK)/lib
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/con-contract tests/con_contract.c -L$(ABIV11_SDK)/lib
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/tty-winsize tests/tty_winsize_probe.c -L$(ABIV11_SDK)/lib
 
 # A console read taken back with XTY_ACTION_CANCEL (tests/read_cancel.c).
 .PHONY: abiv11-read-cancel
@@ -1213,6 +1223,14 @@ test: test-output-search
 .PHONY: test-output-search
 test-output-search: build/test_output_search
 	./build/test_output_search
+# CON:-style console names for XTERM: (src/console_name.h).
+build/test_console_name: tests/test_console_name.c src/console_name.c src/console_name.h
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined tests/test_console_name.c src/console_name.c -o $@
+test: test-console-name
+.PHONY: test-console-name
+test-console-name: build/test_console_name
+	./build/test_console_name
 
 # Public SDK (sdk/): its contract tests run against the terminal's own
 # presentation reply code, plus the SDK's host compile check.
