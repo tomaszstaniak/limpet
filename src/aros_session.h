@@ -8,8 +8,8 @@
 #include <exec/io.h>
 #include <devices/conunit.h>
 
-/* Owned foreground command or externally owned endpoint; one outstanding
- * read, and writes served in order. All functions
+/* Owned foreground command or externally owned endpoint; reads, writes and
+ * WaitForChar calls from several clients served in order. All functions
  * except the internal child entry run on the owning GUI/test process. No locks
  * are needed for queues: the child accesses them only through DOS packets.
  * Zero-initialize before first start. Owned mode does not support background
@@ -17,11 +17,17 @@
  * clients. Caller must stop all packet producers before freeing the endpoint. */
 typedef struct {
     struct MsgPort *port;
+    /* pending_read is the read being served; others wait in read_wait, in
+     * order, as CON: queues them. Waiters (WaitForChar) each have their own
+     * timer; input answers all of them. */
     struct DosPacket *pending_read,*pending_write;
-    struct DosPacket *pending_wait;
+#define XSESSION_READERS 16
+#define XSESSION_WAITERS 16
+    struct DosPacket *read_wait[XSESSION_READERS];
+    unsigned read_waiting;
+    struct { struct DosPacket *packet; struct timerequest *timer; int active; } waits[XSESSION_WAITERS];
+    unsigned wait_count;
     struct MsgPort *timer_port;
-    struct timerequest *timer;
-    int timer_active;
     XSessionQueue input,output;
     XConsoleInput line;
     int console,shell;
