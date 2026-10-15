@@ -32,6 +32,8 @@ int main(int argc, char **argv)
     port = CreateMsgPort();
     io = port ? (struct IOStdReq *)CreateIORequest(port, sizeof *io) : NULL;
     if (!io || OpenDevice((CONST_STRPTR)"input.device", 0, (struct IORequest *)io, 0)) {
+        if (io) DeleteIORequest((struct IORequest *)io);
+        if (port) DeleteMsgPort(port);
         PutStr((CONST_STRPTR)"key-inject: no input.device\n"); return 20;
     }
     ev.ie_Qualifier = qual;
