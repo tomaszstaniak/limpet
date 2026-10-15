@@ -64,6 +64,7 @@ int screen_attach_history(XTermScreen *s, XTermCell *cells, size_t count)
     s->history = cells; s->history_capacity = count;
     s->history_lines = (unsigned)(count / s->columns);
     s->history_count = s->history_head = s->view_offset = 0;
+    ++s->layout_serial;
     return 0;
 }
 
@@ -122,6 +123,7 @@ static void history_push(XTermScreen *s, const XTermCell *row)
     s->history_head = (s->history_head + 1) % s->history_lines;
     if (s->history_count < s->history_lines) ++s->history_count;
     if (s->view_offset && s->view_offset < s->history_count) ++s->view_offset;
+    ++s->history_pushed;
 }
 
 
@@ -257,6 +259,9 @@ static void reflow(XTermScreen *s, unsigned rows, unsigned columns)
     s->history_count = start > first_kept ? (unsigned)(start - first_kept) : 0;
     s->history_head = (unsigned)(start % w.slots);
     s->view_offset = 0;
+    /* A new layout numbers its lines afresh (layout_serial moves on in
+       screen_resize); the count must only stay at least the history's. */
+    s->history_pushed += s->history_count;
     /* Rows that came back from the history (a taller window) move the text
        down: the count goes back by as much. Exact for a height change; after
        a width change it follows the old top row. */
@@ -271,6 +276,7 @@ int screen_resize(XTermScreen *s, unsigned rows, unsigned columns)
     unsigned r, common_rows, common_columns;
     int width_changed;
     if (!s || !rows || !columns || rows > s->capacity / columns) return -1;
+    if (rows != s->rows || columns != s->columns) ++s->layout_serial;
     if(s->alternate_active) {
         /* Reuse the exact crop/wide-pair rules for the saved primary screen.
          * The temporary has no alternate, so this recurses at most once. */
@@ -1022,6 +1028,16 @@ XTermCell screen_view_cell(const XTermScreen *s, unsigned row, unsigned column)
         return s->cells[(size_t)(row - s->view_offset) * s->columns + column];
     line = (s->history_head + s->history_lines - s->view_offset + row) % s->history_lines;
     return s->history[(size_t)line * s->columns + column];
+}
+
+const XTermCell *screen_line_row(const XTermScreen *s, unsigned row)
+{
+    unsigned line;
+    if (!s || row >= s->history_count + s->rows) return NULL;
+    if (row >= s->history_count)
+        return s->cells + (size_t)(row - s->history_count) * s->columns;
+    line = (s->history_head + s->history_lines - s->history_count + row) % s->history_lines;
+    return s->history + (size_t)line * s->columns;
 }
 
 XTermCell screen_line_cell(const XTermScreen *s, unsigned row, unsigned column)
