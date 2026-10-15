@@ -22,7 +22,8 @@ and remote work over SSH.
 | **Limpet 0.3.0** | a window title that names the running command and the state a program reports, Ctrl-R history search, one prompt after Ctrl-C, images at the bottom edge | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/v0.3.0), tag `v0.3.0` |
 | **Limpet SDK 0.3.0** | the SDK these sources build: SDK 0.2.0 plus the window title (`limpet_osc_title()`) | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.3.0), tag `sdk-v0.3.0` |
 | **Limpet 0.4.0** | icons dragged from Workbench put their paths on the Shell's command line | [published 2026-10-13](https://github.com/tomaszstaniak/limpet/releases/tag/v0.4.0), tag `v0.4.0` |
-| **Limpet 0.4.1** | the terminal these sources build: a program can take back a console read it has out; closing the window under drops no longer relies on a uniprocessor exec | [published 2026-10-13](https://github.com/tomaszstaniak/limpet/releases/tag/v0.4.1), tag `v0.4.1` |
+| **Limpet 0.4.1** | a program can take back a console read it has out; closing the window under drops no longer relies on a uniprocessor exec | [published 2026-10-13](https://github.com/tomaszstaniak/limpet/releases/tag/v0.4.1), tag `v0.4.1` |
+| **Limpet 0.5.0** | the terminal these sources build: fixes a crash of POSIX programs asking for the window size; Find in output; a settings file for font, theme, scrollback and history. Separately, the experimental `LIMPET:` console handler | [published 2026-10-15](https://github.com/tomaszstaniak/limpet/releases/tag/v0.5.0), tag `v0.5.0` |
 | `main` | development; may be ahead of every release | this repository |
 
 The releases page shows what is actually published. What changed:
@@ -57,8 +58,8 @@ Limpet includes:
   command history;
 - from 0.4.0: icons dragged from Workbench put their paths on the
   command line;
-- in the 0.5.0 candidate (not published): finding text in the output, and
-  a settings file for the font, theme, scrollback and command history
+- from 0.5.0: finding text in the output, and a settings file for the
+  font, theme, scrollback and command history
   ([details](doc/search-and-settings.md)).
 
 The AROS Shell itself is unchanged: Limpet is the window it runs in.

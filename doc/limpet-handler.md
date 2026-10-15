@@ -74,7 +74,7 @@ Measured with `tests/con_contract.c`, which opens the console by the name
 it is given and runs the same checks against `CON:` and `LIMPET:`
 (`make abiv11-xterm-console` builds it as `con-contract`). "Test" names the
 check in its log, or the runtime step of the [verification
-record](verification-0.5.0-candidate.md#xterm-stage-1).
+record](verification-0.5.0.md#limpet-handler-experimental).
 
 | Contract | LIMPET: | Where | Test |
 | --- | --- | --- | --- |

@@ -3,14 +3,24 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## 0.5.0 (candidate, not published)
+## 0.5.0 (2026-10-15)
+
+Fixed:
+
+- **A POSIX program that asked for the window size crashed** in a Limpet
+  window up to 0.4.1. `ioctl(TIOCGWINSZ)` in the C library reads the size
+  through `ACTION_DISK_INFO`'s `id_InUse`, which Limpet left 0, and died
+  with "Illegal address access" in crt.library. It now gets the window's
+  rows and columns, also after a resize: `ACTION_DISK_INFO` gives the
+  window and a read-only console unit with the grid's size.
 
 For users:
 
 - Find in output: RAmiga+F or Ctrl+Shift+F finds text in the scrollback
   and on the screen; Up and Down go to older and newer matches, Esc goes
-  back to where you were. Output that arrives meanwhile does not move the
-  view. The alternate screen of a full-screen program is not searched.
+  back to where you were, RAmiga+V pastes into the search text. Output that
+  arrives meanwhile does not move the view. The alternate screen of a
+  full-screen program is not searched.
   [Details](search-and-settings.md#find-in-output).
 - A settings file, `ENV:Limpet/Limpet.conf` (or `ENVARC:`): font and font
   size, theme, scrollback lines and command history length. A wrong file is
@@ -23,14 +33,14 @@ For users:
 
 For programs:
 
-- `ioctl(TIOCGWINSZ)` from a POSIX program no longer crashes it in a
-  Limpet window: `ACTION_DISK_INFO` gives the window and a read-only
-  console unit with the grid's size, where `CON:` gives its console.device
-  request. Up to 0.4.1 the C library read through a null pointer.
 - Several processes writing to one Limpet console at once wait their turn
   instead of the later ones getting an error.
-- Experimental, not in the package: [LIMPET:](limpet-handler.md), a Limpet
-  window where a program would open `CON:`.
+- The SDK stays 0.3.0: no header or library changed.
+
+Separately, experimental and not in the Limpet archive or apkg:
+[LIMPET:](limpet-handler.md), a Limpet window where a program would open
+`CON:` (`Limpet-handler-experimental-0.5.0-abiv11.zip`). It does not
+replace `CON:`.
 
 ## 0.4.1 (2026-10-13)
 

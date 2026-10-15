@@ -1,6 +1,6 @@
 # Finding text and settings
 
-Two features of Limpet 0.5.0 (candidate, not published yet): finding text in
+Two features of Limpet 0.5.0: finding text in
 the window's output, and a settings file for the font, the theme and how
 much the window remembers.
 
