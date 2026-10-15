@@ -3,6 +3,22 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## Unreleased
+
+For users:
+
+- Ctrl-D, Ctrl-E and Ctrl-F work as in the system console: the program
+  reading the window gets the break signal (Ctrl-D stops a running script).
+- Ctrl-\ ends input, as in the system console: a program reading the
+  window sees the end of its input; at the Shell's prompt the Shell ends.
+  F5 still ends the window's input for good.
+
+For programs:
+
+- The Amiga console's window-size and cursor queries are answered
+  (`CSI 0 SPACE q`, `CSI 6 n`), with the 8-bit or the 7-bit CSI, one-based
+  as AmigaOS does.
+
 ## 0.5.0 (2026-10-15)
 
 Fixed:
