@@ -485,7 +485,8 @@ static void execute_csi(XTermScreen *s, unsigned char command)
                 s->reply(s->reply_context,(const unsigned char *)"\033[0n",4);
             else if(mode==6) {
                 char response[XSCREEN_REPLY_CAPACITY];
-                int length=snprintf(response,sizeof response,"\033[%s%u;%uR",
+                int length=snprintf(response,sizeof response,"%s%s%u;%uR",
+                    s->csi_c1?"\x9b":"\033[",
                     s->csi_private?"?":"",s->cursor_row+1,s->cursor_column+1);
                 if(length>0 && (size_t)length<sizeof response)
                     s->reply(s->reply_context,(const unsigned char *)response,(size_t)length);
@@ -499,6 +500,18 @@ static void execute_csi(XTermScreen *s, unsigned char command)
             char response[XSCREEN_REPLY_CAPACITY];
             int length=snprintf(response,sizeof response,
                 "\033[8;%u;%ut",s->rows,s->columns);
+            if(length>0 && (size_t)length<sizeof response)
+                s->reply(s->reply_context,(const unsigned char *)response,(size_t)length);
+        }
+        return;
+    }
+    /* The Amiga console's window status request: CSI SPACE q or CSI 0 SPACE q.
+       console.device answers with the 8-bit CSI whatever began the query. */
+    if(command=='q' && s->csi_intermediate==' ' && s->amiga_pens && !s->csi_private &&
+       s->param_count==1 && !s->params[0]) {
+        if(s->reply && s->csi_reply_enabled) {
+            char response[XSCREEN_REPLY_CAPACITY];
+            int length=snprintf(response,sizeof response,"\x9b" "1;1;%u;%u r",s->rows,s->columns);
             if(length>0 && (size_t)length<sizeof response)
                 s->reply(s->reply_context,(const unsigned char *)response,(size_t)length);
         }
@@ -850,6 +863,28 @@ static void osc_end(XTermScreen *s)
     s->parser=GROUND;
 }
 
+/* CR, LF, BS, HT and FF: 1 when ch was one of them and is done. */
+static int control(XTermScreen *s, unsigned char ch)
+{
+    if (ch == '\r') { s->cursor_column = 0; s->wrap_pending = 0; }
+    else if (ch == '\n') {
+        s->cells[(size_t)(s->cursor_row + 1) * s->columns - 1].wrap = 0;
+        s->wrap_pending = 0; line_feed(s);
+    }
+    else if (ch == '\b') {
+        s->wrap_pending = 0;
+        if (s->cursor_column) --s->cursor_column;
+    } else if (ch == '\t') {
+        unsigned next=(s->cursor_column/8+1)*8;
+        s->cursor_column=next<s->columns?next:s->columns-1;
+        s->wrap_pending=0;
+    } else if (ch == '\f') {
+        fill(s->cells, (size_t)s->rows * s->columns, s->style);
+        s->cursor_row = s->cursor_column = s->wrap_pending = 0;
+    } else return 0;
+    return 1;
+}
+
 size_t screen_bulk_length(const XTermScreen *s, const unsigned char *bytes, size_t count)
 {
     size_t n = 0;
@@ -940,10 +975,22 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
         if (ch == 27) {
             s->parser = ESCAPE; s->escape_reply_enabled=s->reply!=NULL; continue;
         }
+        /* An Amiga program's 8-bit CSI. Only between characters: inside a
+           UTF-8 sequence 0x9B is a continuation byte, handled above. */
+        if (ch == 0x9b && s->amiga_pens &&
+            (s->parser == GROUND || s->parser == ESCAPE || s->parser == CSI)) {
+            s->parser = CSI; s->param_count = 1; s->discard = 0;
+            s->csi_private=s->param_started=s->csi_intermediate=0;
+            s->csi_c1=1;
+            s->csi_reply_enabled=s->reply!=NULL;
+            memset(s->params, 0, sizeof s->params);
+            continue;
+        }
         if (s->parser == ESCAPE) {
             if (ch == '[') {
                 s->parser = CSI; s->param_count = 1; s->discard = 0;
                 s->csi_private=s->param_started=s->csi_intermediate=0;
+                s->csi_c1=0;
                 s->csi_reply_enabled=s->escape_reply_enabled && s->reply!=NULL;
                 memset(s->params, 0, sizeof s->params);
             } else if(ch=='_' && s->apc) {
@@ -981,25 +1028,14 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
                 s->csi_intermediate=ch;
             } else if (ch >= 0x40 && ch <= 0x7e) {
                 execute_csi(s, ch); s->parser = GROUND;
+            } else if (ch < 0x20 && control(s, ch)) {
+                /* ECMA-48: a control inside a sequence acts and the sequence
+                   goes on, so a stray CSI cannot eat a line end. */
             } else s->discard = 1;
             continue;
         }
-        if (ch == '\r') { s->cursor_column = 0; s->wrap_pending = 0; }
-        else if (ch == '\n') {
-            s->cells[(size_t)(s->cursor_row + 1) * s->columns - 1].wrap = 0;
-            s->wrap_pending = 0; line_feed(s);
-        }
-        else if (ch == '\b') {
-            s->wrap_pending = 0;
-            if (s->cursor_column) --s->cursor_column;
-        } else if (ch == '\t') {
-            unsigned next=(s->cursor_column/8+1)*8;
-            s->cursor_column=next<s->columns?next:s->columns-1;
-            s->wrap_pending=0;
-        } else if (ch == '\f') {
-            fill(s->cells, (size_t)s->rows * s->columns, s->style);
-            s->cursor_row = s->cursor_column = s->wrap_pending = 0;
-        } else if (ch >= 32 && ch <= 126) put_scalar(s, ch);
+        if (control(s, ch)) {}
+        else if (ch >= 32 && ch <= 126) put_scalar(s, ch);
         else if (ch >= 0xc2 && ch <= 0xf4) {
             s->utf8_remaining = ch < 0xe0 ? 1 : ch < 0xf0 ? 2 : 3;
             s->utf8_value = ch & (ch < 0xe0 ? 0x1f : ch < 0xf0 ? 0x0f : 0x07);

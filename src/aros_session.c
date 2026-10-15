@@ -72,7 +72,7 @@ static void service(ArosSession *s)
     }
     if(s->pending_wait) {
         int expired=s->timer_active && CheckIO((struct IORequest *)s->timer)!=NULL;
-        int ready=session_queue_wait(&s->input,s->eof,expired);
+        int ready=session_queue_wait(&s->input,s->eof || s->eof_once,expired);
         if(ready>=0) {
             struct DosPacket *waiter=s->pending_wait;
             s->pending_wait=NULL;
@@ -84,6 +84,10 @@ static void service(ArosSession *s)
         size_t n=session_queue_read(&s->input,(unsigned char *)p->dp_Arg2,(size_t)p->dp_Arg3);
         s->pending_read=NULL;
         ReplyPkt(p,n,0);
+    } else if(p && s->eof_once) {
+        /* Typed text went first (above); this read is the end of input. */
+        s->eof_once=0; s->pending_read=NULL;
+        ReplyPkt(p,0,0);
     }
     while((p=s->pending_write)) {
         if(s->stopping) {
@@ -322,6 +326,9 @@ void aros_session_poll(ArosSession *s)
             fh->fh_Type=s->port; fh->fh_Arg1=stream+1; fh->fh_Interactive=DOSTRUE;
             ++s->references[stream]; s->handles|=1UL<<stream;
             s->opened=1;
+            /* As CON:, the program that opens the console gets its breaks
+               until a program reads it (writes never move the target). */
+            if(s->console) aros_break_bind(&s->breaker,p->dp_Port->mp_SigTask);
             ReplyPkt(p,DOSTRUE,0); break;
         }
         case ACTION_COPY_DIR_FH: {
@@ -406,7 +413,7 @@ void aros_session_poll(ArosSession *s)
                 ReplyPkt(p,DOSFALSE,ERROR_OBJECT_IN_USE);
             else {
                 status->available=(uint32_t)s->input.length;
-                status->eof=s->eof?1:0;
+                status->eof=s->eof || s->eof_once?1:0;
                 status->columns=s->columns; status->rows=s->rows;
                 ReplyPkt(p,DOSTRUE,0);
             }
@@ -419,7 +426,7 @@ void aros_session_poll(ArosSession *s)
             else if(s->pending_wait || s->pending_read)
                 ReplyPkt(p,DOSFALSE,ERROR_OBJECT_IN_USE);
             else if(s->input.length) ReplyPkt(p,DOSTRUE,0);
-            else if(s->eof || !p->dp_Arg1) ReplyPkt(p,DOSFALSE,0);
+            else if(s->eof || s->eof_once || !p->dp_Arg1) ReplyPkt(p,DOSFALSE,0);
             else if(start_timer(s,(LONG)p->dp_Arg1))
                 ReplyPkt(p,DOSFALSE,ERROR_NO_FREE_STORE);
             else s->pending_wait=p;
@@ -505,6 +512,11 @@ size_t aros_session_write(ArosSession *s,const unsigned char *bytes,size_t n)
        (s->external && !(s->handles&(s->console?7UL:1UL)))) return 0;
     if(s->console && !s->line.raw && n==1 && bytes[0]==3)
         return aros_session_interrupt(s)?1:0;
+    /* Sessions without the native editor (--command) take the same keys. */
+    if(s->console && !s->line.raw && n==1 && bytes[0]>=4 && bytes[0]<=6)
+        return aros_session_break_signal(s,SIGBREAKF_CTRL_D<<(bytes[0]-4)),1;
+    if(s->console && !s->line.raw && n==1 && bytes[0]==0x1c)
+        return aros_session_end_input(s)?1:0;
     if(s->console) {
         XConsoleInput saved=s->line;
         size_t in=s->input.length,out=s->output.length;
@@ -542,6 +554,8 @@ int aros_session_interrupt(ArosSession *s)
     if(!aros_break_send(&s->breaker)) return 0;
     s->line.length=0; s->line.escape=s->line.skip_lf=0;
     s->input.head=s->input.length=0;
+    /* Ctrl-C cancels what was typed ahead, a pending Ctrl-\ included. */
+    s->eof_once=0;
     session_queue_write(&s->output,(const unsigned char *)"^C\r\n",4);
     /* An empty line releases a reader, including a Shell whose prompt Write
      * reached us before its Read (EOF would end the Shell). A running
@@ -551,6 +565,22 @@ int aros_session_interrupt(ArosSession *s)
     if(console_interrupt_needs_line(s->pending_read!=NULL,fg.known,fg.running))
         session_queue_write(&s->input,(const unsigned char *)"\n",1);
     service(s); return 1;
+}
+int aros_session_end_input(ArosSession *s)
+{
+    if(!s->console || !aros_session_active(s) || s->eof || s->line.raw) return 0;
+    if(s->line.length) {
+        if(XSESSION_CAPACITY-s->input.length<s->line.length) return 0;
+        session_queue_write(&s->input,s->line.line,s->line.length);
+        s->line.length=0;
+    }
+    s->eof_once=1;
+    service(s); return 1;
+}
+int aros_session_break_signal(ArosSession *s,ULONG signals)
+{
+    if(!s->console || !aros_session_active(s) || s->eof || s->line.raw) return 0;
+    return aros_break_send_signal(&s->breaker,signals);
 }
 void aros_session_stop(ArosSession *s)
 {

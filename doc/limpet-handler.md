@@ -65,8 +65,13 @@ Options match by prefix in `CON:`'s order, so `C` is `CLOSE` and `S` is
 The window is a Limpet window: Limpet's line editor (history, Ctrl-R, TAB
 completion), selection, copy and paste, scrollback and Find in output, and
 the [settings file](search-and-settings.md) read when the window opens.
-There is no Project > Reload settings in an LIMPET: window. Ctrl-C breaks
-the program reading; **F5** ends input (EOF), where `CON:` uses Ctrl-\.
+There is no Project > Reload settings in a LIMPET: window. As in `CON:`,
+Ctrl-C, Ctrl-D, Ctrl-E and Ctrl-F send their break signal to the program
+reading the window (in raw mode they reach it as bytes instead), and
+Ctrl-\ ends input once: what was typed goes to the program without a line
+end, its next read gets end of input, and later reads wait for keys again.
+At the Shell's prompt that ends the Shell. **F5** still ends the window's
+input for good.
 
 ## Compatibility with CON:
 
@@ -90,8 +95,8 @@ record](verification-0.5.0.md#limpet-handler-experimental).
 | Several readers or waiters at once | partly: one; another gets `ERROR_OBJECT_IN_USE` at once (CON: queues them) | `aros_session.c` READ, WAIT_CHAR | from the code; not run |
 | `Write` from several processes at once | supported; up to 16 wait in order | `aros_session.c` WRITE | `writers` (3x300 writes; passed before the change too) |
 | Ctrl-C to the reader | supported; the program reading gets it, a background job that only writes does not (CON: gives it to the last to read or write) | `aros_break.c` | `break`; `Wait 20` + Ctrl-C |
-| Ctrl-D, Ctrl-E, Ctrl-F | not supported | | `break_d` |
-| EOF from the keyboard | partly: F5, not Ctrl-\ | `aros_session_eof` | `eof` |
+| Ctrl-D, Ctrl-E, Ctrl-F | supported: cooked mode signals the reader (the same one Ctrl-C goes to; before anyone reads, the program that opened the console, as in CON:), the line is kept; raw mode gives the byte and no signal | `aros_session_break_signal` | `break_d`, `break_e`, `break_f`, `raw.ctrl_d`; Ctrl-D stopped an `Execute` script in both consoles |
+| End of input from the keyboard | supported: Ctrl-\ once, typed text first without a line end, then one 0 read, then reads wait again; at the prompt the Shell ends. F5 also, for good (a Limpet extra). Differs: Ctrl-\ waits its turn behind typed keys and pastes and until a program reads (CON: marks the end at once); `WaitForChar` with an end pending answers FALSE at once (CON: waits out the timeout); Ctrl-C clears a pending end | `aros_session_end_input` | `eof.partial`, `eof.zero`, `eof.once`; Shell ended in both |
 | Close gadget while a program reads | supported: the read ends, the Shell ends with the window | `aros_session_stop` | NewShell windows closed |
 | Program ends before the window closes | supported: the last `Close` closes the window, `WAIT` keeps it | `aros_session.c` END; `aros_xterm.c` | `close`; `EndCLI`; `Status` |
 | `ACTION_SEEK` (Flush of input after a command) | supported: -1 at once (error 219; CON: 209) | | `seek` |
@@ -100,7 +105,8 @@ record](verification-0.5.0.md#limpet-handler-experimental).
 | `ACTION_DISK_INFO`: window in `id_VolumeNode` | supported (fixed in this stage; was -1) | `aros_session.c` | `disk_info.fields` |
 | `ACTION_DISK_INFO`: `id_InUse` as a console.device request (posixc `TIOCGWINSZ`) | partly: an `IOStdReq` whose unit is a `ConUnit` with the grid's size and the window, read-only (fixed in this stage; was 0, and `TIOCGWINSZ` crashed) | `aros_session.c` | `disk_info.unit`; `tty-winsize` |
 | I/O sent to that console.device request | not supported: it is no device; a program doing it fails | | none |
-| Amiga console reports in raw mode: window bounds (`CSI 0 SPACE q`), cursor (`CSI 6 n`) | not supported: no answer | | `report.bounds`, `report.cursor` (CON: answers both, 0-based) |
+| Amiga console reports: window bounds (`CSI [0] SPACE q`), cursor (`CSI 6 n`), with the 8-bit or the 7-bit CSI | supported, one-based as AmigaOS and mainline AROS answer: `0x9B 1;1;rows;columns SPACE r`, cursor in the query's introducer; the new size after a resize. ABIv11's CON: answers both one lower | `screen_model.c` | `test_amiga_reports`; `report.*`, `report.*.after_resize` |
+| Line feed in raw mode | differs: CON: turns LF into CR LF (it sets `CSI 20h`), LIMPET: moves down only | | seen in the key probe (stepped lines) |
 | Amiga raw input events (`CSI n {`) | not supported (ABIv11 CON: does not report them either) | | none |
 | Output: Amiga console sequences | partly: Limpet's VT subset with SGR 30-37/40-47 as pens; not checked one by one against console.device's set | `screen_model.c` | Shell prompt, `List`, `Search` |
 | Memory per window | about 32.5 MiB (fonts read per window) | `font_cache.c` | measured 2026-09-25 on ABIv11 2026.09 |
@@ -128,26 +134,26 @@ protocol, and a program written for `CON:` does not need them.
 
 Each with how to see it and what it breaks.
 
-1. **No window-bounds or cursor report.** `con-contract` `report.bounds`:
-   `CON:` answers `CSI 1;1;15;75 r`, `LIMPET:` nothing. A program that asks
-   the console for its size this way waits or guesses (UnZip's screen-size
-   query is one). High impact for console-aware Amiga programs.
-2. **Ctrl-D, Ctrl-E, Ctrl-F are not signalled.** `break_d`. Scripts use
-   Ctrl-D to stop; some programs use E and F.
-3. **Ctrl-\ is not end of input**; F5 is. Users of `CON:` press Ctrl-\.
-4. **One reader at a time.** A second process reading or waiting on the
+1. **Reports are one-based, ABIv11's CON: is one lower.** LIMPET: follows
+   AmigaOS and mainline; a program tuned to ABIv11's CON: sees one row and
+   column more than it expects there. Low impact; recorded so it is a
+   choice, not a surprise.
+2. **Raw-mode line feed.** CON: sets LF mode (`CSI 20h`), so a raw-mode
+   program's `\n` starts a new line at the left; LIMPET: does not. Programs
+   that write bare `\n` in raw mode print stepped lines.
+3. **One reader at a time.** A second process reading or waiting on the
    same console gets an error at once instead of waiting its turn.
-5. **`AUTO` opens the window at once**, so a program started from
+4. **`AUTO` opens the window at once**, so a program started from
    Workbench with an `AUTO` console shows an empty window it never uses.
-6. **`WINDOW` is refused.** Programs that hand the console their own window
+5. **`WINDOW` is refused.** Programs that hand the console their own window
    get an error.
-7. **No console.device behind `ACTION_DISK_INFO`.** Only reading the
+6. **No console.device behind `ACTION_DISK_INFO`.** Only reading the
    `ConUnit` works.
-8. **32.5 MiB and a font load per window**, and a start of 15-25 s under
+7. **32.5 MiB and a font load per window**, and a start of 15-25 s under
    QEMU TCG (window state not controlled). Many small `CON:` windows (each
    `Run`-started tool with its own window) would cost much more than
    with `CON:`.
-9. **Not run on mainline**, where DOS keeps the handler's own port and
+8. **Not run on mainline**, where DOS keeps the handler's own port and
    `CliInit` puts requesters on the console's window.
 
 ## Next stage: an optional stand-in for CON:
@@ -170,7 +176,7 @@ Not built; a design for review.
 - **Way back without a working window.** `ECON:` and the boot console are
   never touched. `LimpetCON OFF` works from any Shell, and a reboot
   always restores `CON:`, because nothing is written to disk.
-- **Before it is offered:** gaps 1 to 5 closed, gap 8 reduced (one font
+- **Before it is offered:** gaps 2 to 5 closed, gap 7 reduced (one font
   load shared by all windows), and the contract probe passing the same on
   both consoles, plus a round of programs started from Workbench with
   console windows.

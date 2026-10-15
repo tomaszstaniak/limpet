@@ -68,6 +68,66 @@ static void writer(void)
     Signal(parent, SIGBREAKF_CTRL_F);
 }
 
+
+/* The console's unit as ACTION_DISK_INFO gives it: columns and rows, 0 if none. */
+static void unit_size(BPTR h, int *cols, int *rows)
+{
+    struct FileHandle *fh = BADDR(h);
+    struct InfoData info;
+    *cols = *rows = 0;
+    memset(&info, 0, sizeof info);
+    if (DoPkt(fh->fh_Type, ACTION_DISK_INFO, (SIPTR)MKBADDR(&info), 0, 0, 0, 0) && info.id_InUse) {
+        struct ConUnit *u = (struct ConUnit *)((struct IOStdReq *)info.id_InUse)->io_Unit;
+        if (u) { *cols = u->cu_XMax + 1; *rows = u->cu_YMax + 1; }
+    }
+}
+
+/* Send a query in raw mode and collect the reply a byte at a time (each
+   Read takes one byte, so a reply split between reads is put together
+   here). Returns its length; hex gets it for the log. */
+static int ask(BPTR h, const char *query, int qn, char *got, int room, char *hex, int hexroom)
+{
+    LONG n = 0, k; int j = 0;
+    Write(h, (APTR)query, qn);
+    while (n < room - 1 && WaitForChar(h, n ? 100000 : 1000000)) {
+        k = Read(h, got + n, 1);
+        if (k != 1) break;
+        n += k;
+        if ((unsigned char)got[n - 1] >= 0x40 && n > 1) break;
+    }
+    got[n] = 0;
+    for (k = 0; k < n && j < hexroom - 3; ++k)
+        j += snprintf(hex + j, hexroom - j, "%02x", (unsigned char)got[k]);
+    hex[j] = 0;
+    return (int)n;
+}
+
+/* The window-bounds and cursor reports, compared with the console unit:
+   AmigaOS and mainline AROS answer one-based (rows;columns, row;column),
+   the console.device of ABIv11 one lower. */
+static void reports(BPTR h, const char *tag)
+{
+    char got[64], hex[140], id[48];
+    int n, a, b, c, d, cols, rows;
+    SetMode(h, 1);
+    unit_size(h, &cols, &rows);
+    n = ask(h, "\x9b" "0 q", 4, got, sizeof got, hex, sizeof hex);
+    snprintf(id, sizeof id, "report.bounds%s", tag);
+    if (n && sscanf(got + 1, "%d;%d;%d;%d r", &a, &b, &c, &d) == 4 && (unsigned char)got[0] == 0x9b)
+        say("OBS", id, "%s rows=%d columns=%d; unit %dx%d: %s", hex, c, d, rows, cols,
+            c == rows && d == cols ? "one-based" : c == rows - 1 && d == cols - 1 ? "one lower (zero-based)" : "differs");
+    else say(n ? "OBS" : "FAIL", id, "%s", n ? hex : "no answer in 1 s");
+    Write(h, "\x9b" "3;5H", 5);
+    n = ask(h, "\x9b" "6n", 3, got, sizeof got, hex, sizeof hex);
+    snprintf(id, sizeof id, "report.cursor%s", tag);
+    if (n && sscanf(got + 1, "%d;%dR", &a, &b) == 2 && (unsigned char)got[0] == 0x9b)
+        say("OBS", id, "%s after CSI 3;5H: row=%d column=%d: %s", hex, a, b,
+            a == 3 && b == 5 ? "one-based" : a == 2 && b == 4 ? "one lower (zero-based)" : "differs");
+    else say(n ? "OBS" : "FAIL", id, "%s", n ? hex : "no answer in 1 s");
+    Write(h, "\n", 1);
+    SetMode(h, 0);
+}
+
 static void quiet_checks(BPTR h, const char *name)
 {
     struct FileHandle *fh = BADDR(h);
@@ -157,29 +217,7 @@ static void quiet_checks(BPTR h, const char *name)
         say("OBS", "change_signal.old", "%s", old == (SIPTR)me ? "this process" : old ? "another" : "0");
     }
 
-    {   /* The Amiga console's own queries, raw mode: the window bounds
-           (CSI 0 SPACE q) and the cursor (CSI 6 n). What comes back, as hex. */
-        static const struct { const char *id, *query; int n; } q[] = {
-            {"report.bounds", "\x9b" "0 q", 4}, {"report.cursor", "\x9b" "6n", 3}
-        };
-        unsigned i;
-        SetMode(h, 1);
-        for (i = 0; i < 2; ++i) {
-            char got[64], hex[140]; LONG n = 0, k; int j = 0;
-            Write(h, (APTR)q[i].query, q[i].n);
-            while (n < (LONG)sizeof got - 1 && WaitForChar(h, n ? 100000 : 1000000)) {
-                k = Read(h, got + n, 1);
-                if (k != 1) break;
-                n += k;
-                if ((unsigned char)got[n - 1] >= 0x40 && n > 1) break;
-            }
-            for (k = 0; k < n && j < (int)sizeof hex - 3; ++k)
-                j += snprintf(hex + j, sizeof hex - j, "%02x", (unsigned char)got[k]);
-            hex[j] = 0;
-            say(n ? "OBS" : "OBS", q[i].id, "%s", n ? hex : "no answer in 1 s");
-        }
-        SetMode(h, 0);
-    }
+    reports(h, "");
 
     {   /* Writers at once: none may fail. */
         int k; LONG failed = 0; ULONG got = 0;
@@ -212,7 +250,7 @@ static void quiet_checks(BPTR h, const char *name)
 
 static void key_checks(BPTR h)
 {
-    char buf[80]; LONG n;
+    char buf[80]; LONG n, m, o;
     FPuts(h, (CONST_STRPTR)"\nType abc and press Return: "); Flush(h);
     n = Read(h, buf, sizeof buf - 1);
     if (n >= 0) buf[n] = 0;
@@ -224,23 +262,41 @@ static void key_checks(BPTR h)
     CHECK("raw.read", n == 1 && buf[0] == 'x', "Read=%ld byte=%d", (long)n, n == 1 ? (unsigned char)buf[0] : -1);
     n = WaitForChar(h, 0);
     CHECK("raw.no_echo_left", n == 0, "WaitForChar(0)=%ld", (long)n);
-    SetMode(h, 0);
-
-    SetSignal(0, SIGBREAKF_CTRL_C);
-    FPuts(h, (CONST_STRPTR)"Press Ctrl-C, then Return: "); Flush(h);
-    n = Read(h, buf, sizeof buf - 1);
-    CHECK("break", (SetSignal(0, SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C) != 0,
-          "Ctrl-C reached the reader; Read=%ld", (long)n);
-
     SetSignal(0, SIGBREAKF_CTRL_D);
-    FPuts(h, (CONST_STRPTR)"Press Ctrl-D, then Return: "); Flush(h);
-    n = Read(h, buf, sizeof buf - 1);
-    say((SetSignal(0, SIGBREAKF_CTRL_D) & SIGBREAKF_CTRL_D) ? "PASS" : "FAIL", "break_d",
-        "Ctrl-D reached the reader; Read=%ld", (long)n);
+    Write(h, "Raw mode: press Ctrl-D\n", 23);
+    n = Read(h, buf, 1);
+    CHECK("raw.ctrl_d", n == 1 && buf[0] == 4 && !(SetSignal(0, SIGBREAKF_CTRL_D) & SIGBREAKF_CTRL_D),
+          "Read=%ld byte=%d, no signal", (long)n, n == 1 ? (unsigned char)buf[0] : -1);
+    Write(h, "Raw mode: resize the window, then press y\n", 42);
+    n = Read(h, buf, 1);
+    SetMode(h, 0);
+    reports(h, ".after_resize");
 
-    FPuts(h, (CONST_STRPTR)"End input: Ctrl-\\ in CON:, F5 in Limpet: "); Flush(h);
+    {   /* Ctrl-C, D, E, F in cooked mode: the signal to this reader. */
+        static const char *const names[] = {"break", "break_d", "break_e", "break_f"};
+        unsigned i;
+        for (i = 0; i < 4; ++i) {
+            ULONG sig = SIGBREAKF_CTRL_C << i;
+            char prompt[48];
+            SetSignal(0, sig);
+            snprintf(prompt, sizeof prompt, "Press Ctrl-%c, then Return: ", 'C' + i);
+            FPuts(h, (CONST_STRPTR)prompt); Flush(h);
+            n = Read(h, buf, sizeof buf - 1);
+            CHECK(names[i], (SetSignal(0, sig) & sig) != 0, "Ctrl-%c reached the reader; Read=%ld", 'C' + i, (long)n);
+        }
+    }
+
+    /* End of input from the keyboard: what was typed first, then one 0,
+       then reads wait as before. */
+    FPuts(h, (CONST_STRPTR)"Type xy, then end input (Ctrl-\\): "); Flush(h);
     n = Read(h, buf, sizeof buf - 1);
-    CHECK("eof", n == 0, "Read=%ld", (long)n);
+    if (n >= 0) buf[n] = 0;
+    m = Read(h, buf + 40, 39);
+    CHECK("eof.partial", n == 2 && !memcmp(buf, "xy", 2), "first Read=%ld \"%.10s\"", (long)n, n > 0 ? buf : "");
+    CHECK("eof.zero", m == 0, "second Read=%ld", (long)m);
+    FPuts(h, (CONST_STRPTR)"\nInput again: type z and press Return: "); Flush(h);
+    o = Read(h, buf, sizeof buf - 1);
+    CHECK("eof.once", o == 2 && buf[0] == 'z', "third Read=%ld", (long)o);
 }
 
 int main(int argc, char **argv)

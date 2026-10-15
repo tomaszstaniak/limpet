@@ -31,6 +31,7 @@ For programmers:
 For maintainers:
 
 - [Building and releasing the SDK](sdk/releasing.md).
+- [Verification record for the LIMPET: handler, stage 2](verification-handler-stage2.md) (local, not published).
 - [Verification record for Limpet 0.5.0 and the LIMPET: handler](verification-0.5.0.md).
 - [Verification record for Limpet 0.3.0 and SDK 0.3.0](verification-0.3.0.md).
 - [Verification record for Limpet 0.2.1](verification-0.2.1.md).

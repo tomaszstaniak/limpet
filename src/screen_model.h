@@ -52,6 +52,9 @@ typedef struct XTermScreen {
     XTermCell saved_style;
     unsigned csi_private, param_started;
     unsigned csi_intermediate;
+    /* The sequence began with the 8-bit CSI (0x9B), as Amiga programs write
+     * it; replies to it use the same introducer. Only with amiga_pens. */
+    unsigned csi_c1;
     /* Latched at CSI entry. The transport clears this on input-owner change
      * so a fragmented old query cannot answer a new reader. */
     unsigned csi_reply_enabled,escape_reply_enabled;
@@ -122,6 +125,13 @@ typedef struct XTermScreen {
  * Coordinates are live, one-based physical cells (no origin mode yet).
  * Native CSI 0 space q is
  * not a size query in VT mode: it conflicts with DECSCUSR cursor styling.
+ * With amiga_pens (an AROS console session) the Amiga console's own forms
+ * apply as console.device implements them: a bare 0x9B outside a UTF-8
+ * sequence starts a CSI (valid UTF-8 never has a lone continuation byte),
+ * CSI [0] SPACE q answers the window bounds 0x9B "1;1;rows;columns r", and
+ * CSI 6 n answers the cursor with the introducer the query used. Values are
+ * one-based, as AmigaOS and mainline AROS (d6ac4e1b27) send them; the
+ * console.device of ABIv11 answers both one lower.
  */
 /* XSCREEN_APC_ERASE (no bytes): the visible screen was erased whole (ED 2)
  * or the alternate screen was entered; images placed on the screen now

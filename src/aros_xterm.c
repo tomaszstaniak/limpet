@@ -1110,6 +1110,26 @@ static size_t session_bytes(const unsigned char *bytes,size_t count)
     if(echo_mode==2) {
         if(replies_enabled() && reply_flow.length) return 0;
         if(shell_session && !process_session.line.raw) {
+            /* Ctrl-\: end of input once, as in CON:. What was typed goes
+               to the reader without a line end; the next Read returns 0.
+               F5 still ends the session's input for good. */
+            if(count==1 && bytes[0]==0x1c) {
+                line_editor_search_cancel(&command_editor);
+                editor_sync();
+                if(!aros_session_end_input(&process_session)) return 0;
+                screen.cluster_active=0; screen.cluster_state=0;
+                screen_write(&screen,(const unsigned char *)command_editor.text,command_editor.length);
+                line_editor_action(&command_editor,XLINE_CLEAR);
+                selection.active=selection.dragging=0;
+                return 1;
+            }
+            /* Ctrl-D/E/F: a signal to the reader, as in CON:; the line
+               stays as it is. */
+            if(count==1 && bytes[0]>=4 && bytes[0]<=6) {
+                if(!aros_session_break_signal(&process_session,SIGBREAKF_CTRL_D<<(bytes[0]-4)))
+                    clip_status="No program reads this window yet; the key was not sent";
+                return 1;
+            }
             if(count==1 && bytes[0]==3) {
                 if(!aros_session_interrupt(&process_session)) return 0;
                 line_editor_search_cancel(&command_editor);
@@ -1218,6 +1238,15 @@ static int keyboard_interrupt(const XQueuedKey *key)
         key->length==1 && key->bytes[0]==3;
 }
 
+/* Ctrl-D/E/F in a cooked Shell session only signal, so they need no Read
+   waiting and do not queue behind a running command. Ctrl-\ is input (the
+   end of it) and keeps its place behind typeahead and pastes like any key. */
+static int keyboard_console_key(const XQueuedKey *key)
+{
+    return echo_mode==2 && shell_session && !process_session.line.raw &&
+        key->length==1 && key->bytes[0]>=4 && key->bytes[0]<=6;
+}
+
 static int keyboard_ready(void)
 {
     const XQueuedKey *key;
@@ -1225,6 +1254,12 @@ static int keyboard_ready(void)
     key=&keyboard.events[keyboard.head];
     if(!echo_mode || (echo_mode==2 &&
        (!aros_session_active(&process_session) || process_session.eof))) return 1;
+    if(keyboard_console_key(key)) return 1;
+#ifdef XTERM_PROCESS_PORT_CLIENTS
+    /* The TAB child reads the Shell's dirs while the Shell waits in its
+       unanswered Read: no interrupt may answer that Read until it is gone. */
+    if(keyboard_interrupt(key) && completion_job.task_id) return 0;
+#endif
     if(keyboard_interrupt(key))
         return !process_session.breaker.registered ||
             (aros_break_ready(&process_session.breaker) && XSESSION_CAPACITY-process_session.output.length>=4);
