@@ -69,6 +69,7 @@ static XTermScreen screen;
 /* XTERM:'s window as the opening program named it, CON: syntax
    (src/console_name.h); all fields unset elsewhere. */
 static XConsoleName console_spec={-1,-1,-1,-1,"","",0,0,-1};
+static int wait_reported;
 static XTermCell cells[MAX_ROWS * MAX_COLUMNS];
 static XTermCell alternate[MAX_ROWS * MAX_COLUMNS];
 static XTermCell history[HISTORY_LINES * MAX_COLUMNS];
@@ -1417,8 +1418,11 @@ static int status_expiring(void)
 /* The grid that fits the window's inner size. */
 static void fit_grid(struct Window *window)
 {
-    unsigned cols=(window->GZZWidth-2*MARGIN)/xfont_width();
-    unsigned rows=(window->GZZHeight-2*MARGIN)/xfont_height();
+    /* Signed: OpenWindow does not hold a name's small size to the minimum,
+       so the inner size can be under the margins. */
+    int w=window->GZZWidth-2*MARGIN, h=window->GZZHeight-2*MARGIN;
+    unsigned cols=w>0?(unsigned)w/xfont_width():0;
+    unsigned rows=h>0?(unsigned)h/xfont_height():0;
     if(cols>MAX_COLUMNS) cols=MAX_COLUMNS;
     if(rows>MAX_ROWS) rows=MAX_ROWS;
     if(!cols) cols=1;
@@ -1651,8 +1655,11 @@ int main(int argc,char **argv)
             if(process_session.exited && !process_session.output.length &&
                output_offset==output_length && !process_reported) {
                 /* WAIT: the window stays until the user closes it. */
-                if(handler_mode && (console_spec.options&XCON_WAIT))
-                    clip_status="Ended (WAIT): close the window";
+                if(handler_mode && (console_spec.options&XCON_WAIT)) {
+                    /* Once: later messages (Copied, Find) must show. */
+                    if(!wait_reported) clip_status="Ended (WAIT): close the window";
+                    wait_reported=1;
+                }
                 else if(handler_mode) closing=TRUE;
                 else {
                     char status[80];

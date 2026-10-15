@@ -385,15 +385,14 @@ void aros_session_poll(ArosSession *s)
             /* The window, as CON: gives it (a plain pointer in a BPTR):
                mainline's CliInit puts requesters on it. -1 without one. */
             info->id_VolumeNode=s->window?(BPTR)(IPTR)s->window:(BPTR)(SIPTR)-1;
-            if(s->columns && s->rows) {
-                memset(&s->info_request,0,sizeof s->info_request);
-                memset(&s->info_unit,0,sizeof s->info_unit);
-                s->info_unit.cu_XMax=(WORD)(s->columns-1);
-                s->info_unit.cu_YMax=(WORD)(s->rows-1);
-                s->info_unit.cu_Window=s->window;
-                s->info_request.io_Unit=(struct Unit *)&s->info_unit;
-                info->id_InUse=(IPTR)&s->info_request;
-            }
+            /* Fields written in place, never cleared first: another client
+               may be reading the last answer (the session struct starts
+               zeroed). Without a grid yet, 80x24 rather than a null unit. */
+            s->info_unit.cu_XMax=(WORD)((s->columns?s->columns:80)-1);
+            s->info_unit.cu_YMax=(WORD)((s->rows?s->rows:24)-1);
+            s->info_unit.cu_Window=s->window;
+            s->info_request.io_Unit=(struct Unit *)&s->info_unit;
+            info->id_InUse=(IPTR)&s->info_request;
             ReplyPkt(p,DOSTRUE,0); break;
         }
         case XTERM_ACTION_QUERY: {

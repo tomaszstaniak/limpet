@@ -29,8 +29,9 @@ startup, and `CON:` is not touched.
     Execute SYS:Utilities/Limpet/Remove-XTERM
 
 takes `XTERM:` off the DOS list again. It refuses while an `XTERM:` window
-is open: each window's handler runs code from the device's segment, which
-removal unloads. A reboot removes it as well. (`Assign XTERM: DISMOUNT` is
+is open. The device's node and handler segment stay in memory (a few KB)
+until the next reboot: an open that found the device a moment before may
+still be starting from them. A reboot removes it as well. (`Assign XTERM: DISMOUNT` is
 not used: on a device without a resident task it would start a new
 handler, which opens a window.)
 

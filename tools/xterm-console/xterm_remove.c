@@ -1,8 +1,12 @@
 /* Takes Limpet's XTERM: off the DOS list again (Remove-XTERM). It refuses
- * while any XTERM: window is open: every window's handler process runs the
- * launcher from the device's segment, which this unloads. Not Assign
- * DISMOUNT: on a device without a resident task its DeviceProc would start a
- * new handler, which opens a window (workbench/c/Assign.c). */
+ * while an XTERM: window is open. Not Assign DISMOUNT: on a device without a
+ * resident task its DeviceProc would start a new handler, which opens a
+ * window (workbench/c/Assign.c).
+ *
+ * The node and its segment are only unlinked, never freed: an Open may have
+ * found the node just before (getdeviceproc.c unlocks the list, then
+ * RunHandler loads the segment into the node and starts from it), and the
+ * segment may be a resident one. That leaves a few KB until the reboot. */
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <dos/dosextens.h>
@@ -17,11 +21,16 @@ static int window_open(void)
     struct Node *n;
     int i, found = 0;
     lists[0] = &SysBase->TaskReady; lists[1] = &SysBase->TaskWait;
-    Forbid();
+    /* Interrupts move tasks between these lists: Disable, not Forbid. */
+    Disable();
     for (i = 0; i < 2 && !found; ++i)
-        for (n = lists[i]->lh_Head; n->ln_Succ; n = n->ln_Succ)
-            if (n->ln_Name && !strcmp(n->ln_Name, "XTERM")) { found = 1; break; }
-    Permit();
+        for (n = lists[i]->lh_Head; n->ln_Succ; n = n->ln_Succ) {
+            const char *a = n->ln_Name;
+            if (a && a[0] == 'X' && a[1] == 'T' && a[2] == 'E' && a[3] == 'R' && a[4] == 'M' && !a[5]) {
+                found = 1; break;
+            }
+        }
+    Enable();
     return found;
 }
 
@@ -35,7 +44,6 @@ int main(void)
 {
     struct DosList *dl;
     struct DeviceNode *dn;
-    BPTR seg;
     const char *why = NULL;
     /* While this holds the list for writing, no Open can find XTERM: and
        start another window. */
@@ -52,10 +60,7 @@ int main(void)
         return RETURN_WARN;
     }
     RemDosEntry((struct DosList *)dn);
-    seg = dn->dn_SegList; dn->dn_SegList = BNULL;
     UnLockDosList(LDF_DEVICES | LDF_WRITE);
-    if (seg) UnLoadSeg(seg);
-    FreeDosEntry((struct DosList *)dn);
     PutStr((CONST_STRPTR)"XTERM: removed\n");
     return RETURN_OK;
 }
