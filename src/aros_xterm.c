@@ -1592,7 +1592,7 @@ static int settings_buffers(void)
         settings_free();
         if(lines==XSETTINGS_SCROLLBACK_DEFAULT && commands==XSETTINGS_HISTORY_DEFAULT) return -1;
         snprintf(settings_message,sizeof settings_message,
-                 "Settings: not enough memory for %u lines; %u",lines,XSETTINGS_SCROLLBACK_DEFAULT);
+                 "Settings: not enough memory for %u lines and %u commands; defaults used",lines,commands);
         lines=XSETTINGS_SCROLLBACK_DEFAULT; commands=XSETTINGS_HISTORY_DEFAULT;
     }
     command_ring_size=commands;
@@ -2057,8 +2057,10 @@ int main(int argc,char **argv)
                 int action=clipboard_shortcut(&key);
                 size_t count=aros_input_encode(&key,bytes,sizeof bytes);
                 if(action==3) { find_start(); dirty=1; continue; }
-                if(find_key(code,q,bytes,count)) { dirty=1; continue; }
+                /* Copy and paste work during Find too (a paste goes into
+                   the search text, see clipboard_completed). */
                 if(action) { clipboard_action(action); dirty=1; continue; }
+                if(find_key(code,q,bytes,count)) { dirty=1; continue; }
                 if((code==RAWKEY_PAGEUP || code==RAWKEY_PAGEDOWN) &&
                    (q&(IEQUALIFIER_LSHIFT|IEQUALIFIER_RSHIFT))) {
                     screen_scroll_view(&screen,code==RAWKEY_PAGEUP?(int)screen.rows-1:1-(int)screen.rows);

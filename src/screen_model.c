@@ -291,6 +291,9 @@ int screen_resize(XTermScreen *s, unsigned rows, unsigned columns)
         s->saved_wrap=0;
         s->saved_scroll_top=0; s->saved_scroll_bottom=rows-1;
         s->saved_history_count=primary.history_count;
+        /* The primary's lines were renumbered there (a reflow, rows pushed
+           by a shorter window); keep the count with them. */
+        s->history_pushed=primary.history_pushed;
         s->saved_history_head=primary.history_head; s->saved_view_offset=primary.view_offset;
         s->history=primary.history; s->reflow_spare=primary.reflow_spare;
         s->history_lines=primary.history_lines;

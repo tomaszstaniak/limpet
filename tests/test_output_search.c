@@ -185,6 +185,20 @@ int main(void)
     output_search_close(&q,&s,1);
     assert(s.view_offset==0);
 
+    /* A resize while a full-screen program has the screen keeps the main
+       screen's numbering (vim or less open while the window changes). */
+    init(4,10,30);
+    out("alpha 1\r\nalpha 2\r\nalpha 3\r\n\033[?1049h");
+    assert(!screen_resize(&s,4,6));
+    assert(!screen_resize(&s,3,6));
+    out("\033[?1049l");
+    assert(s.history_pushed>=s.history_count);
+    assert(output_search_open(&q,&s)==XSEARCH_OPENED);
+    type("alpha");
+    assert(q.found && q.total==3 && q.index==3);
+    assert(output_search_step(&q,&s,1) && q.index==2);
+    output_search_close(&q,&s,1);
+
     /* The alternate screen: not searched; entering it closes the search. */
     init(3,10,8);
     out("text\r\n\033[?1049h");
