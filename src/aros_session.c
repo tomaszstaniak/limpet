@@ -85,8 +85,7 @@ static void service(ArosSession *s)
         s->pending_read=NULL;
         ReplyPkt(p,n,0);
     }
-    p=s->pending_write;
-    if(p) {
+    while((p=s->pending_write)) {
         if(s->stopping) {
             s->pending_write=NULL; s->write_offset=0;
             ReplyPkt(p,-1,ERROR_BREAK);
@@ -103,10 +102,16 @@ static void service(ArosSession *s)
             } else s->write_offset+=session_queue_write(&s->output,
                     (const unsigned char *)p->dp_Arg2+s->write_offset,
                     (size_t)p->dp_Arg3-s->write_offset);
-            if(s->write_offset==(size_t)p->dp_Arg3) {
-                s->pending_write=NULL; s->write_offset=0;
-                ReplyPkt(p,p->dp_Arg3,0);
-            }
+            if(s->write_offset!=(size_t)p->dp_Arg3) break;
+            s->pending_write=NULL; s->write_offset=0;
+            ReplyPkt(p,p->dp_Arg3,0);
+        }
+        /* The next writer in line, if any. */
+        if(s->write_waiting) {
+            unsigned i;
+            s->pending_write=s->write_wait[0];
+            for(i=1;i<s->write_waiting;++i) s->write_wait[i-1]=s->write_wait[i];
+            --s->write_waiting;
         }
     }
 }
@@ -377,7 +382,18 @@ void aros_session_poll(ArosSession *s)
             if(!s->console || !info) { ReplyPkt(p,DOSFALSE,ERROR_ACTION_NOT_KNOWN); break; }
             memset(info,0,sizeof *info);
             info->id_DiskType=s->line.raw?0x52415700:0x434f4e00;
-            info->id_VolumeNode=(BPTR)(SIPTR)-1; /* No requester window in adapter. */
+            /* The window, as CON: gives it (a plain pointer in a BPTR):
+               mainline's CliInit puts requesters on it. -1 without one. */
+            info->id_VolumeNode=s->window?(BPTR)(IPTR)s->window:(BPTR)(SIPTR)-1;
+            if(s->columns && s->rows) {
+                memset(&s->info_request,0,sizeof s->info_request);
+                memset(&s->info_unit,0,sizeof s->info_unit);
+                s->info_unit.cu_XMax=(WORD)(s->columns-1);
+                s->info_unit.cu_YMax=(WORD)(s->rows-1);
+                s->info_unit.cu_Window=s->window;
+                s->info_request.io_Unit=(struct Unit *)&s->info_unit;
+                info->id_InUse=(IPTR)&s->info_request;
+            }
             ReplyPkt(p,DOSTRUE,0); break;
         }
         case XTERM_ACTION_QUERY: {
@@ -410,7 +426,11 @@ void aros_session_poll(ArosSession *s)
             else s->pending_wait=p;
             break;
         case ACTION_READ:
-            if(id!=1 || !(s->handles&1) || p->dp_Arg3<0 ||
+            /* A console reads from any of its handles, as CON: does: a
+               program that opens CON:... with MODE_NEWFILE reads its keys
+               through that same handle. */
+            if((id!=1 && !(s->console && (id==2 || id==3))) ||
+               !(s->handles&(1UL<<(id-1))) || p->dp_Arg3<0 ||
                (p->dp_Arg3 && !p->dp_Arg2)) ReplyPkt(p,-1,ERROR_BAD_NUMBER);
             else if(!p->dp_Arg3) ReplyPkt(p,0,0);
             else if(s->pending_read || s->pending_wait) ReplyPkt(p,-1,ERROR_OBJECT_IN_USE);
@@ -425,7 +445,10 @@ void aros_session_poll(ArosSession *s)
                 ReplyPkt(p,-1,ERROR_BAD_NUMBER);
             else if(s->stopping) ReplyPkt(p,-1,ERROR_BREAK);
             else if(!p->dp_Arg3) ReplyPkt(p,0,0);
-            else if(s->pending_write) ReplyPkt(p,-1,ERROR_OBJECT_IN_USE);
+            else if(s->pending_write) {
+                if(s->write_waiting<XSESSION_WRITERS) s->write_wait[s->write_waiting++]=p;
+                else ReplyPkt(p,-1,ERROR_OBJECT_IN_USE);
+            }
             else {
                 /* Writes do not move the break target: a background job
                  * that only prints must not take Ctrl-C from the Shell. The
@@ -477,7 +500,10 @@ void aros_session_poll(ArosSession *s)
 size_t aros_session_write(ArosSession *s,const unsigned char *bytes,size_t n)
 {
     size_t used;
-    if(!aros_session_active(s) || s->eof || (s->external && !(s->handles&1))) return 0;
+    /* A console takes keys while any of its handles is open (reads come on
+       any of them); a plain endpoint only with its input open. */
+    if(!aros_session_active(s) || s->eof ||
+       (s->external && !(s->handles&(s->console?7UL:1UL)))) return 0;
     if(s->console && !s->line.raw && n==1 && bytes[0]==3)
         return aros_session_interrupt(s)?1:0;
     if(s->console) {

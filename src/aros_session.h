@@ -5,9 +5,11 @@
 #include "aros_break.h"
 #include <exec/ports.h>
 #include <dos/dosextens.h>
+#include <exec/io.h>
+#include <devices/conunit.h>
 
 /* Owned foreground command or externally owned endpoint; one outstanding
- * read and write. All functions
+ * read, and writes served in order. All functions
  * except the internal child entry run on the owning GUI/test process. No locks
  * are needed for queues: the child accesses them only through DOS packets.
  * Zero-initialize before first start. Owned mode does not support background
@@ -31,8 +33,21 @@ typedef struct {
     BPTR startup_input,startup_file;
     unsigned startup_closes;
     IPTR signal_target;
+    APTR window; /* The console's window for ACTION_DISK_INFO, or NULL. */
+    /* What ACTION_DISK_INFO hands out as CON: does: an IOStdReq whose unit
+     * is a ConUnit with the grid's size and the window. Read-only: posixc's
+     * TIOCGWINSZ reads cu_XMax/cu_YMax/cu_Window through id_InUse and read
+     * through a null pointer before. It is no console.device: io_Device is
+     * NULL, and a program sending it I/O fails. */
+    struct IOStdReq info_request;
+    struct ConUnit info_unit;
     ArosBreak breaker;
     size_t write_offset;
+    /* Writes from other clients while pending_write waits for room, in
+     * order; CON: makes every writer wait too, it never refuses one. */
+#define XSESSION_WRITERS 16
+    struct DosPacket *write_wait[XSESSION_WRITERS];
+    unsigned write_waiting;
     ULONG task_id,handles;
     unsigned references[3];
     struct FileLock locks[16];
