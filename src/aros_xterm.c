@@ -1481,7 +1481,9 @@ static const char *status_seen;
 static unsigned status_age;
 static int status_lasting(const char *s)
 {
-    static const char *const lasting[]={"MULTILINE","Pasting","Copying","Reading clipboard",
+    /* "Settings: " is what went wrong with Limpet.conf: it stays until
+       another message takes its place (success messages do not start so). */
+    static const char *const lasting[]={"Settings: ","MULTILINE","Pasting","Copying","Reading clipboard",
         "Closing","TAB: searching","Selected","Session ended","Cannot start session",
         "Opening link","Copying link"};
     unsigned i;
@@ -1614,9 +1616,9 @@ static void settings_reload(void)
     paint_damage_invalidate(&paint_damage);
     if(settings_message[0]) clip_status=settings_message;
     else clip_status=theme_from_command_line?
-        (later?"Settings: theme set by --theme; font, scrollback and history apply to new windows":
-               "Settings: theme set by --theme stays"):
-        later?"Settings: theme applied; font, scrollback and history apply to new windows":
+        (later?"Reloaded; --theme keeps its theme; font, scrollback and history apply to new windows":
+               "Reloaded; --theme keeps its theme"):
+        later?"Reloaded: theme applied; font, scrollback and history apply to new windows":
               "Settings reloaded";
 }
 #endif
