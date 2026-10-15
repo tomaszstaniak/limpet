@@ -94,7 +94,7 @@ static void quiet_checks(BPTR h, const char *name)
        (compiler/crt/posixc/ioctl.c); so does this, only when it is set. */
     if (info.id_InUse) {
         struct ConUnit *u = (struct ConUnit *)((struct IOStdReq *)info.id_InUse)->io_Unit;
-        CHECK("disk_info.unit", u && u->cu_XMax > 0 && u->cu_YMax > 0, "columns=%d rows=%d window=%s",
+        CHECK("disk_info.unit", u && u->cu_XMax >= 0 && u->cu_YMax >= 0, "columns=%d rows=%d window=%s",
               u ? u->cu_XMax + 1 : 0, u ? u->cu_YMax + 1 : 0,
               u && u->cu_Window && (BPTR)(IPTR)u->cu_Window == info.id_VolumeNode ? "same" : "other");
     } else say("FAIL", "disk_info.unit", "id_InUse is 0: TIOCGWINSZ reads through a null pointer");

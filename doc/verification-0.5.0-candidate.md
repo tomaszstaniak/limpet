@@ -85,12 +85,25 @@ the program opened) and gave no window or console unit in
 | `Remove-XTERM` with a window open, then without | refused, then removed; `NewShell WINDOW XTERM:` then reports the device missing |
 | 10 Shell windows opened and closed from a script | free memory 2,080,753,088 → 2,080,666,224 after 5 → 2,080,665,680 after 10 bytes |
 
-After an independent review, fixes followed that were built and covered by
-host tests but not run again on AROS: Remove-XTERM no longer frees the
-device node or its segment and scans the task lists under `Disable`; a
-name smaller than the margins gives a 1x1 grid; the WAIT message is set
-once; the console unit is written in place; RAmiga+C/V work while Find is
-open; a resize under the alternate screen keeps the line count Find uses.
+An independent review followed; its fixes are in the sources: Remove-XTERM
+no longer frees the device node or its segment and scans the task lists
+under `Disable`; a name smaller than the margins gives a small grid
+instead of 80x160; the WAIT message is set once; the console unit is
+written in place; RAmiga+C/V work while Find is open; a resize under the
+alternate screen keeps the line count Find uses (host test added).
+
+### The candidate archives
+
+`dist/0.5.0-cand1` (not published): `Limpet-0.5.0-abiv11.zip`
+(SHA-256 `8e9e5c4a…`, program 3,413,312 bytes, 27,016 more than 0.4.1)
+and `Limpet-XTERM-experimental-0.5.0-abiv11.zip` (`76381e5b…`), built from
+`main` with `LIMPET_VERSION=0.5.0 LIMPET_DATE=15.10.2026`. One more boot of
+v11-2 with both unpacked into one drawer: `Version` 0.5; the contract probe
+on `XTERM:` passed everything it passed before; `XTERM:0/0/200/30/Tiny`
+got a 20x1 grid (the probe's check then still wanted more than one row;
+corrected); a NewShell in `XTERM:300/200/600/300` reported 13x70 to
+`TIOCGWINSZ`; `Remove-XTERM` after `EndCLI` removed the device; Find in
+the archive's Limpet found both matches.
 
 Not run: `SCREEN`, `NOBORDER`, `BACKDROP`, `INACTIVE`; two readers on
 one console; the write queue with a full output queue (the three-writer
