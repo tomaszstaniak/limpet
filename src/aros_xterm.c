@@ -24,6 +24,7 @@
 #include "key_queue.h"
 #include "kitty_graphics.h"
 #include "aros_drop.h"
+#include "console_name.h"
 #include <dos/var.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -65,6 +66,9 @@ static const int pty_mode=0;
 #define MARGIN 12
 
 static XTermScreen screen;
+/* XTERM:'s window as the opening program named it, CON: syntax
+   (src/console_name.h); all fields unset elsewhere. */
+static XConsoleName console_spec={-1,-1,-1,-1,"","",0,0,-1};
 static XTermCell cells[MAX_ROWS * MAX_COLUMNS];
 static XTermCell alternate[MAX_ROWS * MAX_COLUMNS];
 static XTermCell history[HISTORY_LINES * MAX_COLUMNS];
@@ -388,7 +392,7 @@ static int replies_enabled(void)
 {
     return process_session.console && process_session.line.raw &&
         !process_session.eof && aros_session_active(&process_session) &&
-        (!process_session.external || (process_session.handles&1));
+        (!process_session.external || (process_session.handles&7));
 }
 static void replies_sync(void)
 {
@@ -1033,6 +1037,7 @@ static void update_title(struct Window *window, unsigned last_key)
     /* What runs, then what the terminal reports (src/window_title.h). */
     memset(&in,0,sizeof in);
     in.terminal=pty_mode?"Limpet (PTY preview)":"Limpet";
+    if(console_spec.title[0]) in.terminal=console_spec.title;
     in.link=link_hovered?hovered_link.url:NULL;
     in.program=program_title_text(&program_title);
     in.command=foreground.running?foreground.name:NULL;
@@ -1397,7 +1402,7 @@ static const char *status_seen;
 static unsigned status_age;
 static int status_lasting(const char *s)
 {
-    static const char *const lasting[]={"MULTILINE","Pasting","Copying","Reading clipboard",
+    static const char *const lasting[]={"MULTILINE","Ended (WAIT)","Pasting","Copying","Reading clipboard",
         "Closing","TAB: searching","Selected","Session ended","Cannot start session",
         "Opening link","Copying link"};
     unsigned i;
@@ -1407,6 +1412,19 @@ static int status_lasting(const char *s)
 }
 static int status_expiring(void)
 { return clip_status && !status_lasting(clip_status); }
+
+
+/* The grid that fits the window's inner size. */
+static void fit_grid(struct Window *window)
+{
+    unsigned cols=(window->GZZWidth-2*MARGIN)/xfont_width();
+    unsigned rows=(window->GZZHeight-2*MARGIN)/xfont_height();
+    if(cols>MAX_COLUMNS) cols=MAX_COLUMNS;
+    if(rows>MAX_ROWS) rows=MAX_ROWS;
+    if(!cols) cols=1;
+    if(!rows) rows=1;
+    if(cols!=screen.columns || rows!=screen.rows) screen_resize(&screen,rows,cols);
+}
 
 int main(int argc,char **argv)
 {
@@ -1422,6 +1440,15 @@ int main(int argc,char **argv)
     (void)argc; (void)argv;
     if(!handler) return RETURN_FAIL;
     shell_session=1;
+    {
+        /* The name the program opened, as CON: reads it. WINDOW (a window
+           of the caller's) is not supported: this console draws its own. */
+        const char *name=handler->startup->dp_Arg1?
+            (const char *)AROS_BSTR_ADDR((BSTR)handler->startup->dp_Arg1):"";
+        if(console_name_parse(&console_spec,name) || (console_spec.options&XCON_WINDOW)) {
+            SetIoErr(ERROR_BAD_STREAM_NAME); return RETURN_FAIL;
+        }
+    }
 #else
     /* Theme is a leading option; remaining arguments retain their strict grammar. */
     if(argc>1 && !strcmp(argv[1],"--theme")) {
@@ -1483,26 +1510,44 @@ int main(int argc,char **argv)
 #ifdef XTERM_PTY_DIAG
     if(diag_exit_stage==2) { xfont_close();return RETURN_OK; }
 #endif
+    {
+        ULONG flags=WFLG_CLOSEGADGET | WFLG_DRAGBAR | WFLG_DEPTHGADGET |
+                  WFLG_SIZEGADGET | WFLG_SIZEBBOTTOM | WFLG_ACTIVATE |
+                  WFLG_GIMMEZEROZERO | WFLG_SIMPLE_REFRESH | WFLG_REPORTMOUSE;
+        unsigned o=console_spec.options;
+        /* The CON: options that say what the window looks like. */
+        if(!console_spec.close_gadget) flags&=~WFLG_CLOSEGADGET;
+        if(o&XCON_INACTIVE) flags&=~WFLG_ACTIVATE;
+        if(o&XCON_NODEPTH) flags&=~WFLG_DEPTHGADGET;
+        if(o&XCON_NOSIZE) flags&=~(WFLG_SIZEGADGET|WFLG_SIZEBBOTTOM);
+        if(o&XCON_NODRAG) flags&=~WFLG_DRAGBAR;
+        if(o&XCON_NOBORDER) flags|=WFLG_BORDERLESS;
+        if(o&XCON_BACKDROP) { flags|=WFLG_BACKDROP; flags&=~(WFLG_DRAGBAR|WFLG_SIZEGADGET|WFLG_SIZEBBOTTOM); }
     window = OpenWindowTags(NULL,
-        WA_Title, (IPTR)"Limpet",
-        WA_Left, 40, WA_Top, 60,
-        WA_InnerWidth, 80 * xfont_width() + 2 * MARGIN,
-        WA_InnerHeight, 24 * xfont_height() + 2 * MARGIN,
+        WA_Title, (IPTR)(console_spec.title[0]?console_spec.title:"Limpet"),
+        WA_Left, console_spec.left>=0?console_spec.left:40,
+        WA_Top, console_spec.top>=0?console_spec.top:60,
+        console_spec.width>0?WA_Width:WA_InnerWidth,
+            console_spec.width>0?console_spec.width:(long)(80 * xfont_width() + 2 * MARGIN),
+        console_spec.height>0?WA_Height:WA_InnerHeight,
+            console_spec.height>0?console_spec.height:(long)(24 * xfont_height() + 2 * MARGIN),
+        console_spec.screen[0]?WA_PubScreenName:TAG_IGNORE,(IPTR)console_spec.screen,
+        WA_PubScreenFallBack, TRUE,
         WA_MinWidth, 240, WA_MinHeight, 100,
         WA_MaxWidth, MAX_COLUMNS * xfont_width() + 2 * MARGIN,
         WA_MaxHeight, MAX_ROWS * xfont_height() + 2 * MARGIN,
         WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_REFRESHWINDOW | IDCMP_NEWSIZE | IDCMP_RAWKEY |
                   IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE | IDCMP_INACTIVEWINDOW | IDCMP_MENUPICK,
-        WA_Flags, WFLG_CLOSEGADGET | WFLG_DRAGBAR | WFLG_DEPTHGADGET |
-                  WFLG_SIZEGADGET | WFLG_SIZEBBOTTOM | WFLG_ACTIVATE |
-                  WFLG_GIMMEZEROZERO | WFLG_SIMPLE_REFRESH | WFLG_REPORTMOUSE,
+        WA_Flags, flags,
         TAG_DONE);
+    }
     if (!window) {
         xfont_close();
         if(handler_mode) SetIoErr(ERROR_NO_FREE_STORE);
         return RETURN_FAIL;
     }
     attach_menu(window);
+    fit_grid(window);
 #ifndef XTERM_PROCESS_PORT_CLIENTS
     /* Not in the XTERM: worker: a drop's paths take DOS calls (NameFromLock,
        Lock), which that process may not make while it serves its own port. */
@@ -1537,6 +1582,8 @@ int main(int argc,char **argv)
             screen_attach_alternate(&screen,alternate,MAX_ROWS*MAX_COLUMNS);
             clip_status=NULL;
         }
+        /* Starting zeroes the session: the window goes in after. */
+        process_session.window=window;
     }
     tick_open();
     update_title(window, last_key);
@@ -1603,7 +1650,10 @@ int main(int argc,char **argv)
             if(foreground_poll()) dirty=1;
             if(process_session.exited && !process_session.output.length &&
                output_offset==output_length && !process_reported) {
-                if(handler_mode) closing=TRUE;
+                /* WAIT: the window stays until the user closes it. */
+                if(handler_mode && (console_spec.options&XCON_WAIT))
+                    clip_status="Ended (WAIT): close the window";
+                else if(handler_mode) closing=TRUE;
                 else {
                     char status[80];
                     if(pty_mode) write_text(XTERM_SESSION_RESET);
@@ -1911,6 +1961,7 @@ int main(int argc,char **argv)
                     if(start_failed) {
                         clip_status="Cannot start session/profile | F4 retries"; dirty=1; continue;
                     }
+                    process_session.window=window;
                     output_reset();
                     program_title_clear(&program_title); memset(&foreground,0,sizeof foreground);
                     echo_session_close(&echo); echo_mode=2; process_reported=0;
