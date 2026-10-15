@@ -2,15 +2,18 @@
 #include <proto/graphics.h>
 #include <stdio.h>
 
-int xfont_open(void)
+int xfont_open(void) { return xfont_open_main(NULL); }
+
+int xfont_open_main(const char *primary)
 {
-    static const char *const paths[5] = {
+    const char *paths[5] = {
         "FONTS:TrueType/VeraMono.ttf",
         "FONTS:TrueType/OpenSans-Regular.ttf",
         "PROGDIR:Fonts/NotoEmoji.ttf",
         "PROGDIR:Fonts/Unifont.otf",
         "PROGDIR:Fonts/NotoColorEmoji.ttf"
     };
+    if (primary) paths[0] = primary;
     /* No start-up banner on stdout: see the note on optional faces in
        font_cache.c. Errors are still printed. */
     return xfont_open_extended(paths) ? -1 : 0;
