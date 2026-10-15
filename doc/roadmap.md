@@ -59,6 +59,13 @@ Check programs that open console handles themselves, rather than only
 programs launched inside an existing Limpet window. Installation must be
 optional and reversible before offering a system-console replacement.
 
+Stage 1 is done in the sources: [XTERM:](xterm-console.md) opens a Limpet
+window for `NewShell WINDOW XTERM:` and for programs that open
+`XTERM:...` themselves, with CON:'s name syntax, an install and removal
+that last until the next reboot, and a compatibility table measured
+against `CON:`. The same page lists what is missing before it could stand
+in for `CON:`, and a design for that next step.
+
 ## Terminal applications and remote work
 
 - Build and test the SSH client on ABIv11.

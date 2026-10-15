@@ -5,6 +5,7 @@ For users:
 - [Why Limpet](why-limpet.md): what it is, what it adds to the Shell, and a
   tested comparison with `CON:`.
 - [Compatibility and limits](compatibility.md).
+- [XTERM:](xterm-console.md): Limpet as a console handler (experimental).
 - [Changes](changes.md) of the terminal, release by release.
 - [Roadmap](roadmap.md): ports and features planned after 0.1.
 

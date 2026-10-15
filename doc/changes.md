@@ -3,6 +3,19 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## Console (in the 0.5.0 candidate)
+
+For programs:
+
+- `ioctl(TIOCGWINSZ)` from a POSIX program no longer crashes it in a
+  Limpet window: `ACTION_DISK_INFO` gives the window and a read-only
+  console unit with the grid's size, where `CON:` gives its console.device
+  request. Up to 0.4.1 the C library read through a null pointer.
+- Several processes writing to one Limpet console at once wait their turn
+  instead of the later ones getting an error.
+- Experimental, not in the package: [XTERM:](xterm-console.md), a Limpet
+  window where a program would open `CON:`.
+
 ## 0.4.1 (2026-10-13)
 
 For users:
