@@ -462,7 +462,7 @@ void screen_reset_input_modes(XTermScreen *s)
     if (!s) return;
     if (s->mouse_tracking || s->mouse_sgr) ++s->mouse_generation;
     s->mouse_tracking = s->mouse_sgr = 0;
-    s->bracketed_paste = s->resize_report = s->wheel_report = 0;
+    s->bracketed_paste = s->resize_report = s->wheel_report = s->modify_enter = 0;
 }
 
 static unsigned parameter(const XTermScreen *s, unsigned index, unsigned fallback)
@@ -477,6 +477,15 @@ static void execute_csi(XTermScreen *s, unsigned char command)
     size_t cursor = (size_t)s->cursor_row * s->columns + s->cursor_column;
     size_t total = (size_t)s->rows * s->columns;
     if (s->discard) return;
+    /* xterm's modifyOtherKeys, CSI > 4 ; Pv m, for Enter only: with a level
+       of 1 or more a raw-mode client gets Shift+Enter as CSI 27;2;13~ and
+       can tell it from Enter. CSI > 4 m or a level of 0 turns it off. Any
+       other CSI > sequence is ignored, as before. */
+    if(s->csi_gt) {
+        if(s->csi_intermediate) return;
+        if(command=='m' && s->params[0]==4) s->modify_enter=s->param_count>1 && s->params[1]>0;
+        return;
+    }
     /* Queries observe the live cursor, including a pending right-margin wrap.
      * Never fall through to the cursor-motion wrap reset below. */
     if(command=='n' && !s->csi_intermediate && s->param_count==1) {
@@ -980,7 +989,7 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
         if (ch == 0x9b && s->amiga_pens &&
             (s->parser == GROUND || s->parser == ESCAPE || s->parser == CSI)) {
             s->parser = CSI; s->param_count = 1; s->discard = 0;
-            s->csi_private=s->param_started=s->csi_intermediate=0;
+            s->csi_private=s->csi_gt=s->param_started=s->csi_intermediate=0;
             s->csi_c1=1;
             s->csi_reply_enabled=s->reply!=NULL;
             memset(s->params, 0, sizeof s->params);
@@ -989,7 +998,7 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
         if (s->parser == ESCAPE) {
             if (ch == '[') {
                 s->parser = CSI; s->param_count = 1; s->discard = 0;
-                s->csi_private=s->param_started=s->csi_intermediate=0;
+                s->csi_private=s->csi_gt=s->param_started=s->csi_intermediate=0;
                 s->csi_c1=0;
                 s->csi_reply_enabled=s->escape_reply_enabled && s->reply!=NULL;
                 memset(s->params, 0, sizeof s->params);
@@ -1022,8 +1031,10 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
                 s->param_started=1;
                 if (s->param_count < 16) ++s->param_count;
                 else s->discard = 1;
-            } else if(ch=='?' && !s->param_started && !s->csi_private && !s->csi_intermediate) {
+            } else if(ch=='?' && !s->param_started && !s->csi_private && !s->csi_gt && !s->csi_intermediate) {
                 s->csi_private=1;
+            } else if(ch=='>' && !s->param_started && !s->csi_private && !s->csi_gt && !s->csi_intermediate) {
+                s->csi_gt=1;
             } else if(ch==' ' && !s->csi_intermediate) {
                 s->csi_intermediate=ch;
             } else if (ch >= 0x40 && ch <= 0x7e) {

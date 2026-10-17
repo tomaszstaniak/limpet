@@ -72,6 +72,7 @@ Shell session does not answer it. See
 | [Bracketed paste (DEC 2004)](#bracketed-paste) | raw-mode programs | query, `XTY_INPUT_BRACKETED_PASTE` | **0.2.0** | Verified |
 | [Resize reports (DEC 2048)](#resize-reports) | raw-mode programs | query, `XTY_INPUT_RESIZE_REPORT` | **0.2.0** | Verified |
 | [Wheel reports (private mode 2100)](#wheel-reports) | raw-mode programs | query, `XTY_INPUT_WHEEL_REPORT` | **0.2.0** | Verified |
+| [Shift+Enter (CSI > 4 ; 1 m)](#shiftenter) | raw-mode programs | query, `XTY_INPUT_MODIFIED_ENTER` | unreleased | Host-tested |
 | [Input modes end with raw mode](#input-modes-end-with-raw-mode) | everyone | none | **0.2.0** | Verified |
 | [Selection kept during output](#user-interface-features) | users | not visible to programs | **0.2.0** | Verified |
 | [Scrollback, reflow, copy and paste](#user-interface-features) | users | not visible to programs | 0.1.0 | Verified |
@@ -687,12 +688,33 @@ bit 32). Never send `CSI ? 2100 h` without it.
 position; none after the mode was reset; hardcode scrolled with the
 wheel, and in the same session a drag selected text). Host test: `tests/test_mouse.c`.
 
+## Shift+Enter
+
+**What it gives you.** A program with its own multi-line editor (a chat
+prompt, a REPL) can let Enter send and Shift+Enter start a new line. Without
+it both keys arrive as CR and the program cannot tell them apart.
+
+**Use.** In raw mode, send `CSI > 4 ; 1 m`. Shift+Enter (Return or the
+keypad's Enter, Shift alone) then arrives as `CSI 27 ; 2 ; 13 ~`. Enter, and
+Enter with Ctrl or Alt, stay CR. `CSI > 4 m` or `CSI > 4 ; 0 m` turns it off.
+
+**Why this form.** It is xterm's modifyOtherKeys sequence for that key, so a
+program that already reads it from xterm and other terminals reads it here.
+Limpet applies it to Enter only; other keys are sent as before at any level.
+
+**Detect.** `XTY_INPUT_MODIFIED_ENTER` in `LimpetPresentation.input` (known
+bit 32). Without it, keep a key of your own for a new line (Ctrl-J, which
+arrives as LF, works in every Limpet and in CON:).
+
+**Status.** Host-tested (`tests/test_bracketed_paste.c`,
+`tests/test_input_echo.c`, `tests/test_presentation.c`); not yet released.
+
 ## Input modes end with raw mode
 
 When a Limpet Shell window returns to cooked mode (a program calls
 `SetMode(Input(), 0)` or ends), Limpet turns off mouse tracking 1000, 1002
-and 1006, bracketed paste 2004, resize reports 2048 and wheel reports
-2100. A program that crashes or forgets to clean up therefore cannot leave
+and 1006, bracketed paste 2004, resize reports 2048, wheel reports 2100 and
+the Shift+Enter mode (`CSI > 4 m`). A program that crashes or forgets to clean up therefore cannot leave
 the Shell, or the next program, with modes it never asked for.
 
 **Consequence for programs.** Set these modes after every switch to raw

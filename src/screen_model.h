@@ -50,7 +50,7 @@ typedef struct XTermScreen {
     unsigned saved_scroll_top, saved_scroll_bottom;
     unsigned saved_history_count, saved_history_head, saved_view_offset;
     XTermCell saved_style;
-    unsigned csi_private, param_started;
+    unsigned csi_private, csi_gt, param_started;
     unsigned csi_intermediate;
     /* The sequence began with the 8-bit CSI (0x9B), as Amiga programs write
      * it; replies to it use the same introducer. Only with amiga_pens. */
@@ -62,6 +62,7 @@ typedef struct XTermScreen {
     unsigned bracketed_paste;   /* DEC 2004: the client wants pastes framed */
     unsigned resize_report;     /* DEC 2048: the client wants size changes in band */
     unsigned wheel_report;      /* private 2100: wheel steps as SGR reports, buttons not taken (hardcode L5) */
+    unsigned modify_enter;      /* CSI > 4 ; 1 m: Shift+Enter as CSI 27;2;13~ in raw mode (Bishop) */
     /* Optional synchronous reply sink; must copy bytes and not reenter this
      * model. The transport decides whether a client may receive replies. */
     void (*reply)(void *, const unsigned char *, size_t);

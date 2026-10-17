@@ -21,6 +21,19 @@ int main(void)
     feed("\033[?1000;2004h"); assert(s.bracketed_paste && s.mouse_tracking == 1000);
     feed(XTERM_SESSION_RESET);
     assert(!s.bracketed_paste && !s.mouse_tracking);
+    /* CSI > 4 ; 1 m: Shift+Enter told apart (modifyOtherKeys, Enter only). */
+    feed("\033[>4;1m"); assert(s.modify_enter);
+    feed("\033[>4m"); assert(!s.modify_enter);
+    feed("\033[>4;2m"); assert(s.modify_enter);
+    feed("\033[>4;0m"); assert(!s.modify_enter);
+    {
+        unsigned col = s.cursor_column;
+        feed("\033[>4;1m\033[>5;1m\033[>c"); assert(s.modify_enter);  /* other CSI > ignored */
+        feed("\033[?4;1m"); assert(s.modify_enter);                    /* not the same sequence */
+        assert(s.cursor_column == col);                                /* nothing of them printed */
+    }
+    feed(XTERM_SESSION_RESET); assert(!s.modify_enter);
+    feed("\033[>4;1m"); screen_reset_input_modes(&s); assert(!s.modify_enter);
     /* Native console back in cooked mode: every input report is off. */
     feed("\033[?1002;1006;2004;2048;2100h");
     assert(s.mouse_tracking == 1002 && s.mouse_sgr && s.bracketed_paste && s.resize_report && s.wheel_report);

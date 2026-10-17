@@ -18,6 +18,9 @@ For programs:
 - The Amiga console's window-size and cursor queries are answered
   (`CSI 0 SPACE q`, `CSI 6 n`), with the 8-bit or the 7-bit CSI, one-based
   as AmigaOS does.
+- Shift+Enter can be told from Enter: a raw-mode program that sends
+  `CSI > 4 ; 1 m` receives Shift+Enter as `CSI 27 ; 2 ; 13 ~`. The
+  presentation query announces it with `XTY_INPUT_MODIFIED_ENTER`.
 
 ## 0.5.0 (2026-10-15)
 

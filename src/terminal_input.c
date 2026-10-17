@@ -50,6 +50,14 @@ size_t terminal_encode_key(TerminalKey key, unsigned modifiers,
     return n;
 }
 
+size_t terminal_encode_modified_enter(unsigned modifiers, unsigned char *output, size_t capacity)
+{
+    static const char seq[] = "\033[27;2;13~";
+    if (modifiers != TERMINAL_SHIFT || !output || capacity < sizeof seq - 1) return 0;
+    memcpy(output, seq, sizeof seq - 1);
+    return sizeof seq - 1;
+}
+
 static unsigned char control(unsigned char c, unsigned modifiers)
 {
     if (!(modifiers & TERMINAL_CTRL)) return c;
