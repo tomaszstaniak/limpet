@@ -457,7 +457,7 @@ int main(void)
     test_osc8();
     test_title();
     test_kitty();
-    assert(!strcmp(LIMPET_SDK_VERSION_STRING, "0.3.0"));
+    assert(!strcmp(LIMPET_SDK_VERSION_STRING, "0.4.0") && LIMPET_SDK_VERSION_MINOR == 4);
     puts("LIMPET SDK PASS: query against the terminal's reply code, refusals, malformed and future replies, "
          "SGR, OSC 8, window title, Kitty framing and limits");
     return 0;

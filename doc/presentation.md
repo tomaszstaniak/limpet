@@ -25,7 +25,7 @@ The reply uses the control envelope described in [protocols.md](protocols.md#env
 | values[4] | Current rows |
 | values[5] | Current columns |
 | values[6] | Colour interpretation mask: bit 0 `XTY_COLOR_PENS` |
-| values[7] | Input modes a raw-mode client may turn on, valid with known bit 5 (value 32): bit 0 bracketed paste (DEC 2004), bit 1 resize reports (DEC 2048), bit 2 wheel reports (private 2100). Limpet 0.2.0 and later; 0.1.0 leaves the field and its known bit clear |
+| values[7] | Input modes a raw-mode client may turn on, valid with known bit 5 (value 32): bit 0 bracketed paste (DEC 2004), bit 1 resize reports (DEC 2048), bit 2 wheel reports (private 2100), bit 3 Shift+Enter as `CSI 27 ; 2 ; 13 ~` after `CSI > 4 ; 1 m` (Limpet 0.6.0). Limpet 0.2.0 and later; 0.1.0 leaves the field and its known bit clear |
 | values[8] | Terminal features, valid with known bit 6 (value 64, `XTY_PRESENT_KNOWN_FEATURES`): bit 0 `XTY_FEATURE_TITLE`, OSC 0/2 set the window title. Limpet 0.3.0 and later; 0.2.x leaves the field and its known bit clear, so an answered query alone never means titles work |
 | values[9..11] | Reserved, zero |
 

@@ -5,7 +5,7 @@ Limpet and the SDK have separate version numbers and separate tags.
 | | Version | Archive | Git tag |
 | --- | --- | --- | --- |
 | Limpet (the terminal) | 0.5.0 | `Limpet-0.5.0-abiv11.zip` | `v0.5.0` |
-| Limpet SDK | 0.3.0 | `limpet-sdk-0.3.0.zip` | `sdk-v0.3.0` |
+| Limpet SDK | 0.4.0 | `limpet-sdk-0.4.0.zip` | `sdk-v0.4.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
 Limpet 0.2.1 (tag `v0.2.1`), 0.2.0 (tag `v0.2.0`) and 0.1.0 (tag `v0.1.0`)
@@ -57,7 +57,7 @@ minor version.
 ### Binary compatibility
 
 Binary compatibility is not guaranteed in SDK 0.x. Structures such as `LimpetPresentation` may grow at the
-end (0.2.0 added `input`, 0.3.0 `features`), so every object that uses the SDK must be
+end (0.2.0 added `input`, 0.3.0 `features`; 0.4.0 added only a bit), so every object that uses the SDK must be
 compiled with the same SDK version as the library it links with. Rebuild
 after updating the SDK.
 
@@ -74,7 +74,9 @@ caller's struct at run time.
 | 0.2.0 | Limpet 0.2.0, 0.2.1 | colours, styles, geometry and input modes |
 | 0.2.0 | Limpet 0.1.0 | everything marked "Since 0.1.0"; the input modes are reported as unknown, so a program does not turn them on |
 | 0.2.0 | Limpet 0.3.0 | everything as with 0.2.1; the window title is not decoded, so a program does not send one |
-| 0.3.0 | Limpet 0.3.0–0.5.0 | SDK 0.3.0 features, including window titles |
+| 0.3.0 | Limpet 0.3.0–0.6.0 | SDK 0.3.0 features, including window titles; the Shift+Enter bit is not named, so a program does not turn it on |
+| 0.4.0 | Limpet 0.6.0 | every SDK 0.4.0 feature, including Shift+Enter |
+| 0.4.0 | Limpet 0.3.0–0.5.0 | as SDK 0.3.0; `XTY_INPUT_MODIFIED_ENTER` stays clear |
 | 0.3.0 | Limpet 0.2.x | as SDK 0.2.0; `limpet_can_set_title()` returns 0 |
 | any | a future Limpet | everything the SDK knows; newer fields are ignored until a newer SDK decodes them |
 

@@ -10,7 +10,7 @@ AROS C cross-compilation setup is required.
   **ABIv11 Developer SDK**. The SDK was built and tested with GCC 10.5 and
   the 2026.09 Developer SDK.
 - `make`, `unzip`.
-- To run the result: AROS ABIv11 x86_64 and Limpet 0.3.0 or later for
+- To run the result: AROS ABIv11 x86_64 and Limpet 0.6.0 or later for
   all SDK features. Earlier Limpet versions report newer features as unknown;
   unsupported consoles use plain-text fallback.
 
@@ -20,8 +20,8 @@ SDK release ships a library for ABIv11 only. See
 
 ## 1. Unpack
 
-    unzip limpet-sdk-0.3.0.zip
-    cd limpet-sdk-0.3.0
+    unzip limpet-sdk-0.4.0.zip
+    cd limpet-sdk-0.4.0
 
 | Path | Contents |
 | --- | --- |
@@ -57,23 +57,24 @@ using the prebuilt one, run the same command with `rebuild-lib`, then
 Copy `build/abiv11/` to the AROS machine, start Limpet, and run `hello`
 from the Limpet window:
 
-    Limpet SDK 0.3.0
+    Limpet SDK 0.4.0
     Output is a Limpet console.
       Colours:       24-bit colour (SGR 38;2;r;g;b)
       SGR 30-37:     Workbench screen pens; ANSI colours go as 38;5;0-15
       Bold, reset:   yes
       Rewrite line:  yes (CR and CSI K)
       Size:          117 columns x 37 rows, when asked
-      Input modes:   bracketed paste (2004) resize reports (2048) wheel reports (2100)
+      Input modes:   bracketed paste (2004) resize reports (2048) wheel reports (2100) Shift+Enter (CSI > 4 ; 1 m)
       Window title:  settable (OSC 0/2)
 
-In Limpet 0.2.x the last line reads
+In Limpet 0.3.0 to 0.5.0 the input modes end before Shift+Enter. In
+Limpet 0.2.x the last line reads
 `Window title:  unknown (Limpet before 0.3.0 does not report it)`; in Limpet
 0.1.0 the input modes are unknown as well.
 
 Run it again in a normal AROS Shell window (`CON:`):
 
-    Limpet SDK 0.3.0
+    Limpet SDK 0.4.0
     This console does not answer the Limpet query (CON: or another console).
     Nothing is known about it: plain text only.
 
@@ -107,8 +108,8 @@ int main(void)
 Build it like the examples:
 
     x86_64-aros-gcc -O2 --sysroot=$AROS_SDK -I$AROS_SDK/include \
-        -Ilimpet-sdk-0.3.0/include myprog.c -o myprog \
-        -L$AROS_SDK/lib -Llimpet-sdk-0.3.0/lib/abiv11 -lLimpet
+        -Ilimpet-sdk-0.4.0/include myprog.c -o myprog \
+        -L$AROS_SDK/lib -Llimpet-sdk-0.4.0/lib/abiv11 -lLimpet
 
 Or skip the library and compile the two files in `src/` into your program;
 they need nothing but `dos.library` and the C library.

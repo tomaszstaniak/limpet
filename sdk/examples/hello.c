@@ -70,10 +70,11 @@ int main(void)
     /* Input modes a raw-mode program may turn on. Limpet 0.1.0 does not
        report this field, so "unknown" is the honest answer there. */
     if (p.known & XTY_PRESENT_KNOWN_INPUT)
-        printf("  Input modes:   %s%s%s%s\n",
+        printf("  Input modes:   %s%s%s%s%s\n",
                p.input & XTY_INPUT_BRACKETED_PASTE ? "bracketed paste (2004) " : "",
                p.input & XTY_INPUT_RESIZE_REPORT ? "resize reports (2048) " : "",
-               p.input & XTY_INPUT_WHEEL_REPORT ? "wheel reports (2100)" : "",
+               p.input & XTY_INPUT_WHEEL_REPORT ? "wheel reports (2100) " : "",
+               p.input & XTY_INPUT_MODIFIED_ENTER ? "Shift+Enter (CSI > 4 ; 1 m)" : "",
                p.input ? "" : "none");
     else
         puts("  Input modes:   unknown (Limpet 0.1.0 does not report them)");

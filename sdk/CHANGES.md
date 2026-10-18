@@ -1,5 +1,29 @@
 # Limpet SDK changes
 
+## 0.4.0 (2026-10-18)
+
+Works with Limpet 0.1.0 to 0.6.0.
+
+Added:
+
+- Input bit `XTY_INPUT_MODIFIED_ENTER` (8) in `LimpetPresentation.input`:
+  in raw mode, after `CSI > 4 ; 1 m`, Shift+Enter arrives as
+  `CSI 27 ; 2 ; 13 ~` (Limpet 0.6.0). Limpet 0.5.0 and earlier leave the
+  bit clear.
+- `hello` lists the new input mode.
+
+Changed:
+
+- Nothing in the binary interface: `LimpetPresentation` and the link names
+  are the same as in 0.3.0, so objects built with SDK 0.3.0 link with this
+  library unchanged.
+- `test_sdk_compat.sh` also checks an SDK 0.3.0 client (vendored in
+  `sdk/tests/compat-0.3.0` from tag `sdk-v0.3.0`), and that an object built
+  with the 0.3.0 header links with this library and decodes the reply.
+
+Protocol header `tty_control.h`: SHA-256
+`53c8c07797ad897a64ad54a60877f1ae9887536d86087c66a6eb4bff7c015907`.
+
 ## 0.3.0 (2026-10-11)
 
 Works with Limpet 0.1.0 to 0.3.0.

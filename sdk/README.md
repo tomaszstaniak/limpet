@@ -1,4 +1,4 @@
-# Limpet SDK 0.3.0
+# Limpet SDK 0.4.0
 
 The SDK provides a presentation query and helpers for colour, progress
 lines, links, images and window titles in the Limpet terminal. Programs
@@ -40,17 +40,20 @@ window and from the Shell in a `CON:` window.
 
 ## Compatibility
 
-Works against Limpet 0.3.0 (every feature), 0.2.0 and 0.2.1 (everything
-except the window title, which they do not confirm) and 0.1.0 (also
+Works against Limpet 0.6.0 (every feature), 0.3.0 to 0.5.0 (everything
+except Shift+Enter, which they do not report), 0.2.0 and 0.2.1 (also
+without the window title, which they do not confirm) and 0.1.0 (also
 without the input modes, which it reports as unknown). Code written for an
-earlier SDK compiles unchanged, but objects must be rebuilt with this
-version: `LimpetPresentation` grew again. Details: `doc/versioning.md`.
+earlier SDK compiles unchanged. Objects built with SDK 0.3.0 link with this
+version unchanged; objects built with 0.1 or 0.2 must be rebuilt. Details:
+`doc/versioning.md`.
 
 ## Build requirements
 
 An ABIv11 x86_64 C toolchain and matching Developer SDK are required.
 The prebuilt library uses GCC 10.5 and the 2026.09 SDK. Rebuild it when
 using an incompatible toolchain. Verification records are in
-`doc/sdk/verification-0.3.0.md` and `doc/sdk/verification-0.2.0.md`.
+`doc/sdk/verification-0.4.0.md`, `doc/sdk/verification-0.3.0.md` and
+`doc/sdk/verification-0.2.0.md`.
 
 Project: <https://github.com/tomaszstaniak/limpet>

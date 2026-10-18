@@ -1,6 +1,6 @@
 # Limpet SDK API reference
 
-SDK version 0.3.0. Header: `#include <limpet/limpet.h>`, which also
+SDK version 0.4.0. Header: `#include <limpet/limpet.h>`, which also
 includes the protocol header `limpet/tty_control.h`.
 
 ## API and protocol
@@ -34,9 +34,9 @@ Applications may also use the packet protocol directly.
 
 ```c
 #define LIMPET_SDK_VERSION_MAJOR 0
-#define LIMPET_SDK_VERSION_MINOR 3
+#define LIMPET_SDK_VERSION_MINOR 4
 #define LIMPET_SDK_VERSION_PATCH 0
-#define LIMPET_SDK_VERSION_STRING "0.3.0"
+#define LIMPET_SDK_VERSION_STRING "0.4.0"
 ```
 
 These describe the SDK, not the terminal. Queries report capabilities, not the terminal version.
@@ -45,6 +45,7 @@ These describe the SDK, not the terminal. Queries report capabilities, not the t
 
 `LimpetPresentation` is part of the binary interface. SDK 0.2.0 appended
 `input` (28 to 32 bytes) and SDK 0.3.0 `features` (32 to 36 bytes).
+SDK 0.4.0 only adds an input bit; the struct is the same as in 0.3.0.
 Compile every object that uses the SDK, and the library, with the same SDK
 version.
 
@@ -97,7 +98,7 @@ typedef struct {
 | `lines` | `XTY_PRESENT_KNOWN_LINES` (4) | bits `XTY_LINE_CR` (1), `XTY_LINE_ERASE_EOL` (2) |
 | `rows`, `columns` | `XTY_PRESENT_KNOWN_GEOMETRY` (8) | both positive |
 | `interpretation` | `XTY_PRESENT_KNOWN_INTERPRETATION` (16) | bit `XTY_COLOR_PENS` (1) |
-| `input` (0.2.0) | `XTY_PRESENT_KNOWN_INPUT` (32) | bits `XTY_INPUT_BRACKETED_PASTE` (1), `XTY_INPUT_RESIZE_REPORT` (2), `XTY_INPUT_WHEEL_REPORT` (4): modes a raw-mode program may turn on |
+| `input` (0.2.0) | `XTY_PRESENT_KNOWN_INPUT` (32) | bits `XTY_INPUT_BRACKETED_PASTE` (1), `XTY_INPUT_RESIZE_REPORT` (2), `XTY_INPUT_WHEEL_REPORT` (4), `XTY_INPUT_MODIFIED_ENTER` (8, SDK 0.4.0; Limpet 0.6.0): modes a raw-mode program may turn on |
 | `features` (0.3.0) | `XTY_PRESENT_KNOWN_FEATURES` (64) | bit `XTY_FEATURE_TITLE` (1): OSC 0/2 set the window title (Limpet 0.3.0) |
 
 A clear bit in `known` marks an unknown field; a set bit with a zero value

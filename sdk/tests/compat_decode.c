@@ -18,6 +18,10 @@ int main(int argc, char **argv)
     /* SDK 0.2.0 and later. */
     printf(" input=%u", (unsigned)p.input);
 #endif
+#ifdef XTY_PRESENT_KNOWN_FEATURES
+    /* SDK 0.3.0 and later. */
+    printf(" features=%u", (unsigned)p.features);
+#endif
     putchar('\n');
     return 0;
 }
