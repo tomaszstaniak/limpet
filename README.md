@@ -9,7 +9,14 @@ The goal is to replace `CON:`: keep compatibility with existing AROS
 software and support modern command-line tools, full-screen applications
 and remote work over SSH.
 
-![Limpet showing an animated plasma drawn with the Kitty graphics protocol](doc/screenshots/kitty-plasma.png)
+![A rotating Mandelbrot zoom in Limpet](doc/screenshots/mandelbrot-zoom.gif)
+
+Mandelbrot zoom, drawn with Unicode half-blocks and 24-bit ANSI colours.
+
+![The James Webb Space Telescope’s Cosmic Cliffs image displayed in Limpet](doc/screenshots/webb-kitty.png)
+
+Webb’s *Cosmic Cliffs*, displayed with the Kitty graphics protocol.
+Image: NASA, ESA, CSA, STScI.
 
 ## Download
 
