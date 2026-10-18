@@ -3,7 +3,7 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## Unreleased
+## 0.6.0 (2026-10-18)
 
 For users:
 
@@ -20,7 +20,13 @@ For programs:
   as AmigaOS does.
 - Shift+Enter can be told from Enter: a raw-mode program that sends
   `CSI > 4 ; 1 m` receives Shift+Enter as `CSI 27 ; 2 ; 13 ~`. The
-  presentation query announces it with `XTY_INPUT_MODIFIED_ENTER`.
+  presentation query announces it with `XTY_INPUT_MODIFIED_ENTER`, which
+  Limpet SDK 0.4.0 names. `CSI > 4 m`, `CSI > 4 n` and `CSI > m` turn it
+  off, and it ends with raw mode like the other input modes.
+
+The experimental [LIMPET:](limpet-handler.md) handler, still a separate
+archive, has the same three: the Amiga console's reports, Ctrl-D/E/F and
+Ctrl-\.
 
 ## 0.5.0 (2026-10-15)
 

@@ -2,9 +2,9 @@
 
 ## Systems
 
-The current terminal release, **0.5.0**, and the prebuilt SDK **0.3.0**
-target **AROS ABIv11 x86_64**. The 0.5.0 archive was checked on AROS One 1.3;
-see the [verification record](verification-0.5.0.md) for build and runtime details.
+The current terminal release, **0.6.0**, and the prebuilt SDK **0.4.0**
+target **AROS ABIv11 x86_64**. The 0.6.0 archive was checked on AROS One 1.3;
+see the [verification record](verification-0.6.0.md) for build and runtime details.
 
 Mainline x86_64 has an older development preview, but no current public
 release. Other architectures and other Amiga-family systems have no published
@@ -15,7 +15,8 @@ An ABI match alone does not establish compatibility with a particular system.
 
 | Terminal | Presentation query | Stream features in this documentation |
 | --- | --- | --- |
-| Limpet 0.3.0–0.5.0 | answers, with input modes and title feature | see the per-feature versions in the [catalogue](capabilities.md) |
+| Limpet 0.6.0 | answers, with input modes (including Shift+Enter) and title feature | see the per-feature versions in the [catalogue](capabilities.md) |
+| Limpet 0.3.0–0.5.0 | answers, with input modes and title feature | as listed, except entries marked "Since 0.6.0" |
 | Limpet 0.2.0, 0.2.1 | answers, with input modes | as listed, except entries marked "Since 0.3.0" |
 | Limpet 0.1.0 | answers, without input modes | as listed, except entries marked "Since 0.2.0" |
 | `CON:` (system console) | `ERROR_ACTION_NOT_KNOWN` | the Amiga console sequences, not the ones documented here |
@@ -37,7 +38,7 @@ following is claimed:
 
 The exact subsets are in the [protocol reference](protocols.md).
 
-## Limits in 0.5.0
+## Limits in 0.6.0
 
 | Item | Limit |
 | --- | --- |
@@ -52,8 +53,8 @@ The exact subsets are in the [protocol reference](protocols.md).
 
 - **No resize signal.** Ask for the size again, or (0.2.0) turn on resize
   reports in raw mode.
-- **Input modes end with raw mode** (0.2.0). Set 2004, 2048, 2100 and mouse
-  tracking again after each switch to raw mode.
+- **Input modes end with raw mode** (0.2.0). Set 2004, 2048, 2100, mouse
+  tracking and (0.6.0) Shift+Enter again after each switch to raw mode.
 - **No reply in cooked mode.** Stream queries are answered only in raw
   mode.
 - **SGR 30-37 are pens** in a Shell session. Use `38;5;n` for ANSI colours

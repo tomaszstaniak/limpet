@@ -23,6 +23,24 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in 0.6.0
+------------
+
+- Ctrl-D, Ctrl-E and Ctrl-F work as in the system console: the program
+  reading the window gets that break signal. Ctrl-D stops a running
+  script.
+- Ctrl-\ ends input once, as in the system console: a program reading
+  the window sees the end of its input, and at the Shell prompt the Shell
+  ends. F5 still ends the window's input for good.
+- For programs in raw mode: after CSI > 4 ; 1 m, Shift+Enter arrives as
+  CSI 27 ; 2 ; 13 ~, so a program can use Enter to send and Shift+Enter
+  for a new line. Enter and other modified Enters stay CR. The
+  presentation query announces it; Limpet SDK 0.4.0 names the bit.
+- For programs: the Amiga console's window-size (CSI 0 SPACE q) and
+  cursor (CSI 6 n) queries are answered, one-based as AmigaOS does.
+- The program is 3,416,912 bytes, 3,336 more than 0.5.0.
+
+
 New in 0.5.0
 ------------
 
@@ -205,6 +223,9 @@ Keys
 ----
 
     Ctrl-C                    break the command running in the Shell
+    Ctrl-D / Ctrl-E / Ctrl-F  send that break signal to the program
+                              reading the window (Ctrl-D stops a script)
+    Ctrl-\                    end input once (at the prompt: end the Shell)
     Up / Down                 earlier commands
     Ctrl-R                    search earlier commands (Enter: edit it,
                               Esc: back to the line as it was)
@@ -243,6 +264,9 @@ Features on this build
                                                      (new in 0.4.0)
     Find in output                                   yes (new in 0.5.0)
     Settings file: font, theme, scrollback, history  yes (new in 0.5.0)
+    Ctrl-D/E/F signals, Ctrl-\ end of input          yes (new in 0.6.0)
+    Shift+Enter for raw-mode programs                yes, when the program
+                                                     asks (new in 0.6.0)
     POSIX pseudo-terminal (PTY)                      no; the PTY is a separate
                                                      preview for mainline only
 

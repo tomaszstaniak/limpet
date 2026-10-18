@@ -1,10 +1,10 @@
 # Limpet capabilities
 
-This page describes **Limpet 0.5.0** and **SDK 0.3.0** for AROS ABIv11,
+This page describes **Limpet 0.6.0** and **SDK 0.4.0** for AROS ABIv11,
 x86_64. It covers terminal features, application interfaces and the separate
 experimental `LIMPET:` console handler.
 
-Features added after 0.5.0 are listed under [Unreleased changes](#unreleased-changes).
+Features added after 0.6.0 are listed under [Unreleased changes](#unreleased-changes).
 For installation and platform requirements, see [compatibility](compatibility.md).
 
 ## Feature detection
@@ -36,7 +36,7 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Bracketed paste](#bracketed-paste) | mode 2004; presentation input bit | 0.2.0 |
 | [Resize reports](#resize-reports) | mode 2048; presentation input bit | 0.2.0 |
 | [Wheel reports](#wheel-reports) | Limpet mode 2100; presentation input bit | 0.2.0 |
-| [Shift+Enter](#shiftenter) | `CSI > 4 ; 1 m`; presentation input bit | unreleased |
+| [Shift+Enter](#shiftenter) | `CSI > 4 ; 1 m`; presentation input bit | 0.6.0 |
 | [Window title](#window-title) | OSC 0/2; presentation feature bit | 0.3.0 |
 | [Command history search](#history-search) | Ctrl-R | 0.3.0 |
 | [File drop](#file-drop) | drag Workbench icons onto the command line | 0.4.0 |
@@ -44,6 +44,8 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Find in output](#find-in-output) | RAmiga+F or Ctrl+Shift+F | 0.5.0 |
 | [Settings](#settings) | ENV:Limpet/Limpet.conf | 0.5.0 |
 | [Console handler](#limpet-console-handler) | LIMPET:; separate experimental archive | 0.5.0 |
+| [Amiga console reports](#amiga-console-reports) | `CSI 0 SPACE q`, `CSI 6 n` with the 8-bit CSI | 0.6.0 |
+| [Ctrl-D/E/F, Ctrl-\\](#ctrl-c) | break signals and end of input, as in `CON:` | 0.6.0 |
 
 ## Presentation query
 
@@ -98,7 +100,7 @@ The presentation query reports one of three colour levels.
 | INDEXED256 | 2 | adds `38;5;n` and `48;5;n` |
 | RGB | 3 | adds `38;2;r;g;b` and `48;2;r;g;b` |
 
-Limpet 0.5.0 reports level 3. The colour capability covers semicolon forms
+Limpet 0.6.0 reports level 3. The colour capability covers semicolon forms
 and 7-bit CSI only; it does not guarantee colon forms (`38:2::r:g:b`) or
 the 8-bit CSI byte 0x9B.
 
@@ -239,6 +241,20 @@ so that nothing appears at the Shell prompt.
 A program that sends a query must read the reply with a time limit
 (`WaitForChar()`), parse it among ordinary key presses, and never send a
 query while the user is typing something else.
+
+## Amiga console reports
+
+Since **0.6.0**, a Shell session also answers the two reports of the Amiga
+console, so a program written for `CON:` can ask Limpet for the window size
+and the cursor position.
+
+- `CSI 0 SPACE q` (or `CSI SPACE q`) answers `0x9B 1;1;rows;columns SPACE r`.
+- `CSI 6 n` sent with the 8-bit CSI (`0x9B`) answers `0x9B row;column R`.
+  Sent with `ESC [`, it answers `ESC [ row ; column R` as before.
+
+Both are one-based, as AmigaOS answers. The `CON:` of ABIv11 answers one
+lower. Replies come in raw mode only, like the other queries, and give the
+new size after a resize.
 
 ## Alternate screen
 
@@ -429,6 +445,16 @@ consoles.
   the Shell and the command it runs, as in `CON:`. Programs check it with
   `SetSignal()` or `CheckSignal()`.
 - **Raw mode:** Ctrl-C arrives as byte 3. No signal is sent.
+
+Since **0.6.0**, Ctrl-D, Ctrl-E and Ctrl-F send `SIGBREAKF_CTRL_D`, `_E`
+and `_F` to the program reading the window in cooked mode, as in `CON:`;
+Ctrl-D stops a running script. In raw mode they arrive as bytes 4, 5 and 6.
+
+Ctrl-\ ends input once, as in `CON:`: text already typed reaches the
+program without a line end, the next read returns 0, and later reads wait
+for input again. At the Shell prompt the Shell ends. Unlike `CON:`, Ctrl-\
+waits its turn behind keys and pastes typed before it. F5 still ends the
+window's input for good.
 
 After a break the Shell shows one new prompt (0.3.0; earlier versions
 printed two on one line after interrupting a running command). Ctrl-C at
@@ -668,25 +694,24 @@ The broader PTY cancellation API remains experimental.
 
 ## LIMPET: console handler
 
-The separate **0.5.0 experimental handler** lets a program open a Limpet
+The separate **0.6.0 experimental handler** lets a program open a Limpet
 console through DOS:
 
 ```text
 NewShell WINDOW LIMPET:
 ```
 
-It is distributed as `Limpet-handler-experimental-0.5.0-abiv11.zip`, not
+It is distributed as `Limpet-handler-experimental-0.6.0-abiv11.zip`, not
 installed by the main archive or apkg. Installation lasts until reboot and
 does not replace `CON:`. Programs opening `CON:` still get the system console.
 
 The released handler supports console names with geometry and title, cooked
-and raw input, Shell scripts, redirection and multiple writers. Important
-limits in **the 0.5.0 handler**:
+and raw input, Shell scripts, redirection and multiple writers, and, since
+0.6.0, the Amiga console's reports, Ctrl-D/E/F and Ctrl-\. Important
+limits in **the 0.6.0 handler**:
 
 - only one reader or `WaitForChar` request can be pending;
 - `AUTO` opens the window immediately; `WINDOW` is rejected;
-- Amiga window-bounds reports, Ctrl-D/E/F signals and Ctrl-\ EOF are not
-  available in that release;
 - raw-mode LF moves down without returning to column 1;
 - the console information exposes dimensions, but is not a working
   `console.device` endpoint for direct device I/O;
@@ -695,7 +720,7 @@ limits in **the 0.5.0 handler**:
 
 For installation, see [the handler guide](limpet-handler.md#install-and-remove).
 The guide includes development changes; the list above describes the
-released 0.5.0 archive.
+released 0.6.0 archive.
 
 ## Terminal settings (termios) and PTY
 
@@ -718,16 +743,13 @@ part of the ABIv11 release and has not been built for ABIv11.
 
 ## Unreleased changes
 
-The local development tree adds Amiga console window-bounds and cursor
-reports, cooked-mode Ctrl-D/E/F signals, and Ctrl-\ to end input once.
-These changes also affect ordinary Shell windows because the session code
-is shared. They are **not part of Limpet 0.5.0 or its handler archive**.
-See [the handler guide](limpet-handler.md) for current contracts and remaining
-compatibility gaps. F5 remains the permanent end-of-input shortcut.
+None that affect programs. The development tree may hold work on the
+experimental handler that is not in the 0.6.0 archive; see
+[the handler guide](limpet-handler.md).
 
 ## References
 
 - [Protocol reference](protocols.md) and [SDK API](sdk/api.md)
 - [Changes by release](changes.md)
-- [0.5.0 verification record](verification-0.5.0.md), with earlier records
+- [0.6.0 verification record](verification-0.6.0.md), with earlier records
   linked from the corresponding releases

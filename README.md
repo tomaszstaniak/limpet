@@ -20,12 +20,12 @@ Image: NASA, ESA, CSA, STScI.
 
 ## Download
 
-- [Limpet 0.5.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.5.0)
+- [Limpet 0.6.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.6.0)
   for AROS ABIv11, x86_64.
-- [SDK 0.3.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.3.0)
+- [SDK 0.4.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.4.0)
   for application developers.
 - The separate `LIMPET:` console handler is an experimental download in the
-  0.5.0 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
+  0.6.0 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
 
 Earlier releases are listed on [GitHub](https://github.com/tomaszstaniak/limpet/releases).
 See the [terminal changelog](doc/changes.md) and [SDK changelog](sdk/CHANGES.md)
@@ -62,7 +62,9 @@ Limpet includes:
   command line;
 - from 0.5.0: finding text in the output, and a settings file for the
   font, theme, scrollback and command history
-  ([details](doc/search-and-settings.md)).
+  ([details](doc/search-and-settings.md));
+- from 0.6.0: Ctrl-D/E/F and Ctrl-\ as in the system console, and
+  Shift+Enter for programs with their own multi-line input.
 
 The AROS Shell itself is unchanged: Limpet is the window it runs in.
 Limpet runs alongside the system console for now. Programs that explicitly
@@ -111,7 +113,7 @@ input. If the console does not support it, the application can use plain text.
 | --- | --- |
 | ![hello example in Limpet](doc/screenshots/sdk-hello.png) | ![examples in CON:](doc/screenshots/sdk-con-fallback.png) |
 
-The SDK archive (`limpet-sdk-0.3.0.zip`, tag `sdk-v0.3.0`) contains the
+The SDK archive (`limpet-sdk-0.4.0.zip`, tag `sdk-v0.4.0`) contains the
 headers, a prebuilt library for ABIv11, the library sources, eight
 examples and this documentation.
 

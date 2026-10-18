@@ -13,8 +13,8 @@ Scope of this stage: AROS ABIv11 x86_64, tested on AROS One 1.3 under
 QEMU. Not built or run on mainline, not run on ABIv11 2026.09 or real
 hardware.
 
-The compatibility table also includes unreleased stage 2 changes. For the
-limits of the published 0.5.0 archive, see the [release capability reference](capabilities.md#limpet-console-handler).
+The table describes the handler of the 0.6.0 archive. For a short list of
+its limits, see the [capability reference](capabilities.md#limpet-console-handler).
 
 ## Install and remove
 
@@ -80,7 +80,8 @@ Measured with `tests/con_contract.c`, which opens the console by the name
 it is given and runs the same checks against `CON:` and `LIMPET:`
 (`make abiv11-xterm-console` builds it as `con-contract`). "Test" names the
 check in its log, or the runtime step of the [verification
-record](verification-0.5.0.md#limpet-handler-experimental).
+records](verification-0.5.0.md#limpet-handler-experimental) and
+[stage 2](verification-handler-stage2.md).
 
 | Contract | LIMPET: | Where | Test |
 | --- | --- | --- | --- |

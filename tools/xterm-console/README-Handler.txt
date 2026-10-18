@@ -38,9 +38,11 @@ refused.
 Missing compared with CON:
 --------------------------
 
-- no answer to the window-size (CSI 0 SPACE q) and cursor (CSI 6 n)
-  queries of the Amiga console;
-- Ctrl-D, Ctrl-E and Ctrl-F send no signal; F5, not Ctrl-\, ends input;
+- the window-size (CSI 0 SPACE q) and cursor (CSI 6 n) reports are
+  one-based, as AmigaOS answers; the CON: of ABIv11 answers one lower;
+- Ctrl-\ waits its turn behind keys typed before it; CON: ends input at
+  once;
+- in raw mode a line feed moves down without going to the left edge;
 - one program at a time may read or wait for keys;
 - about 32 MB of memory per window, and a start of 15-25 s under QEMU;
 - programs that use the console.device behind the window cannot;

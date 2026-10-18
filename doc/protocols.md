@@ -1,6 +1,6 @@
 # Protocol reference
 
-This reference covers **Limpet 0.5.0**. Applications use escape sequences
+This reference covers **Limpet 0.6.0**. Applications use escape sequences
 through standard I/O and the control protocol through DOS packets on the same
 handle. See the [capability reference](capabilities.md) for feature detection
 and [unreleased changes](capabilities.md#unreleased-changes) for development additions.
@@ -43,11 +43,15 @@ Text is UTF-8. An invalid byte is shown as U+FFFD.
 | `CSI ? 2004 h` / `l` | bracketed paste | **0.2.0**; raw mode only |
 | `CSI ? 2048 h` / `l` | resize reports | **0.2.0**; raw mode only |
 | `CSI ? 2100 h` / `l` | wheel reports, buttons left to the terminal | **0.2.0**; Limpet private mode; raw mode only |
+| `CSI > 4 ; 1 m` / `CSI > 4 m` | Shift+Enter as `CSI 27 ; 2 ; 13 ~` on / off (xterm modifyOtherKeys, Enter only); also off: `CSI > 4 ; 0 m`, `CSI > 4 n`, `CSI > m` | **0.6.0**; raw mode only |
 | `CSI ... m` | SGR | see below |
 | `CSI 5 n`, `CSI 6 n`, `CSI ? 6 n` | status, cursor position | reply in raw mode only |
 | `CSI 18 t` | text area size | reply `CSI 8 ; rows ; cols t`, raw mode only |
+| `0x9B 6 n` | cursor position, Amiga form | **0.6.0**; reply `0x9B row ; col R`, raw mode only |
+| `CSI 0 SPACE q`, `CSI SPACE q` (either introducer) | window bounds, Amiga form | **0.6.0**; reply `0x9B 1 ; 1 ; rows ; cols SPACE r`, raw mode only |
 
-Anything else is ignored. In particular there is no reply to device
+Other `CSI >` sequences are ignored. Anything else is ignored. In
+particular there is no reply to device
 attribute requests (`CSI c`), so a program cannot identify Limpet that way.
 
 ## Output: SGR
@@ -92,8 +96,11 @@ ignored. Image data never appears as text.
 | --- | --- |
 | cursor keys | `CSI A`, `CSI B`, `CSI C`, `CSI D` |
 | Ctrl-C | 0x03 (in cooked mode: the break signal instead) |
+| Ctrl-D, Ctrl-E, Ctrl-F | 0x04, 0x05, 0x06 (in cooked mode, from 0.6.0: the break signals D, E, F instead) |
+| Ctrl-\ | 0x1C (in cooked mode, from 0.6.0: end of input once instead) |
 | Esc | 0x1B |
 | Enter | 0x0D |
+| Shift+Enter | 0x0D; `CSI 27 ; 2 ; 13 ~` after `CSI > 4 ; 1 m` (0.6.0) |
 
 Replies to queries (`CSI 6 n`, `CSI 18 t`, Kitty `a=q`) arrive in the same
 stream, in raw mode only. Mouse reports (`CSI < b ; x ; y M`) likewise.
@@ -119,7 +126,7 @@ stream, in raw mode only. Mouse reports (`CSI < b ; x ; y M`) likewise.
 ### Modes end with raw mode (0.2.0)
 
 When a native Shell window returns to cooked mode, Limpet turns off 1000,
-1002, 1006, 2004, 2048 and 2100. Set them again after each
+1002, 1006, 2004, 2048, 2100 and (0.6.0) the Shift+Enter mode. Set them again after each
 `SetMode(Input(), 1)`. A PTY session (experimental) resets them when it
 ends.
 
@@ -155,7 +162,7 @@ The response marker distinguishes a completed request from an unchanged block. O
 
 ### Control operations
 
-| No. | Name | Released Shell session (through 0.5.0) | Experimental PTY |
+| No. | Name | Released Shell session (through 0.6.0) | Experimental PTY |
 | --- | --- | --- | --- |
 | 1 | `XTY_CAPS` | `ERROR_ACTION_NOT_KNOWN` | yes |
 | 2-12 | config, geometry, read state, flush, drain, flow | `ERROR_ACTION_NOT_KNOWN` | yes |
