@@ -20,8 +20,9 @@ jobs:
       # The pin changes only with a deliberate protocol change. Limpet 0.1.0
       # was built from 921bc72d...; Limpet 0.2.0 adds the presentation input
       # field (known bit 32: DEC 2004, DEC 2048, private 2100); Limpet 0.3.0
-      # the features field (known bit 64: window title). Older clients
-      # are checked by sdk/tests/test_sdk_compat.sh.
+      # the features field (known bit 64: window title); Limpet 0.6.0 the
+      # input bit 8 (Shift+Enter, CSI > 4 ; 1 m). Older clients are checked
+      # by sdk/tests/test_sdk_compat.sh.
       - name: Protocol header is the reviewed one
         run: |
-          echo "80894ef8484a47852fa861cac26cecdc88b9d5bc5b3b41da40b33f0d7034e64b  sdk/include/limpet/tty_control.h" | sha256sum -c -
+          echo "53c8c07797ad897a64ad54a60877f1ae9887536d86087c66a6eb4bff7c015907  sdk/include/limpet/tty_control.h" | sha256sum -c -
