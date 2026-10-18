@@ -480,12 +480,14 @@ static void execute_csi(XTermScreen *s, unsigned char command)
     /* xterm's modifyOtherKeys, CSI > 4 ; Pv m, for Enter only: with a level
        of 1 or more a raw-mode client gets Shift+Enter as CSI 27;2;13~ and
        can tell it from Enter. CSI > 4 m or a level of 0 turns it off, and
-       so does CSI > m, which resets every key-modifier resource in xterm.
+       so does CSI > m, which resets every key-modifier resource in xterm,
+       and CSI > 4 n, which disables the resource.
        Any other CSI > sequence is ignored, as before. */
     if(s->csi_gt) {
         if(s->csi_intermediate) return;
         if(command=='m' && s->params[0]==4) s->modify_enter=s->param_count>1 && s->params[1]>0;
         else if(command=='m' && !s->param_started) s->modify_enter=0;   /* CSI > m only: CSI > 0 m is modifyKeyboard */
+        else if(command=='n' && s->params[0]==4) s->modify_enter=0;     /* xterm: CSI > 4 n disables modifyOtherKeys */
         return;
     }
     /* Queries observe the live cursor, including a pending right-margin wrap.

@@ -41,8 +41,8 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
    INPUT_MODIFIED_ENTER: in raw mode the client may send CSI > 4 ; 1 m
    (xterm's modifyOtherKeys, here for Enter only) and then receives
    Shift+Enter as CSI 27 ; 2 ; 13 ~ (Shift alone: with Ctrl, Alt or an
-   Amiga key it stays CR, as does Enter). CSI > 4 m, CSI > 4 ; 0 m and
-   CSI > m turn it off.
+   Amiga key it stays CR, as does Enter). CSI > 4 m, CSI > 4 ; 0 m,
+   CSI > 4 n and CSI > m turn it off.
    No report or framed paste ever goes inside a framed paste. A native
    console turns all of these modes (and 1000/1002/1006) off when it
    returns to cooked mode; set them again after each SetMode(raw).

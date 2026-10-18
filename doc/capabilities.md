@@ -514,7 +514,7 @@ both keys arrive as CR.
 **Usage:** In raw mode, send `CSI > 4 ; 1 m`. Shift+Enter (Return or the
 keypad Enter, with Shift alone) then arrives as `CSI 27 ; 2 ; 13 ~`. Enter,
 and Enter with Ctrl, Alt or an Amiga key, still arrive as CR. `CSI > 4 m`,
-`CSI > 4 ; 0 m` and `CSI > m` turn the mode off.
+`CSI > 4 ; 0 m`, `CSI > 4 n` and `CSI > m` turn the mode off.
 
 This is the sequence xterm's modifyOtherKeys sends for Shift+Enter, so a
 program that already reads it from xterm reads it here. Limpet implements
@@ -530,8 +530,8 @@ arrives as LF in every Limpet version and in `CON:`.
 When a Limpet Shell window returns to cooked mode (a program calls
 `SetMode(Input(), 0)` or ends), Limpet turns off mouse tracking 1000, 1002
 and 1006, bracketed paste 2004, resize reports 2048, wheel reports 2100
-and the Shift+Enter mode. This prevents modes from carrying over into the Shell or the next program
-after the session returns to cooked mode.
+and the Shift+Enter mode. This prevents modes from carrying over into the
+Shell or the next program after the session returns to cooked mode.
 
 Enable the required modes after each switch to raw mode.
 

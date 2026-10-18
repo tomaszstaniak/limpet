@@ -27,6 +27,9 @@ int main(void)
     feed("\033[>4;2m"); assert(s.modify_enter);
     feed("\033[>4;0m"); assert(!s.modify_enter);
     feed("\033[>4;1m\033[>m"); assert(!s.modify_enter);              /* CSI > m resets all, as in xterm */
+    feed("\033[>4;1m\033[>4n"); assert(!s.modify_enter);             /* CSI > 4 n disables it, as in xterm */
+    feed("\033[>4;1m\033[>1n"); assert(s.modify_enter);              /* another resource: not this mode */
+    feed("\033[>4;0m");
     feed("\033[>4;1m\033[>0m"); assert(s.modify_enter);              /* CSI > 0 m is modifyKeyboard: not this mode */
     {
         unsigned col = s.cursor_column;
