@@ -40,6 +40,11 @@ static void keys(void)
         assert(out[0] == 0xa5);
     }
     assert(terminal_encode_key(TERMINAL_KEY_NONE, 0, out, sizeof out) == 0);
+    /* Shift+Enter for a client that asked for it; nothing else changes. */
+    assert(terminal_encode_modified_enter(TERMINAL_SHIFT, out, sizeof out) == 10 && !memcmp(out, "\033[27;2;13~", 10));
+    assert(terminal_encode_modified_enter(TERMINAL_SHIFT | TERMINAL_CTRL, out, sizeof out) == 0);
+    assert(terminal_encode_modified_enter(0, out, sizeof out) == 0);
+    assert(terminal_encode_modified_enter(TERMINAL_SHIFT, out, 9) == 0);
 }
 
 /* Catch truncated multi-byte output, double Ctrl mapping, and missing Meta. */

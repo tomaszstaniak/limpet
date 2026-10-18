@@ -27,6 +27,7 @@
 #include "output_search.h"
 #include "settings.h"
 #include "console_name.h"
+#include "terminal_input.h"
 #include <dos/var.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -2155,6 +2156,15 @@ int main(int argc,char **argv)
                 UWORD q=key.event.ie_Qualifier;
                 int action=clipboard_shortcut(&key);
                 size_t count=aros_input_encode(&key,bytes,sizeof bytes);
+                /* A raw-mode client that asked (CSI > 4 ; 1 m) tells Shift+Enter
+                   from Enter: a new line in its editor rather than a send. */
+                if(screen.modify_enter && process_session.line.raw && count==1 && bytes[0]=='\r' &&
+                   (code==RAWKEY_RETURN || code==RAWKEY_KP_ENTER) &&
+                   (q&(IEQUALIFIER_LSHIFT|IEQUALIFIER_RSHIFT)) &&
+                   !(q&(IEQUALIFIER_CONTROL|IEQUALIFIER_LALT|IEQUALIFIER_RALT|IEQUALIFIER_LCOMMAND|IEQUALIFIER_RCOMMAND))) {
+                    size_t n=terminal_encode_modified_enter(TERMINAL_SHIFT,bytes,sizeof bytes);
+                    if(n) count=n;
+                }
                 if(action==3) { find_start(); dirty=1; continue; }
                 /* Copy and paste work during Find too (a paste goes into
                    the search text, see clipboard_completed). */

@@ -36,6 +36,7 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Bracketed paste](#bracketed-paste) | mode 2004; presentation input bit | 0.2.0 |
 | [Resize reports](#resize-reports) | mode 2048; presentation input bit | 0.2.0 |
 | [Wheel reports](#wheel-reports) | Limpet mode 2100; presentation input bit | 0.2.0 |
+| [Shift+Enter](#shiftenter) | `CSI > 4 ; 1 m`; presentation input bit | unreleased |
 | [Window title](#window-title) | OSC 0/2; presentation feature bit | 0.3.0 |
 | [Command history search](#history-search) | Ctrl-R | 0.3.0 |
 | [File drop](#file-drop) | drag Workbench icons onto the command line | 0.4.0 |
@@ -504,12 +505,32 @@ supports it; check the presentation bit before enabling it.
 **Detection:** `XTY_INPUT_WHEEL_REPORT` in `LimpetPresentation.input` (known
 bit 32). Never send `CSI ? 2100 h` without it.
 
+## Shift+Enter
+
+A program with its own multi-line editor, such as a chat prompt or a REPL,
+can use Enter to send and Shift+Enter to start a new line. Without this mode
+both keys arrive as CR.
+
+**Usage:** In raw mode, send `CSI > 4 ; 1 m`. Shift+Enter (Return or the
+keypad Enter, with Shift alone) then arrives as `CSI 27 ; 2 ; 13 ~`. Enter,
+and Enter with Ctrl, Alt or an Amiga key, still arrive as CR. `CSI > 4 m`,
+`CSI > 4 ; 0 m` and `CSI > m` turn the mode off.
+
+This is the sequence xterm's modifyOtherKeys sends for Shift+Enter, so a
+program that already reads it from xterm reads it here. Limpet implements
+only this key: other keys are sent as before at any level, and the bit does
+not mean that other modified keys are reported.
+
+**Detection:** `XTY_INPUT_MODIFIED_ENTER` in `LimpetPresentation.input`
+(known bit 32). Without it, offer another key for a new line: Ctrl-J
+arrives as LF in every Limpet version and in `CON:`.
+
 ## Input modes end with raw mode
 
 When a Limpet Shell window returns to cooked mode (a program calls
 `SetMode(Input(), 0)` or ends), Limpet turns off mouse tracking 1000, 1002
-and 1006, bracketed paste 2004, resize reports 2048 and wheel reports
-2100. This prevents modes from carrying over into the Shell or the next program
+and 1006, bracketed paste 2004, resize reports 2048, wheel reports 2100
+and the Shift+Enter mode. This prevents modes from carrying over into the Shell or the next program
 after the session returns to cooked mode.
 
 Enable the required modes after each switch to raw mode.

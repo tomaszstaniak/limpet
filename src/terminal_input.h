@@ -19,6 +19,10 @@ typedef enum {
  * atomic: return 0 without modifying output if capacity is insufficient. */
 size_t terminal_encode_key(TerminalKey key, unsigned modifiers,
                            unsigned char *output, size_t capacity);
+/* Enter with modifiers in xterm's modifyOtherKeys form, for a client that
+ * turned it on with CSI > 4 ; 1 m. Only Shift+Enter is sent this way
+ * (CSI 27;2;13~); 0 for anything else, which then stays CR. Atomic as above. */
+size_t terminal_encode_modified_enter(unsigned modifiers, unsigned char *output, size_t capacity);
 /* Explicit Latin-1 default, not a Unicode keymap decoder. Shift/caps have
  * already been applied by the keymap. Ctrl maps ASCII @.._ and a..z,
  * space/2 to NUL and ? to DEL; Alt prefixes one ESC per mapped event. */

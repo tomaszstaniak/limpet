@@ -13,7 +13,7 @@ int main(void)
     assert(c.values[4]==24 && c.values[5]==80);
     assert(c.values[6]==0);
     /* Input features (bit 32): what a raw-mode client may turn on. */
-    assert(c.values[7]==(XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT|XTY_INPUT_WHEEL_REPORT));
+    assert(c.values[7]==(XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT|XTY_INPUT_WHEEL_REPORT|XTY_INPUT_MODIFIED_ENTER));
     /* Features (bit 64, 0.3.0): OSC 0/2 window titles. */
     assert(c.values[8]==XTY_FEATURE_TITLE);
     for(i=9;i<12;++i) assert(!c.values[i]);
