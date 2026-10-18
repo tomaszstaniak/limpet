@@ -10,12 +10,12 @@ while the program runs in a Limpet window.
 | `LIMPET_NOT_INTERACTIVE` | output is redirected (`>file`, a pipe) | run without redirection |
 | `LIMPET_UNSUPPORTED` | the program's output is not the Limpet window, for example because it opened `CON:` itself or was started by another program with its own output handle | `hello` from the same Limpet window answers `Output is a Limpet console` |
 | `LIMPET_UNSUPPORTED` | the Limpet session is closing | |
-| `LIMPET_INVALID_REPLY` | a request with nonzero fields; a third-party console that answers badly | use `limpet_presentation_request()` |
+| `LIMPET_INVALID_REPLY` | a request with nonzero fields; a malformed third-party console reply | use `limpet_presentation_request()` |
 | `LIMPET_FAILED` | another DOS error, for example `ERROR_INVALID_LOCK` for `NIL:` or a closed handle | check `*ioerr` |
 | `LIMPET_BAD_ARGUMENT` | `Output()` is 0, as for a program started from Workbench without a console | |
 
 A program that queries `Input()` instead of `Output()` gets an answer for
-the wrong handle. The SDK takes whatever handle you pass.
+the wrong handle. The SDK queries the supplied handle.
 
 ## Colours are wrong
 
@@ -33,13 +33,13 @@ successful presentation query.
 
 ## UTF-8 shows as accented Latin letters
 
-The program runs in `CON:`, which reads bytes as Latin-1. There is no
-detection for this other than the query; write ASCII when it fails, if the
-text must be readable there.
+Check which console the program opened. The ABIv11 `CON:` used in the
+comparison renders these bytes as Latin-1; other console configurations may
+differ. Use a suitable encoding for the target console, or ASCII fallback.
 
 ## A paste or a report arrives where the program does not expect it
 
-- **Framed paste after the program ended.** Not possible from 0.2.0:
+- **Framed paste after the program ended.** Since 0.2.0,
   Limpet turns 2004, 2048, 2100 and mouse tracking off when the console
   returns to cooked mode. With Limpet 0.1.0 these modes do not exist.
 - **No framed paste although the program sent `CSI ? 2004 h`.** The mode
@@ -78,7 +78,9 @@ job started with `Run` is not shown.
 
 ## `ERROR_ACTION_NOT_KNOWN` for `XTY_CAPS` or termios calls
 
-Expected. A Limpet Shell session serves only operation 13. See
+Released Shell sessions support control operation 13, not the PTY
+configuration operations. Read cancellation is a separate action supported
+since 0.4.1. See
 [experimental interfaces](sdk/experimental.md).
 
 ## The program crashes at start on AROS
@@ -87,7 +89,8 @@ Expected. A Limpet Shell session serves only operation 13. See
   in unpredictable ways. Build with the toolchain and SDK of the system
   you run on.
 - **Stripped too hard.** A full `strip` of an x86_64 AROS executable can
-  leave it unrelocated. Use `strip --strip-unneeded` or `--strip-debug`.
+  remove relocations required at load time. Preserve relocations; use only
+  a stripping mode validated for the target toolchain.
 
 ## Reporting a problem
 

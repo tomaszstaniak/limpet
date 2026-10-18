@@ -1,7 +1,7 @@
-# Roadmap after 0.1
+# Roadmap
 
-Limpet 0.1 is available for AROS x86_64 ABIv11. The next releases will
-bring it to more machines and make everyday Shell work more convenient.
+Limpet 0.5.0 is available for AROS x86_64 ABIv11. Completed work includes
+command-history search, file drop, output search and a settings file.
 The long-term goal is to replace `CON:` while keeping compatibility with
 native AROS software.
 

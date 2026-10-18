@@ -1,16 +1,11 @@
 # Examples
 
-Seven programs in `sdk/examples/` (in the archive: `examples/`). Each is
+Eight programs in `sdk/examples/` (in the archive: `examples/`). Each is
 one C file that uses only the public SDK, `dos.library` and the C library.
 
 **Target:** AROS ABIv11 x86_64. **Build:** `make CC=... AROS_SDK=...
 ABI=abiv11 examples`, results in `build/abiv11/`; see
 [getting started](getting-started.md).
-
-**Verified:** 2026-10-07, all seven built from these sources with GCC 10.5
-and the ABIv11 2026.09 Developer SDK, run on AROS ABIv11 2026.09 x86_64
-under QEMU in Limpet 0.2.0 and in the system console `CON:`; `hello` also
-in Limpet 0.1.0. Details in [the verification record](verification-0.2.0.md).
 
 | Program | Shows | In `CON:` | Ends |
 | --- | --- | --- | --- |
@@ -22,10 +17,6 @@ in Limpet 0.1.0. Details in [the verification record](verification-0.2.0.md).
 | `image` | the Kitty subset: query, draw, delete | sends nothing | key, or 30 s |
 | `keys` | raw-mode key input in both consoles | works, cursor keys as 0x9B | `q`, Ctrl-C, or 60 s idle |
 | `title` (0.3.0) | the window title following a program's state | the states as text only | after 8 s, or Ctrl-C |
-
-Every program was also run with output redirected to a file, in both
-consoles, and wrote no escape sequence (no ESC byte in any of the 14
-files).
 
 ## hello
 
@@ -53,14 +44,7 @@ too narrow until the next check.
 ## geometry
 
 Prints the size, then asks twice a second for 20 seconds and prints each
-change. Shows that the size is a snapshot: the program sees a resize only
-because it asks again.
-
-**SDK 0.3.0:** built with GCC 10.5 and the ABIv11
-2026.09 Developer SDK; `hello`, `title`, `hyperlink` and `image` ran on AROS
-One 1.3 (ABIv11) under QEMU in Limpet 0.3.0, 2026-10-11.
-`colors`, `progress`, `geometry` and `keys` did not change and were not run
-again; no example was run in `CON:` with SDK 0.3.0.
+change. Dimensions are polled; this example does not enable resize reports.
 
 ## title
 
@@ -81,8 +65,7 @@ the AROS system.
 
 1. Presentation query; stops without sending anything if it fails.
 2. Raw mode, Kitty `a=q`, then cooked mode again. The whole reply must
-   arrive within one second of writing the query; a console that answers
-   nothing costs one second.
+   arrive within one second of writing the query; a missing reply ends the exchange after that deadline.
 3. Prints blank lines for the image, moves back up, draws a 160x96 RGB
    picture with the cursor kept in place, moves below it. Limpet 0.3.0
    would make room by itself for `C=0`; the example reserves rows so that
@@ -108,3 +91,6 @@ decide on colour.
 
 Limit: function keys and other longer sequences are reported as "other key
 sequence". A lone Esc is recognised by 50 ms of silence after it.
+
+Build and runtime records: [SDK 0.3.0](verification-0.3.0.md) and
+[SDK 0.2.0](verification-0.2.0.md).

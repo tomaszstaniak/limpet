@@ -1,62 +1,41 @@
 # Why Limpet
 
-## What Limpet is
+## A console for the AROS Shell
 
-The **AROS Shell** is the command interpreter: it reads your commands, runs
-programs and scripts, and prints the prompt. It needs a console to run in.
-Normally that is `CON:`, the system console window.
+Limpet runs the native AROS Shell in an Intuition window. Commands, scripts,
+assigns and prompt syntax remain unchanged. Limpet handles text rendering,
+keyboard input, history and the clipboard.
 
-**Limpet is a different console for the same Shell.** It is a terminal
-window written for AROS, and the standard AROS Shell runs in it unchanged:
-the same commands, scripts, assigns and prompt. Nothing about the Shell
-changes. What changes is how its output is shown and what programs running
-in it can do.
+The system console `CON:` remains available. Applications that open it
+explicitly still get a `CON:` window. The separate experimental `LIMPET:`
+handler lets applications request a Limpet window through DOS.
 
-So the comparison on this page is between the Shell in `CON:` and the Shell
-in Limpet. Programs that open `CON:` themselves still get a `CON:` window;
-Limpet does not replace the system console.
+## Shell features
 
-## What you notice as a user
+- **UTF-8:** Latin, Greek, Cyrillic, CJK, combining characters and monochrome
+  emoji. Bidirectional layout is not supported.
+- **Scrollback and search:** output rewraps on resize; Find searches the
+  screen and history. Ctrl-R searches previously entered commands.
+- **Clipboard:** mouse selection, RAmiga+C to copy and RAmiga+V to paste.
+  Updates elsewhere on screen leave selected text intact.
+- **Links:** hover to see the URL, Ctrl+click to open it through OpenURL,
+  or Ctrl+Shift+click to copy it. OSC 8 allows a label to link to a URL.
+- **Colours:** 16, 256 and 24-bit colour, with Workbench pens preserved for
+  native Shell output.
+- **Images:** inline RGB/RGBA through the supported Kitty graphics subset.
+- **File drop:** dragging Workbench icons inserts quoted paths at the cursor.
+- **Preferences:** font, size, theme and history limits in a settings file.
 
-**Text in any language.** Limpet decodes UTF-8: Polish, Czech, Greek,
-Cyrillic, Chinese, Japanese and Korean text, combining accents and
-monochrome emoji. `CON:` shows the same bytes as Latin-1 characters.
+See [search and settings](search-and-settings.md) and the
+[capability reference](capabilities.md) for controls and limits.
 
-**Long output you can go back to.** Command output goes into a scrollback
-of 256 lines at full width, more when the window is narrower (512 at 80
-columns). When you make the window
-narrower or wider, Limpet rewraps the text and the history instead of
-cutting lines off.
+## Application interfaces
 
-**Copy and paste that works with commands.** Select text with the mouse,
-copy with RAmiga+C and paste with RAmiga+V. Limpet uses the system
-clipboard, and pasting works in the command line you are typing.
-
-**Links you can open.** Addresses in output are recognised. Hover to see
-the target in the title bar, Ctrl+click to open it with OpenURL, or
-Ctrl+Shift+click to copy it. Programs can also print a short label that
-links to a long address.
-
-**Colour where the program asks for it.** Tools that know about Limpet use
-16, 256 or 24-bit colour, and update progress bars in one line. Your Shell
-prompt keeps its Workbench pen colours, as in `CON:`.
-
-**Pictures next to text.** Programs can draw images in the window through a
-subset of the Kitty graphics protocol.
-
-**A selection that stays put** (0.2.0). Select a few lines while a program
-keeps updating its status line or streams a reply below them: the
-selection stays, and RAmiga+C copies it. It goes away only when the
-selected text itself changes or scrolls.
-
-## What you get as a programmer
-
-**You can ask before you decorate.** One DOS packet on your output handle
-tells you whether colour, bold and in-place line updates will be shown, and
-how big the window is. It does not read the keyboard, it does not change
-modes, and in `CON:` it fails at once with `ERROR_ACTION_NOT_KNOWN`. A
-program can therefore use colour in Limpet and stay plain in `CON:` and in
-files, with no guessing and no configuration.
+The presentation query reports colours, styles, line controls, dimensions
+and supported input modes through a DOS packet on the output handle. It
+does not read keyboard input or change terminal modes. Applications can
+select formatting from the reply and use plain text when the query is unsupported
+or output is redirected.
 
 This is what apkg, the AROS package manager, does. In Limpet it shows
 coloured verdicts, a table sized to the window and a single-line download
@@ -70,12 +49,9 @@ plain text.
 *Left: apkg in Limpet 0.1.0. Right: the SDK examples in `CON:` on the same
 system print complete plain text.*
 
-**Full-screen programs that behave like the user expects** (0.2.0). A
-program in raw mode can ask for pastes as one framed block (so a pasted
-newline is not Enter), for size changes as input, and for wheel steps
-without taking over the mouse, so the user can still select and copy.
-Limpet turns these modes off when the program returns the console to
-cooked mode, so the Shell never inherits them.
+Raw-mode applications can enable bracketed paste, resize reports and wheel
+reports without taking over mouse selection. Limpet resets these modes
+when the console returns to cooked mode.
 
 hardcode, an AI coding agent for AROS, uses all three: a 50-line paste
 lands in its input box as text, its panel redraws at every width, and a
@@ -88,28 +64,24 @@ selection survives while the reply streams in.
 *hardcode 0.3.0-dev in Limpet 0.2.0 on AROS ABIv11 2026.09 under QEMU,
 against a local test server (no AI model), 2026-10-07.*
 
-**Standard sequences, not a private dialect.** Output uses well-known
-protocols: ANSI/VT colour and cursor sequences, OSC 8 links and Kitty
-graphics. A program written for these elsewhere needs little change. The
-Limpet-specific part is the detection packet, the pens rule and one
-private mode (2100, wheel reports).
+Output uses ANSI/VT sequences, OSC 8 links and a subset of Kitty graphics.
+The detection packet, Workbench pen interpretation and wheel mode 2100
+are specific to Limpet. Programs using other terminal features may need
+additional adaptation.
 
-## What is specific to Limpet
+## AROS integration
 
-Several terminals implement the same standard sequences. What Limpet adds
-on AROS:
+Limpet integrates with native AROS facilities:
 
-- it runs the **native AROS Shell** in a native Intuition window, not a
-  Unix shell in an emulation layer;
+- it runs the **native AROS Shell** in an Intuition window;
 - it keeps **AROS console conventions**: Workbench pens for SGR 30-37,
   Ctrl-C as the break signal, `WaitForChar()` and raw mode as programs
   expect, and from 0.2.0 it ties input modes to raw mode, which ends them
   when the program hands the console back;
 - it uses **AROS services**: the system clipboard, OpenURL, FreeType and
   the system fonts;
-- it offers **detection through a DOS packet**, which needs no reply on
-  the input stream and therefore never puts stray characters into the
-  Shell.
+- it reports **capabilities through a DOS packet**, without placing
+  replies in keyboard input.
 
 The standard protocols themselves (VT sequences, OSC 8, Kitty graphics) are
 not Limpet's invention, and Limpet implements documented subsets of them.
@@ -135,9 +107,10 @@ Limpet 0.1.0 on the same system, both under QEMU, 2026-10-05.
 | --- | --- |
 | ![Comparison probe in CON:](screenshots/sdk-con-compare.png) | ![Comparison probe in Limpet](screenshots/sdk-limpet-compare.png) |
 
-Only these rows were tested. Other `CON:` behaviour is not described here.
+The comparison applies to these sequences on the named system; it is not
+a complete compatibility table.
 
-## What Limpet does not do yet
+## Limits
 
 - It is for AROS ABIv11 x86_64 only. Mainline and other architectures are
   on the roadmap, not released.
@@ -148,5 +121,4 @@ Only these rows were tested. Other `CON:` behaviour is not described here.
   (0.2.0); others ask for the size again.
 - Images are raw RGB/RGBA only, without PNG or scaling.
 
-The [capability catalogue](capabilities.md) lists every feature with its
-status.
+See the [capability reference](capabilities.md) for supported interfaces and limits.

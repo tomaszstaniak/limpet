@@ -1,14 +1,12 @@
 # Presentation query (operation 13)
 
-A program that writes to Limpet's console can ask what the terminal will
-render before it decorates its output: colours, bold, line controls,
-current size and how the basic colour codes are read. The query is a DOS
-packet on the program's own output handle; on any other console it fails
-with `ERROR_ACTION_NOT_KNOWN`, and the program should write plain text.
+Operation 13 queries rendering capabilities through a DOS packet on the
+application's output handle. Unsupported consoles return
+`ERROR_ACTION_NOT_KNOWN`; applications should then use plain text.
 Constants and the wire layout are in
 [`sdk/include/limpet/tty_control.h`](../sdk/include/limpet/tty_control.h),
 the header both the terminal and the [SDK](sdk/api.md) are built from.
-`limpet_query_presentation()` does everything on this page for you; the
+`limpet_query_presentation()` builds, sends and decodes the request; the
 [`hello`](../sdk/examples/hello.c) example shows it in use.
 
 ## Request and reply
@@ -34,20 +32,19 @@ The reply uses the control envelope described in [protocols.md](protocols.md#env
 A clear known bit means unknown, not unsupported. A set known bit with a
 zero feature value means confirmed absent. Geometry is known only when both
 dimensions are positive. The geometry comes from the live grid after resize
-processing, not a startup default. It is a snapshot, not a resize subscription.
+processing, not a startup default. Applications must query again for updated dimensions or enable resize reports.
 
 **Pens.** On an AROS console session the renderer reads SGR
 30-37 and 40-47 as Amiga screen pens 0-7, as the system console does, so
-the Shell's own prompt shows as in `CON:`. It says so with
+the Shell's own prompt shows as in `CON:`. This is reported by
 `XTY_COLOR_PENS` in values[6]. A client that sees the bit must send ANSI
 colours as `38;5;n` / `48;5;n` (n 0-15), which keep their palette meaning;
 the basic SGR codes then do not mean ANSI colours.
 
-Exact rules, as in the header:
+Colour interpretation rules:
 
-- `XTY_COLOR_PENS` counts only when known bit 4 is set; without it the bit
-  means nothing, and with the interpretation unknown the client keeps
-  its ANSI behaviour.
+- `XTY_COLOR_PENS` is valid only when known bit 4 is set. If colour
+  interpretation is unknown, retain standard ANSI behaviour.
 - With PENS known, `38;5;0..15` and `48;5;0..15` are guaranteed from level
   `ANSI16` (values[1] = 1) up, with their ANSI palette meaning.
 - `SGR 39` restores the theme's default foreground and drops a foreground
@@ -62,4 +59,4 @@ Public enums and masks are in `limpet/tty_control.h`: `XTY_PRESENT_KNOWN_*`,
 The header specifies 7-bit ESC [ sequences and the exact supported SGR codes.
 Send the query directly; `XTY_CAPS` is not needed first. A console that
 does not support it returns an error and leaves your block unchanged.
-Ignore bits you do not know.
+Ignore unknown bits and reserved fields.

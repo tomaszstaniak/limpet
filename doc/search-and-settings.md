@@ -1,14 +1,12 @@
-# Finding text and settings
+# Search and settings
 
-Two features of Limpet 0.5.0: finding text in
-the window's output, and a settings file for the font, the theme and how
-much the window remembers.
+Limpet 0.5.0 adds output search and a configuration file for the font, theme
+and history limits.
 
 ## Find in output
 
-Find looks through the text Limpet itself holds: the scrollback and the
-rows on the screen. It is not Ctrl-R, which looks through the commands you
-typed.
+Find searches the screen and scrollback. Ctrl-R searches command history
+separately.
 
 | Key | What it does |
 | --- | --- |
@@ -28,11 +26,10 @@ The title bar shows the search text and where you are: `Find: error - 3 of 17`,
 nowhere further to go. The match shown is in the selection colours; other
 matches in view are underlined.
 
-What a match is:
+Matching rules:
 
-- the text as you typed it, letter for letter; no patterns, no regular
-  expressions;
-- A-Z and a-z are the same; other letters are compared as they are
+- literal text, without patterns or regular expressions;
+- ASCII letters are matched case-insensitively; other letters must match exactly
   (`Ż` does not find `ż`);
 - whole characters only: a search never takes half of a wide character or
   part of a combined one (`e` does not find `é`);
@@ -43,15 +40,15 @@ What a match is:
 
 While Find is open:
 
-- **output keeps arriving, but the view does not move.** New lines go into
-  the scrollback below what you are reading, and the count of matches
-  grows; Esc takes you back to the bottom if that is where you were.
-- **keys go to Find, not to the program.** What you type ahead and a paste
-  started before wait, and are delivered after Find closes.
-- **resizing the window keeps the match.** When the text is rewrapped, the
-  match shown stays the same one (counted from the newest).
-- **old lines can fall out of the scrollback.** A match that was in them
-  is gone; Find moves to the next one.
+- Incoming output is buffered without moving the view. Match counts update
+  as text arrives. Esc restores the previous view, including the bottom
+  position if that was selected.
+- Typing goes to the search field. Previously queued input and a paste
+  already in progress wait until Find closes.
+- Resizing preserves the selected match, indexed from the newest result,
+  while text is rewrapped.
+- When old text leaves the scrollback, its matches are removed and Find
+  selects the next available match.
 
 Full-screen programs: while a program uses the alternate screen (an editor,
 a pager, hardcode's full-screen view), Find says so in the title bar and
@@ -64,8 +61,7 @@ Find does not save anything to disk.
 ## Settings
 
 Limpet reads `ENV:Limpet/Limpet.conf` when a window opens, or
-`ENVARC:Limpet/Limpet.conf` if there is none in `ENV:`. Without either file
-it works as before. `ENVARC:` keeps the file over a reboot; the system
+`ENVARC:Limpet/Limpet.conf` if there is none in `ENV:`. Without either file, Limpet uses its defaults. `ENVARC:` keeps the file over a reboot; the system
 copies it to `ENV:` at the next start. To use a change now, put the file in
 both (or in `ENV:` only, to try it until the next reboot).
 
@@ -102,7 +98,7 @@ An example:
   within 32 by 32 pixels.
 - **`theme`**: the `--theme` option on the command line wins over the file.
 
-The file is taken whole or not at all. An unknown key, a key given twice, a
+Configuration is validated as a whole. An unknown key, a duplicate key, a
 number out of range or a line without `=` makes Limpet ignore the file and
 use its built-in settings; the title bar says which line is wrong, for
 example `Settings: Limpet.conf line 2: scrollback takes 100 to 1000;
@@ -112,7 +108,7 @@ cannot be read to the built-in dark theme; both say so in the title bar.
 If there is not enough memory for the scrollback asked for, Limpet uses the
 default and says so.
 
-Spaces around the value are dropped, so paths with spaces inside work
+Leading and trailing spaces around values are ignored, so paths with spaces inside work
 without quotes. Lines starting with `#` are comments. The file may be at
 most 4096 bytes.
 

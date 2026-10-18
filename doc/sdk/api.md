@@ -1,34 +1,34 @@
 # Limpet SDK API reference
 
-SDK version 0.2.0. Header: `#include <limpet/limpet.h>`, which also
+SDK version 0.3.0. Header: `#include <limpet/limpet.h>`, which also
 includes the protocol header `limpet/tty_control.h`.
 
-## Two layers
+## API and protocol
 
 | Layer | File | What it is | Stability |
 | --- | --- | --- | --- |
 | Protocol | `tty_control.h` | `XtyControl`, packet types, operation numbers, bit values | Fixed. The terminal is built from this same file. |
 | Convenience API | `limpet.h` | functions that build requests, validate replies and write sequences | SDK 0.x: may grow; see [versioning](../versioning.md) |
 
-Everything in `limpet.h` can be written by hand from `tty_control.h`. The
-mapping is shown for each function below, so that a program can use the
-protocol directly or check what the SDK does.
+`limpet.h` provides request validation, reply decoding and sequence builders.
+Applications may also use the packet protocol directly.
 
-## General rules
+## Calling conventions
 
-- **Handles.** Functions that take a `BPTR` use that DOS FileHandle and no
+- **Handles:** Functions that take a `BPTR` use that DOS FileHandle and no
   other. Keep it open for the whole call. Do not use it from another task
   at the same time.
-- **Memory.** No function allocates memory or keeps a pointer after it
+- **Memory:** No function allocates memory or keeps a pointer after it
   returns. Buffers belong to the caller.
-- **Blocking.** Only `limpet_query_presentation()`, `limpet_control()` and
+- **Blocking:** Only `limpet_query_presentation()`, `limpet_control()` and
   `limpet_write_dos()` talk to DOS, and they block until the handler
-  replies. There is no timeout. All other functions are pure computations.
-- **Tasks.** The pure functions are reentrant. The DOS functions set
+  replies. There is no timeout. Formatting and decoding functions do not call DOS. Image transmission and
+  deletion call the supplied writer, which may perform blocking I/O.
+- **Tasks:** The pure functions are reentrant. The DOS functions set
   `IoErr()` of the calling process.
-- **Strings.** Builders always leave a NUL-terminated string. When they
-  return 0, the buffer holds an empty string: write nothing.
-- **C++.** The header has `extern "C"` guards.
+- **Strings:** Builders NUL-terminate output when buffer capacity permits. On
+  failure they return 0 and clear the buffer if its capacity is nonzero.
+- **C++:** The header has `extern "C"` guards.
 
 ## Version macros
 
@@ -39,8 +39,7 @@ protocol directly or check what the SDK does.
 #define LIMPET_SDK_VERSION_STRING "0.3.0"
 ```
 
-These describe the SDK, not the terminal. The terminal's version is not
-reported by any query; features are.
+These describe the SDK, not the terminal. Queries report capabilities, not the terminal version.
 
 ## Building with one SDK version
 
@@ -49,8 +48,8 @@ reported by any query; features are.
 Compile every object that uses the SDK, and the library, with the same SDK
 version.
 
-To make a mix fail safely, `limpet.h` renames the two functions that fill
-the struct:
+To reject incompatible object files at link time, `limpet.h` renames the
+two functions that fill the structure:
 
 ```c
 #define limpet_query_presentation limpet_query_presentation_v3
@@ -101,15 +100,11 @@ typedef struct {
 | `input` (0.2.0) | `XTY_PRESENT_KNOWN_INPUT` (32) | bits `XTY_INPUT_BRACKETED_PASTE` (1), `XTY_INPUT_RESIZE_REPORT` (2), `XTY_INPUT_WHEEL_REPORT` (4): modes a raw-mode program may turn on |
 | `features` (0.3.0) | `XTY_PRESENT_KNOWN_FEATURES` (64) | bit `XTY_FEATURE_TITLE` (1): OSC 0/2 set the window title (Limpet 0.3.0) |
 
-**Unknown versus unsupported.** A clear bit in `known` means the terminal
-said nothing about that field. A set bit with a zero value means the
-feature is confirmed absent. The decoder sets fields with a clear bit to
-zero, so a client that forgets to test a bit sees "nothing", never stale
-data.
+A clear bit in `known` marks an unknown field; a set bit with a zero value
+marks an unsupported feature. The decoder clears unknown fields.
 
-**Future fields.** `known` keeps bits this SDK does not know. Unknown bits
-in `styles`, `lines` and `interpretation` are kept too. Test only the bits
-you know.
+The decoder preserves unknown mask bits for forward compatibility.
+Applications should test only defined bits.
 
 ### `limpet_query_presentation`
 
@@ -118,7 +113,7 @@ LimpetStatus limpet_query_presentation(BPTR output, LimpetPresentation *out,
                                        LONG *ioerr);
 ```
 
-Asks the console behind `output` what it renders.
+Queries the rendering capabilities of `output`.
 
 - `output`: the handle you write to, normally `Output()`.
 - `out`: filled on `LIMPET_OK`, zeroed otherwise.
@@ -136,7 +131,7 @@ Flush stdio first (`fflush(stdout)`) when the answer decides how to print
 text that follows: the packet is not ordered behind data still in a C
 library buffer.
 
-**By hand:** zero an `XtyControl`, set `version = XTY_CONTROL_VERSION` (1)
+**Direct packet call:** zero an `XtyControl`, set `version = XTY_CONTROL_VERSION` (1)
 and `operation = XTY_GET_PRESENTATION` (13), and send
 `DoPkt(fh->fh_Type, XTY_ACTION_CONTROL, fh->fh_Arg1, &block, 64,
 XTY_PACKET_MAGIC, 0)` where `fh = BADDR(output)`. See
@@ -163,8 +158,8 @@ Checks a received block: version 1, operation 13, `reserved[0]` equal to
 `XTY_PACKET_MAGIC`, `reserved[1]` zero, and both sizes positive when the
 geometry bit is set. Returns `LIMPET_OK` or `LIMPET_INVALID_REPLY`.
 `values[7]` is decoded into `input` when known bit 32 is set;
-`values[8]` to `values[11]` are ignored, not rejected. Pure; usable in host
-tests.
+`values[8]` is decoded into `features` when known bit 64 is set.
+`values[9..11]` are ignored. This function performs no I/O.
 
 ### `limpet_control`
 
@@ -190,7 +185,7 @@ envelope of the reply.
 A Limpet Shell session (0.1.0 and 0.2.0) answers only operation 13. Every
 other operation returns `ERROR_ACTION_NOT_KNOWN`.
 
-## Decisions
+## Capability helpers
 
 All take a `const LimpetPresentation *` (NULL allowed, treated as
 "nothing known") and never fail.
@@ -207,8 +202,8 @@ All take a `const LimpetPresentation *` (NULL allowed, treated as
 
 ### Input modes (0.2.0)
 
-There are no helper functions for these; test the bits and send the mode
-sequences yourself, after switching to raw mode:
+Check the input capability bits and send the corresponding mode sequences
+after switching to raw mode:
 
 ```c
 int paste = (p.known & XTY_PRESENT_KNOWN_INPUT) && (p.input & XTY_INPUT_BRACKETED_PASTE);
@@ -262,9 +257,8 @@ size_t limpet_sgr_rgb(char *buf, size_t size, const LimpetPresentation *p,
 ```
 
 At level RGB: `ESC[38;2;r;g;bm`. At level INDEXED256: the nearest entry of
-the 6x6x6 cube, `ESC[38;5;nm` with n from 16 to 231. Below that: nothing,
-because only the caller knows which of the 16 colours is an acceptable
-substitute. Components above 255 return 0.
+the 6x6x6 cube, `ESC[38;5;nm` with n from 16 to 231. At lower colour levels it returns 0; the caller must choose an ANSI16
+substitute if needed. Components above 255 return 0.
 
 ### Fixed sequences
 
@@ -277,7 +271,8 @@ substitute. Components above 255 return 0.
 | `LIMPET_ERASE_EOL` | `ESC[K` | erase to end of line |
 | `LIMPET_OSC8_CLOSE` | `ESC]8;;ESC\` | end a link |
 
-Send them only after a successful query, like everything else.
+Send fixed sequences only when the corresponding feature is supported.
+A successful query alone does not confirm every sequence in this table.
 
 ### `limpet_osc8_open`
 
@@ -389,8 +384,8 @@ up to `ESC \` with a time limit, and parse:
 | 0 | an error reply; its text (for example `ENOTSUPPORTED:...`) is copied to `message` |
 | -1 | no reply for this id in the bytes |
 
-Bytes before `ESC _ G` (an early key press) are skipped, not consumed: keep
-them if your program needs them.
+The parser skips bytes preceding `ESC _ G`. It does not return those bytes;
+the caller must preserve them if they contain keyboard input.
 
 ## Building against the SDK
 

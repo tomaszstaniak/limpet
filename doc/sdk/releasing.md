@@ -14,8 +14,8 @@
 | `sdk/Makefile` | library and examples for one ABI, plus a host compile check |
 | `tools/make-sdk.sh` | builds the release archive |
 
-The protocol header has one copy. Never fork it into the SDK: the terminal
-and every client must compile against the same bytes.
+The terminal and SDK share one protocol header. Keep a single source of
+truth for packet layouts and constants.
 
 ## Checks before a release
 
@@ -60,8 +60,8 @@ Unpack it outside the repository and build the examples from it, exactly
 as [getting started](getting-started.md) says:
 
     mkdir /tmp/sdk-check && cd /tmp/sdk-check
-    unzip /path/to/limpet-sdk-0.2.0.zip
-    cd limpet-sdk-0.2.0
+    unzip /path/to/limpet-sdk-0.3.0.zip
+    cd limpet-sdk-0.3.0
     shasum -a 256 -c MANIFEST.sha256
     make CC=... AROS_SDK=... ABI=abiv11 examples
     make host-check
@@ -70,11 +70,11 @@ The example binaries must be byte-identical to the ones that were tested.
 
 ## The terminal archive
 
-The terminal and the SDK are released together when the protocol changes,
-under separate tags (`v<version>` and `sdk-v<version>`). Build the terminal
+The terminal and SDK have independent versions and tags (`v<version>` and
+`sdk-v<version>`). Release a new SDK only when its public interface changes. Build the terminal
 from the tagged commit with a fixed date, so the build can be repeated:
 
-    make abiv11-frontend LIMPET_VERSION=0.2.0 LIMPET_DATE=07.10.2026 \
+    make abiv11-frontend LIMPET_VERSION=0.5.0 LIMPET_DATE=15.10.2026 \
          ABIV11_GCC=... ABIV11_SDK=...
 
 The archive `Limpet-<version>-abiv11.zip` holds the `Limpet` drawer:
@@ -83,12 +83,12 @@ the binary, `README.txt`, fonts, themes, licences and the icons. Its
 
 ## Publishing on GitHub
 
-1. Merge into `main`. Tag the commit `v<version>` (terminal) and
-   `sdk-v<version>` (SDK). Both may point at the same commit.
-2. Push `main` and both tags.
+1. Merge into `main`. Tag each component being released: `v<version>` for
+   the terminal or `sdk-v<version>` for the SDK.
+2. Push `main` and the release tags.
 3. Create one release per tag, each with its archive and `SHA256SUMS`,
-   and the matching part of `doc/changes.md` or `sdk/CHANGES.md` as the
-   description.
+   and a user-facing description of the changes. Keep test logs, binary
+   comparisons and acceptance results in verification records, not release notes.
 4. Wait for the CI run of the pushed commit to pass.
 5. Download every asset from GitHub and compare its SHA-256 with
    `SHA256SUMS`.

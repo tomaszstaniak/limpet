@@ -4,7 +4,7 @@ Limpet and the SDK have separate version numbers and separate tags.
 
 | | Version | Archive | Git tag |
 | --- | --- | --- | --- |
-| Limpet (the terminal) | 0.3.0 | `Limpet-0.3.0-abiv11.zip` | `v0.3.0` |
+| Limpet (the terminal) | 0.5.0 | `Limpet-0.5.0-abiv11.zip` | `v0.5.0` |
 | Limpet SDK | 0.3.0 | `limpet-sdk-0.3.0.zip` | `sdk-v0.3.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
@@ -16,9 +16,9 @@ bit to the presentation reply, and SDK 0.3.0 decodes it. An SDK 0.1.0
 was prepared but never published; its sources are kept in
 `sdk/tests/compat-0.1.0` for the compatibility test.
 
-## Three kinds of compatibility
+## Compatibility
 
-### Protocol: what goes over the DOS packet
+### Packet protocol
 
 Fixed at version 1, and unchanged by Limpet 0.2.0 and 0.3.0:
 
@@ -47,16 +47,16 @@ What this means in practice, checked by tests and on AROS:
 | SDK 0.3.0 | Limpet 0.3.0 | all seven fields (`hello`, AROS One 1.3, 2026-10-11) |
 | any | `CON:` | `LIMPET_UNSUPPORTED`, plain text |
 
-### Source: whether your code compiles
+### Source compatibility
 
 Code written for SDK 0.1 or 0.2 compiles unchanged with SDK 0.3.0. Within 0.x,
 functions, constants and status values are only added; a change to an
 existing one would be listed under "Changed" in `CHANGES.md` and raise the
 minor version.
 
-### Binary: whether old objects link with a new library
+### Binary compatibility
 
-Not promised in 0.x. Structures such as `LimpetPresentation` may grow at the
+Binary compatibility is not guaranteed in SDK 0.x. Structures such as `LimpetPresentation` may grow at the
 end (0.2.0 added `input`, 0.3.0 `features`), so every object that uses the SDK must be
 compiled with the same SDK version as the library it links with. Rebuild
 after updating the SDK.
@@ -71,15 +71,15 @@ caller's struct at run time.
 
 | SDK | Terminal | What a program can use |
 | --- | --- | --- |
-| 0.2.0 | Limpet 0.2.0, 0.2.1 | everything in the [catalogue](capabilities.md) |
+| 0.2.0 | Limpet 0.2.0, 0.2.1 | colours, styles, geometry and input modes |
 | 0.2.0 | Limpet 0.1.0 | everything marked "Since 0.1.0"; the input modes are reported as unknown, so a program does not turn them on |
 | 0.2.0 | Limpet 0.3.0 | everything as with 0.2.1; the window title is not decoded, so a program does not send one |
-| 0.3.0 | Limpet 0.3.0 | everything in the catalogue, including the window title |
+| 0.3.0 | Limpet 0.3.0–0.5.0 | SDK 0.3.0 features, including window titles |
 | 0.3.0 | Limpet 0.2.x | as SDK 0.2.0; `limpet_can_set_title()` returns 0 |
 | any | a future Limpet | everything the SDK knows; newer fields are ignored until a newer SDK decodes them |
 
-The query reports what the running terminal does. A program that follows
-it never sends a feature the terminal did not confirm.
+The query reports what the running terminal does. Applications must check the relevant capability before using a reported
+feature. A successful query is not confirmation of every terminal sequence.
 
 ## Version 1.0 of the SDK
 

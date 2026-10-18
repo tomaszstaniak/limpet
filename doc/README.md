@@ -5,20 +5,18 @@ For users:
 - [Why Limpet](why-limpet.md): what it is, what it adds to the Shell, and a
   tested comparison with `CON:`.
 - [Compatibility and limits](compatibility.md).
-- [Finding text and settings](search-and-settings.md) (0.5.0).
+- [Search and settings](search-and-settings.md) (0.5.0).
 - [LIMPET:](limpet-handler.md): Limpet as a console handler (experimental).
 - [Changes](changes.md) of the terminal, release by release.
-- [Roadmap](roadmap.md): ports and features planned after 0.1.
+- [Roadmap](roadmap.md): planned ports and features.
 
 For programmers:
 
 - [Getting started with the SDK](sdk/getting-started.md).
-- [What to use, and when](sdk/choosing.md).
-- [Capability catalogue](capabilities.md): the authoritative list of
-  features, detection and test status.
+- [Choosing an interface](sdk/choosing.md).
+- [Capability catalogue](capabilities.md): supported features, detection and limits.
 - [SDK API reference](sdk/api.md).
-- [Protocol reference](protocols.md): every escape sequence and DOS packet
-  Limpet accepts.
+- [Protocol reference](protocols.md): escape sequences and DOS packet contracts.
   - [Presentation query](presentation.md): operation 13, field by field.
   - [Kitty graphics subset](kitty-graphics.md): inline images.
   - [Hyperlinks](hyperlinks.md): OSC 8 and plain URLs.
