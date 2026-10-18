@@ -1,11 +1,9 @@
 # LIMPET: — Limpet as a console handler (experimental)
 
-`LIMPET:` is a DOS device that opens a Limpet window wherever a program
-would open `CON:`: `NewShell WINDOW LIMPET:`, or a program that opens
-`LIMPET:0/0/640/200/Title` itself. It is the first stage towards letting
-Limpet take over what `CON:` does. It is **experimental**: it does not
-replace `CON:`, programs that open `CON:` keep getting `CON:`, and the
-table below lists what works, what works in part and what does not.
+`LIMPET:` is a DOS console handler. It opens a Limpet window for
+`NewShell WINDOW LIMPET:` or an application calling
+`Open("LIMPET:0/0/640/200/Title", ...)`. It is **experimental** and does not replace
+`CON:`. Programs must request `LIMPET:` explicitly.
 
 Released separately from Limpet, as `Limpet-handler-experimental-<version>-abiv11.zip`;
 the Limpet archive and apkg do not install it. The tests of 2026-10-15
@@ -14,6 +12,9 @@ ran under the handler's earlier working name, XTERM:.
 Scope of this stage: AROS ABIv11 x86_64, tested on AROS One 1.3 under
 QEMU. Not built or run on mainline, not run on ABIv11 2026.09 or real
 hardware.
+
+The compatibility table also includes unreleased stage 2 changes. For the
+limits of the published 0.5.0 archive, see the [release capability reference](capabilities.md#limpet-console-handler).
 
 ## Install and remove
 
@@ -112,11 +113,10 @@ record](verification-0.5.0.md#limpet-handler-experimental).
 | Memory per window | about 32.5 MiB (fonts read per window) | `font_cache.c` | measured 2026-09-25 on ABIv11 2026.09 |
 | Open and close cycles | not established: free memory 86,864 B lower after the first 5 windows, 544 B lower after the next 5 (about 109 B each). Whether that is the handler leaking, memory the system keeps for libraries and segments, or neither, was not found | | 10 cycles from a script, `Avail FLUSH` |
 
-Not compatibility in the sense of this table: modern VT sequences that
-Limpet understands (colours, Unicode, images) are not the Amiga console
-protocol, and a program written for `CON:` does not need them.
+VT sequences, Unicode rendering and inline images are separate from
+compatibility with the Amiga console interface.
 
-### Where each part lives
+### Source layout
 
 - **The Shell** (`workbench/c/shell`) is unchanged and does not know the
   console. It assumes cooked mode and reads byte by byte from the DOS
@@ -130,14 +130,11 @@ protocol, and a program written for `CON:` does not need them.
 - **Limpet's window**: `src/aros_xterm.c` (`-DXTERM_DOS_HANDLER`): the
   renderer, editor and keys of an ordinary Limpet window.
 
-## Gaps before LIMPET: could stand in for CON:
-
-Each with how to see it and what it breaks.
+## Remaining compatibility gaps
 
 1. **Reports are one-based, ABIv11's CON: is one lower.** LIMPET: follows
    AmigaOS and mainline; a program tuned to ABIv11's CON: sees one row and
-   column more than it expects there. Low impact; recorded so it is a
-   choice, not a surprise.
+   column more than it expects there. This is an intentional compatibility difference.
 2. **Raw-mode line feed.** CON: sets LF mode (`CSI 20h`), so a raw-mode
    program's `\n` starts a new line at the left; LIMPET: does not. Programs
    that write bare `\n` in raw mode print stepped lines.
@@ -156,9 +153,9 @@ Each with how to see it and what it breaks.
 8. **Not run on mainline**, where DOS keeps the handler's own port and
    `CliInit` puts requesters on the console's window.
 
-## Next stage: an optional stand-in for CON:
+## Proposed optional CON: replacement
 
-Not built; a design for review.
+This design is not implemented.
 
 - **Opt-in, after boot only.** A command (`LimpetCON ON`) swaps the
   handler of the `CON` device node for `limpet-handler` under the DOS list
@@ -168,15 +165,15 @@ Not built; a design for review.
   unloaded while windows of it may run. Nothing goes into the startup in
   this stage; a later one may offer a line in `S:User-Startup`, never
   `S:Startup-Sequence`.
-- **Per open, the original stays one step away.** When `LIMPET:` cannot
+- **Fallback to the original handler.** When `LIMPET:` cannot
   serve a name (`WINDOW`, `BOOT`, a screen it cannot open, no memory for
   fonts), its launcher passes the startup packet to the saved `CON:`
   handler instead of failing, so that program gets the system console.
   `RAW:` stays the system's until raw-first opens are covered.
-- **Way back without a working window.** `ECON:` and the boot console are
+- **Recovery.** `ECON:` and the boot console are
   never touched. `LimpetCON OFF` works from any Shell, and a reboot
   always restores `CON:`, because nothing is written to disk.
-- **Before it is offered:** gaps 2 to 5 closed, gap 7 reduced (one font
+- **Prerequisites:** gaps 2 to 5 closed, gap 7 reduced (one font
   load shared by all windows), and the contract probe passing the same on
   both consoles, plus a round of programs started from Workbench with
   console windows.

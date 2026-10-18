@@ -1,8 +1,8 @@
 # Getting started with the Limpet SDK
 
-This guide takes you from the archive to a program that prints coloured
-text in Limpet and plain text everywhere else. It assumes you can already
-build an AROS program in C.
+Build the SDK examples, then link a C program that uses colours in Limpet
+and plain text on unsupported consoles or redirected output. An existing
+AROS C cross-compilation setup is required.
 
 ## What you need
 
@@ -10,10 +10,9 @@ build an AROS program in C.
   **ABIv11 Developer SDK**. The SDK was built and tested with GCC 10.5 and
   the 2026.09 Developer SDK.
 - `make`, `unzip`.
-- To run the result: AROS ABIv11 x86_64, 2026.09 or later (the examples
-  were tested there; AROS One 1.3 was not tested with this SDK), with
-  Limpet 0.2.0 for every feature, or Limpet 0.1.0 without the input modes.
-  Without Limpet the examples still run and print plain text.
+- To run the result: AROS ABIv11 x86_64 and Limpet 0.3.0 or later for
+  all SDK features. Earlier Limpet versions report newer features as unknown;
+  unsupported consoles use plain-text fallback.
 
 ABIv11 and mainline AROS binaries do not run on each other's systems. This
 SDK release ships a library for ABIv11 only. See
@@ -30,7 +29,7 @@ SDK release ships a library for ABIv11 only. See
 | `include/limpet/tty_control.h` | the wire protocol, shared with the terminal |
 | `lib/abiv11/libLimpet.a` | the library, prebuilt for ABIv11 x86_64 |
 | `src/` | the library's source, two C files |
-| `examples/` | seven small programs |
+| `examples/` | eight example programs |
 | `doc/` | this documentation |
 | `MANIFEST.sha256` | checksums of every file in the archive |
 
@@ -46,7 +45,7 @@ directory:
          AROS_SDK=/opt/aros-v11/SDK/Development \
          ABI=abiv11 examples
 
-The programs land in `build/abiv11/`. If your compiler already knows its
+The executables are written to `build/abiv11/`. If your compiler already knows its
 sysroot, leave out `AROS_SDK`.
 
 To compile the library from `src/` with your own toolchain instead of
@@ -81,8 +80,7 @@ Run it again in a normal AROS Shell window (`CON:`):
 And with output to a file: `hello >RAM:hello.txt`. The file says the
 output is not a console and contains no escape sequences.
 
-That is the whole pattern: one query, and output that reads correctly
-whether or not it succeeds.
+Use the query result to select formatting; retain plain-text output if it fails.
 
 ## 4. Your own program
 
@@ -115,17 +113,14 @@ Build it like the examples:
 Or skip the library and compile the two files in `src/` into your program;
 they need nothing but `dos.library` and the C library.
 
-Three habits keep a program correct everywhere:
-
-1. **Ask about `Output()`**, the handle you write to. Not `Input()`.
-2. **Flush stdio before asking** when the answer decides how to print what
-   follows.
-3. **Say it in words too.** Colour is a second channel, never the only one.
+Query `Output()`, not `Input()`, so redirection is handled correctly.
+Flush buffered output before the query when its result determines subsequent
+formatting. Use text labels as well as colour for errors and status.
 
 ## Next
 
 - [Which interface to use](choosing.md) for your kind of program.
 - [Capability catalogue](../capabilities.md): every feature, how to detect
-  it, and how far it was checked.
+  it, and its limits.
 - [API reference](api.md).
 - [Examples](examples.md), with expected output and limits.

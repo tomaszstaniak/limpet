@@ -13,8 +13,8 @@ Open an issue at <https://github.com/tomaszstaniak/limpet/issues> with:
 - for a program built with the SDK: the SDK version and the output of the
   SDK's `hello` example run in the same window.
 
-If the problem also happens in `CON:`, say so: it is then probably not a
-Limpet problem.
+Mention whether the problem also occurs in `CON:`; this helps distinguish
+terminal-specific behaviour from shared system behaviour.
 
 ## Changing the code
 
@@ -39,6 +39,10 @@ in [doc/versioning.md](doc/versioning.md) and
 
 ## Documentation
 
-A feature is listed in [doc/capabilities.md](doc/capabilities.md) with its
-real status: verified on a named system, host-tested, experimental or not
-supported. Do not describe a feature as supported because the code exists.
+Update [doc/capabilities.md](doc/capabilities.md) when adding or changing a
+feature. Distinguish released functionality from unreleased development and
+experimental interfaces. Keep detailed test results in verification records.
+
+Public release notes describe user-visible changes, installation and relevant
+limitations. Do not include internal test inventories, CI logs or acceptance
+reports; link to the verification record only where it is useful.

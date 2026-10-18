@@ -11,25 +11,20 @@ and remote work over SSH.
 
 ![Limpet showing an animated plasma drawn with the Kitty graphics protocol](doc/screenshots/kitty-plasma.png)
 
-## Versions
+## Download
 
-| | What it is | Where |
-| --- | --- | --- |
-| **Limpet 0.1.0** | the first terminal release, AROS ABIv11 x86_64 | [releases](https://github.com/tomaszstaniak/limpet/releases), tag `v0.1.0` |
-| **Limpet 0.2.0** | 0.1.0 plus the input modes for full-screen programs and a selection that stays while other rows are redrawn | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.0), tag `v0.2.0` |
-| **Limpet 0.2.1** | 0.2.0 with HarfBuzz 14.5.0 instead of 11.2.1 | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/v0.2.1), tag `v0.2.1` |
-| **Limpet SDK 0.2.0** | headers, library and examples for programs that use Limpet | [published 2026-10-08](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.2.0), tag `sdk-v0.2.0` |
-| **Limpet 0.3.0** | a window title that names the running command and the state a program reports, Ctrl-R history search, one prompt after Ctrl-C, images at the bottom edge | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/v0.3.0), tag `v0.3.0` |
-| **Limpet SDK 0.3.0** | the SDK these sources build: SDK 0.2.0 plus the window title (`limpet_osc_title()`) | [published 2026-10-11](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.3.0), tag `sdk-v0.3.0` |
-| **Limpet 0.4.0** | icons dragged from Workbench put their paths on the Shell's command line | [published 2026-10-13](https://github.com/tomaszstaniak/limpet/releases/tag/v0.4.0), tag `v0.4.0` |
-| **Limpet 0.4.1** | a program can take back a console read it has out; closing the window under drops no longer relies on a uniprocessor exec | [published 2026-10-13](https://github.com/tomaszstaniak/limpet/releases/tag/v0.4.1), tag `v0.4.1` |
-| **Limpet 0.5.0** | the terminal these sources build: fixes a crash of POSIX programs asking for the window size; Find in output; a settings file for font, theme, scrollback and history. Separately, the experimental `LIMPET:` console handler | [published 2026-10-15](https://github.com/tomaszstaniak/limpet/releases/tag/v0.5.0), tag `v0.5.0` |
-| `main` | development; may be ahead of every release | this repository |
+- [Limpet 0.5.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.5.0)
+  for AROS ABIv11, x86_64.
+- [SDK 0.3.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.3.0)
+  for application developers.
+- The separate `LIMPET:` console handler is an experimental download in the
+  0.5.0 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
 
-The releases page shows what is actually published. What changed:
-[terminal](doc/changes.md), [SDK](sdk/CHANGES.md).
+Earlier releases are listed on [GitHub](https://github.com/tomaszstaniak/limpet/releases).
+See the [terminal changelog](doc/changes.md) and [SDK changelog](sdk/CHANGES.md)
+for version history. The `main` branch also contains unreleased development.
 
-## What you can use today
+## Features
 
 Use Limpet for everyday Shell work: reading long command output, copying
 commands and paths, following links, and running tools such as apkg with
@@ -85,8 +80,8 @@ The archive's `README.txt` lists keys, options and known limitations.
 
 ## For programmers
 
-Ordinary programs need nothing: text written to `Output()` appears in
-Limpet as in `CON:`, with UTF-8 decoded. The SDK is for programs that want
+Programs using standard C or DOS I/O can write text and read lines without
+the SDK. Limpet decodes their UTF-8 output. The SDK is for programs that want
 colour, progress lines, links or images in Limpet and plain text in `CON:`
 and in files.
 
@@ -102,9 +97,8 @@ else
     printf("error: file not found\n");
 ```
 
-The query is one DOS packet on the output handle. It does not read the
-keyboard, and `CON:` refuses it at once, so the program does the right
-thing in either console without configuration.
+The query uses a DOS packet on the output handle without reading keyboard
+input. If the console does not support it, the application can use plain text.
 
 | `hello` in Limpet | the same examples in `CON:` |
 | --- | --- |
@@ -118,8 +112,7 @@ examples and this documentation.
   example.
 - [What to use, and when](doc/sdk/choosing.md): plain output, colour,
   links, images, raw keys.
-- [Capability catalogue](doc/capabilities.md): every feature, how to detect
-  it, its limits and how far it was tested.
+- [Capability catalogue](doc/capabilities.md): supported features, detection and limits.
 - [API reference](doc/sdk/api.md), [protocol reference](doc/protocols.md),
   [examples](doc/sdk/examples.md).
 - [Compatibility](doc/compatibility.md),
@@ -131,16 +124,15 @@ examples and this documentation.
 Limpet is built on a host with an AROS ABIv11 cross toolchain (GCC 10.5)
 and the ABIv11 SDK:
 
-    make abiv11-frontend LIMPET_VERSION=0.4.1 LIMPET_DATE=13.10.2026 \
+    make abiv11-frontend LIMPET_VERSION=0.5.0 LIMPET_DATE=15.10.2026 \
          ABIV11_GCC=/path/to/x86_64-aros-gcc \
          ABIV11_SDK=/path/to/SDK/Development
 
-The result is `build/abiv11/aros-xterm` (installed as `Limpet`). The
-version string carries `LIMPET_DATE`; with the date of a release, the build
-of its tag is byte-identical to the released binary (checked for 0.1.0
-with `LIMPET_DATE=03.10.2026` and for 0.2.0 with `LIMPET_DATE=07.10.2026`;
-the 0.2.1 archive is built this way from its tag). Host tests
-of the terminal model, the protocols and the SDK need only a C compiler:
+The result is `build/abiv11/aros-xterm`, installed as `Limpet`. To reproduce
+an existing release, check out its tag and use its version, date, toolchain
+and SDK. `LIMPET_DATE` is embedded in the binary.
+
+Run the host tests with:
 
     make test
 

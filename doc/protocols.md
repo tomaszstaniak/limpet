@@ -1,15 +1,9 @@
 # Protocol reference
 
-Two channels lead from a program to Limpet:
-
-1. **The byte stream**: what a program writes to its output handle, and
-   what it reads back in raw mode. Escape sequences live here.
-2. **DOS packets** on the same handle: the control protocol, of which
-   Limpet 0.1.0 and 0.2.0 serve one operation (13).
-
-This page lists both, for Limpet 0.2.0. Entries marked **0.2.0** are not
-in Limpet 0.1.0. For whether a feature can be detected and how far it
-was checked, see the [capability catalogue](capabilities.md).
+This reference covers **Limpet 0.5.0**. Applications use escape sequences
+through standard I/O and the control protocol through DOS packets on the same
+handle. See the [capability reference](capabilities.md) for feature detection
+and [unreleased changes](capabilities.md#unreleased-changes) for development additions.
 
 All escape sequences below are 7-bit: `ESC` is 0x1B, `CSI` means `ESC [`,
 `OSC` means `ESC ]`, `APC` means `ESC _`, `ST` means `ESC \`. The 8-bit C1
@@ -156,13 +150,12 @@ typedef struct {
 Request: `version` 1, `operation`, `reserved` both 0, `values` as the
 operation needs. A successful reply returns `DOSTRUE` with error 0, the
 same version and operation, and `reserved[0]` set to `XTY_PACKET_MAGIC`.
-The magic is how a client tells a real answer from a handler that left the
-block untouched. On failure the block is unchanged and the reply is
+The response marker distinguishes a completed request from an unchanged block. On failure the block is unchanged and the reply is
 `DOSFALSE` with an error code.
 
 ### Control operations
 
-| No. | Name | Limpet Shell session (0.1.0, 0.2.0) | Experimental PTY |
+| No. | Name | Released Shell session (through 0.5.0) | Experimental PTY |
 | --- | --- | --- | --- |
 | 1 | `XTY_CAPS` | `ERROR_ACTION_NOT_KNOWN` | yes |
 | 2-12 | config, geometry, read state, flush, drain, flow | `ERROR_ACTION_NOT_KNOWN` | yes |
@@ -187,8 +180,7 @@ the header and in [the experimental guide](sdk/experimental.md).
 - Numbers of packet types, operations and bits never change meaning.
 - New fields use reserved values that are zero today. Clients ignore
   values and bits they do not know.
-- A clear "known" bit means unknown. Clients do not turn unknown into
-  absent, or the other way round.
+- A clear bit in the known-field mask means unknown, not unsupported.
 - The block stays 64 bytes. A future layout would use a new `version`, and
   a terminal would answer an unknown version with an error, never with a
   reinterpreted block.

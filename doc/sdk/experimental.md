@@ -1,11 +1,14 @@
 # Experimental interfaces
 
-**Nothing on this page is in a public release.** It describes source code
-in this repository that runs only in an unpublished mainline preview. It is
-here so that people following the work know what exists and what it would
-take. Do not ship a program that depends on it.
+The PTY, termios bridge and extended control operations below are available
+only in an unpublished mainline preview. They are not supported application
+interfaces in the ABIv11 release.
 
-## What exists
+Read cancellation in ordinary Shell sessions is an exception: it has been
+available since Limpet 0.4.1 and is described below. The separately released
+`LIMPET:` handler does not provide the experimental POSIX runtime.
+
+## Preview components
 
 | Part | Source | What it does |
 | --- | --- | --- |
@@ -17,13 +20,13 @@ take. Do not ship a program that depends on it.
 | termios layer | `src/aros_tty_termios.c` | `tcgetattr`, `tcsetattr`, `tcdrain`, `tcflush`, `tcflow` on a DOS handle |
 | C library bridge | `src/aros_tty_fd_bridge.c` | maps a POSIX descriptor to the PTY; needs an experimental `posixc.library` |
 
-## Where it runs
+## Runtime requirements
 
 On mainline AROS x86_64, in a PTY build of Limpet that is not published,
 with an experimental `posixc.library` that is not part of AROS. A Ratatui
 program and an SSH client preview have run there.
 
-## What Limpet 0.1.0 and 0.2.0 do with it
+## Released Shell sessions
 
 A Limpet Shell session on ABIv11 answers every control operation except 13
 with `ERROR_ACTION_NOT_KNOWN`, and does not accept `XTY_ACTION_TRY_READ` or
@@ -38,10 +41,10 @@ packet's identity, as the header describes. The read is answered first
 port. A read already answered gives `DOSFALSE` with
 `ERROR_OBJECT_NOT_FOUND`. There is no capability bit for it on this
 endpoint: try it, and treat a refusal (`ERROR_ACTION_NOT_KNOWN` from
-Limpet 0.4.0 and earlier, and from CON:) as "not here", with the read
-still out. Hardcode takes its read back this way at exit.
+Limpet 0.4.0 and earlier, and from CON:) as unsupported. The read
+remains pending until it receives its own reply. Hardcode takes its read back this way at exit.
 
-## Rules already fixed by the protocol
+## Protocol rules
 
 These hold for the PTY preview and will hold for any release that serves
 these operations:
@@ -57,7 +60,7 @@ these operations:
 - The block is native-endian and synchronous, with no embedded pointers.
   The caller owns it until the DOS reply.
 
-## What would make it public
+## Requirements for a supported PTY release
 
 A PTY build for the released ABI, a `posixc.library` that the system ships
 or that a program can rely on, and acceptance tests of real POSIX programs

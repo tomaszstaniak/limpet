@@ -47,8 +47,7 @@ Percent escapes must be valid and are passed unchanged, never decoded by Limpet.
 This extra check matters because mainline OpenURL expands `%u` into configured
 browser command/ARexx templates. Limpet does not construct or execute a Shell
 command itself. OpenURL preferences and the configured browser remain trusted
-local configuration; use the normal quoted `%u` templates. An allowed network
-address is not a claim that its destination is trustworthy.
+local configuration; use the normal quoted `%u` templates. URL validation checks syntax, not the trustworthiness of the destination.
 
 Nothing opens automatically, including output received over SSH. No OSC 52
 clipboard writes, `file:`, `mailto:`, executable links or remote-control command
@@ -62,6 +61,5 @@ status appears in the title. Closing the terminal waits for an outstanding opene
 worker, as it does for clipboard work; a stuck external OpenURL request can delay
 final close, but does not synchronously block the GUI event loop.
 
-Long target previews are abbreviated in the title (and may be visually clipped
-by narrow windows). Copy provides the complete target; no launch confirmation
-dialog or persistent status bar is provided.
+Long targets are abbreviated in the title. Copying retains the full URL.
+Links open without a confirmation dialog.

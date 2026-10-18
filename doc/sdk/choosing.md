@@ -1,7 +1,7 @@
-# What to use, and when
+# Choosing an interface
 
-Most programs need very little from Limpet. Start at the top of this list
-and stop at the first entry that covers what you want to do.
+Use standard I/O for plain text. The SDK provides capability queries and
+helpers for terminal sequences:
 
 | You want to | Use | SDK needed |
 | --- | --- | --- |
@@ -16,13 +16,11 @@ and stop at the first entry that covers what you want to do.
 
 ## Plain command-line tools
 
-If your program prints results and reads lines, it already works in
-Limpet. Unicode output (UTF-8) is shown correctly, long output goes into
-scrollback, and the window rewraps it when resized. Do not add the SDK just
-because Limpet exists. A program that prints `RAM:` paths and file sizes
-gains nothing from it.
+Programs using standard C or DOS I/O can print text and read lines without
+the SDK. Limpet decodes UTF-8 and retains output in scrollback, rewrapping
+it when the window is resized.
 
-Keep doing the things that work everywhere: write to `Output()`, check
+Write to `Output()`, check
 `SIGBREAKF_CTRL_C` in long loops, return the usual `RETURN_*` codes.
 
 ## Colour and progress
@@ -46,12 +44,11 @@ Example: [`colors`](../../sdk/examples/colors.c),
 package manager, decides colour, bold, table width and its download bar
 this way.
 
-## Native AROS programs that want more
+## Linking native AROS programs
 
-The SDK API is the whole public interface in this release: one query and
-sequence builders. It does not wrap Intuition, it does not open windows,
-and it does not replace `dos.library`. Link `libLimpet.a`, or compile its
-two source files into your program.
+The SDK provides the presentation query and sequence builders. Link
+`libLimpet.a` or compile its two source files into your program. Window
+management and DOS I/O remain application responsibilities.
 
 ## Links
 
@@ -117,5 +114,5 @@ that uses them must:
 - expect key presses mixed in with the answer, and keep them;
 - not send queries while the user is typing.
 
-When the presentation query gives you the same information, use it
-instead: it has none of these problems.
+Prefer the presentation query when it provides the required information;
+it does not use the input stream.
