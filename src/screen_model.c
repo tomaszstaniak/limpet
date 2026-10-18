@@ -485,7 +485,7 @@ static void execute_csi(XTermScreen *s, unsigned char command)
     if(s->csi_gt) {
         if(s->csi_intermediate) return;
         if(command=='m' && s->params[0]==4) s->modify_enter=s->param_count>1 && s->params[1]>0;
-        else if(command=='m' && s->param_count==1 && !s->params[0]) s->modify_enter=0;
+        else if(command=='m' && !s->param_started) s->modify_enter=0;   /* CSI > m only: CSI > 0 m is modifyKeyboard */
         return;
     }
     /* Queries observe the live cursor, including a pending right-margin wrap.
