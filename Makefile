@@ -79,6 +79,7 @@ abiv11-xterm-console:
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/tty-winsize tests/tty_winsize_probe.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/winsize-check tests/winsize_check.c -L$(ABIV11_SDK)/lib
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/key-inject tests/key_inject.c -L$(ABIV11_SDK)/lib
+	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/enter-probe tests/enter_probe.c -L$(ABIV11_SDK)/lib
 
 # A console read taken back with XTY_ACTION_CANCEL (tests/read_cancel.c).
 .PHONY: abiv11-read-cancel
