@@ -26,6 +26,7 @@ int main(void)
     feed("\033[>4m"); assert(!s.modify_enter);
     feed("\033[>4;2m"); assert(s.modify_enter);
     feed("\033[>4;0m"); assert(!s.modify_enter);
+    feed("\033[>4;1m\033[>m"); assert(!s.modify_enter);              /* CSI > m resets all, as in xterm */
     {
         unsigned col = s.cursor_column;
         feed("\033[>4;1m\033[>5;1m\033[>c"); assert(s.modify_enter);  /* other CSI > ignored */

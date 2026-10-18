@@ -479,11 +479,13 @@ static void execute_csi(XTermScreen *s, unsigned char command)
     if (s->discard) return;
     /* xterm's modifyOtherKeys, CSI > 4 ; Pv m, for Enter only: with a level
        of 1 or more a raw-mode client gets Shift+Enter as CSI 27;2;13~ and
-       can tell it from Enter. CSI > 4 m or a level of 0 turns it off. Any
-       other CSI > sequence is ignored, as before. */
+       can tell it from Enter. CSI > 4 m or a level of 0 turns it off, and
+       so does CSI > m, which resets every key-modifier resource in xterm.
+       Any other CSI > sequence is ignored, as before. */
     if(s->csi_gt) {
         if(s->csi_intermediate) return;
         if(command=='m' && s->params[0]==4) s->modify_enter=s->param_count>1 && s->params[1]>0;
+        else if(command=='m' && s->param_count==1 && !s->params[0]) s->modify_enter=0;
         return;
     }
     /* Queries observe the live cursor, including a pending right-margin wrap.

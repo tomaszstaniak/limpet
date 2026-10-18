@@ -29,6 +29,8 @@ for version in 0.1.0 0.2.0; do
     # Input bits added later (8, modified Enter) are new capabilities in the
     # same field: a client ignores bits it does not know, so they are taken
     # out before comparing. Every bit the old client knew must be the same.
+    # 7 is every input bit up to SDK 0.3.0: widen it when a later SDK is
+    # vendored here as compat-<version>.
     case "$now" in *input=*)
         bits=${now##*input=}; bits=${bits%% *}
         now="${now%%input=*}input=$((bits & 7))${now#*input=$bits}";;

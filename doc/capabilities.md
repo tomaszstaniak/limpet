@@ -696,7 +696,8 @@ it both keys arrive as CR and the program cannot tell them apart.
 
 **Use.** In raw mode, send `CSI > 4 ; 1 m`. Shift+Enter (Return or the
 keypad's Enter, Shift alone) then arrives as `CSI 27 ; 2 ; 13 ~`. Enter, and
-Enter with Ctrl or Alt, stay CR. `CSI > 4 m` or `CSI > 4 ; 0 m` turns it off.
+Enter with Ctrl, Alt or an Amiga key, stay CR. `CSI > 4 m`, `CSI > 4 ; 0 m`
+and `CSI > m` turn it off.
 
 **Why this form.** It is xterm's modifyOtherKeys sequence for that key, so a
 program that already reads it from xterm and other terminals reads it here.
@@ -708,6 +709,9 @@ arrives as LF, works in every Limpet and in CON:).
 
 **Status.** Host-tested (`tests/test_bracketed_paste.c`,
 `tests/test_input_echo.c`, `tests/test_presentation.c`); not yet released.
+Seen working on AROS One 1.3 by its first client, Bishop (aros-hardcode
+`docs/evidence/2026-10-17-bishop-walkthrough/`); Limpet has no verification
+record of its own for it yet.
 
 ## Input modes end with raw mode
 

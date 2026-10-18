@@ -2161,7 +2161,7 @@ int main(int argc,char **argv)
                 if(screen.modify_enter && process_session.line.raw && count==1 && bytes[0]=='\r' &&
                    (code==RAWKEY_RETURN || code==RAWKEY_KP_ENTER) &&
                    (q&(IEQUALIFIER_LSHIFT|IEQUALIFIER_RSHIFT)) &&
-                   !(q&(IEQUALIFIER_CONTROL|IEQUALIFIER_LALT|IEQUALIFIER_RALT))) {
+                   !(q&(IEQUALIFIER_CONTROL|IEQUALIFIER_LALT|IEQUALIFIER_RALT|IEQUALIFIER_LCOMMAND|IEQUALIFIER_RCOMMAND))) {
                     size_t n=terminal_encode_modified_enter(TERMINAL_SHIFT,bytes,sizeof bytes);
                     if(n) count=n;
                 }
