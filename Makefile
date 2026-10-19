@@ -553,7 +553,11 @@ test-font-memory: $(FONT_SOURCES) src/cluster_font.c build/harfbuzz-host.o
 	./build/memfont/test_font "$(FONT_PRIMARY)" "$(FONT_SECONDARY)" $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/Unifont.otf
 	./build/memfont/test_cluster_font "$(FONT_PRIMARY)" "$(FONT_SECONDARY)" $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/Unifont.otf $(FONT_ASSETS)/NotoColorEmoji.ttf
 
-test-font: build/test_font build/test_cluster_font build/test_cluster_bitmap
+build/test_cluster_letters: tests/test_cluster_letters.c $(CLUSTER_SRC) src/cluster_font.h src/aros_font.h build/harfbuzz-host.o
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(FONT_CFLAGS) -Ivendor/harfbuzz/src tests/test_cluster_letters.c $(CLUSTER_SRC) build/harfbuzz-host.o $(FONT_LIBS) $(HOST_CXX_LIBS) -lm -o $@
+
+test-font: build/test_font build/test_cluster_font build/test_cluster_bitmap build/test_cluster_letters
+	./build/test_cluster_letters "$(FONT_PRIMARY)"
 	./build/test_font "$(FONT_PRIMARY)" "$(FONT_SECONDARY)" $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/Unifont.otf
 	./build/test_cluster_font "$(FONT_PRIMARY)" "$(FONT_SECONDARY)" $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/Unifont.otf $(FONT_ASSETS)/NotoColorEmoji.ttf
 	./build/test_cluster_bitmap

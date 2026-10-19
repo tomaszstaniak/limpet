@@ -78,7 +78,7 @@ static int render(XClusterRaster *r,FT_Face face,hb_buffer_t *buffer)
 {
     unsigned n,i; int pass;
     int minx=INT_MAX,miny=INT_MAX,maxx=INT_MIN,maxy=INT_MIN;
-    double scale=1.0,ox=0,oy=0;
+    double scale=1.0,scale_x=1.0,ox=0,oy=0;
     hb_glyph_info_t *info=hb_buffer_get_glyph_infos(buffer,&n);
     hb_glyph_position_t *pos=hb_buffer_get_glyph_positions(buffer,NULL);
     if(!n || n>64) return XFONT_SIZE_ERROR;
@@ -111,7 +111,7 @@ static int render(XClusterRaster *r,FT_Face face,hb_buffer_t *buffer)
             for(dy=0;dy<r->height;++dy) for(dx=0;dx<r->width;++dx) {
                 unsigned sx,sy,c,sum[4]={0,0,0,0};
                 for(sy=0;sy<2;++sy) for(sx=0;sx<2;++sx) {
-                    double fx=((double)dx+(sx+.5)/2-ox)/scale-left;
+                    double fx=((double)dx+(sx+.5)/2-ox)/scale_x-left;
                     double fy=((double)dy+(sy+.5)/2-oy)/scale-top;
                     if(fx>=0 && fy>=0 && fx<b->width && fy<b->rows) {
                         uint32_t p=bitmap_pixel(b,(unsigned)fx,(unsigned)fy);
@@ -125,8 +125,20 @@ static int render(XClusterRaster *r,FT_Face face,hb_buffer_t *buffer)
         }
         if(!pass && minx!=INT_MAX) {
             double sx=(double)r->width/(maxx-minx),sy=(double)r->height/(maxy-miny);
+            if(!r->colour && sy>=1 && sx<1 && sx>=.75) {
+                /* A letter slightly wider than the cell (Vera Mono's w and W
+                 * at 12 px: 8 pixels in a 7-pixel cell). Narrow it and keep
+                 * its height and baseline; shrinking and centring it as for
+                 * an emoji left it small and raised, with a gap before it. */
+                scale_x=sx;
+                ox=-minx*sx;
+                if(miny<0) oy=-miny;
+                else if(maxy>(int)r->height) oy=(int)r->height-maxy;
+                continue;
+            }
             if(sx<scale) scale=sx;
             if(sy<scale) scale=sy;
+            scale_x=scale;
             if(r->colour || scale<1) {
                 ox=(r->width-(maxx-minx)*scale)/2-minx*scale;
                 oy=(r->height-(maxy-miny)*scale)/2-miny*scale;
