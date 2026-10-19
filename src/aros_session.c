@@ -5,6 +5,7 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <dos/dostags.h>
+#include <dos/var.h>
 #include <dos/stdio.h>
 #include <devices/timer.h>
 #include <string.h>
@@ -20,6 +21,11 @@ static void worker(void)
     BPTR startup;
     Wait(SIGBREAKF_CTRL_F); /* Parent records the child id before it can exit. */
     startup=s->startup_input;
+    /* Programs choose their colours from COLORTERM, as on other terminals
+     * (Helix keeps to 16 colours without it). A local variable of this
+     * process: the session's Shell copies it (NP_CopyVars), so does every
+     * program the Shell starts, and nothing outside the window sees it. */
+    SetVar((CONST_STRPTR)"COLORTERM",(CONST_STRPTR)"truecolor",-1,GVF_LOCAL_ONLY);
 #ifdef XTERM_SESSION_TESTING
     if(s->shell && aros_session_test_fail_shell_launch) s->result=-1;
     else
