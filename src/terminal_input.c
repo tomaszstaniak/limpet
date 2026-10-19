@@ -66,24 +66,47 @@ static unsigned char control(unsigned char c, unsigned modifiers)
     if (c == '?') return 127;
     return c;
 }
-size_t terminal_encode_latin1(const unsigned char *bytes, size_t length,
-                              unsigned modifiers, unsigned char *output,
-                              size_t capacity)
+static unsigned code_point(unsigned char c, const unsigned short *high)
+{
+    if (c < 128 || !high || !high[c - 128]) return c;
+    return high[c - 128];
+}
+
+static size_t utf8_width(unsigned u)
+{
+    return u < 0x80 ? 1 : u < 0x800 ? 2 : 3;
+}
+
+size_t terminal_encode_charset(const unsigned char *bytes, size_t length,
+                               const unsigned short *high, unsigned modifiers,
+                               unsigned char *output, size_t capacity)
 {
     size_t i, n = (modifiers & TERMINAL_ALT) ? 1 : 0, used = 0;
     if (!bytes || !length || !output || n > capacity) return 0;
     for (i = 0; i < length; ++i) {
-        size_t width = control(bytes[i], modifiers) < 128 ? 1 : 2;
+        size_t width = utf8_width(code_point(control(bytes[i], modifiers), high));
         if (width > capacity - n) return 0;
         n += width;
     }
     if (modifiers & TERMINAL_ALT) output[used++] = '\033';
     for (i = 0; i < length; ++i) {
-        unsigned char c = control(bytes[i], modifiers);
-        if (c >= 128) {
-            output[used++] = (unsigned char)(0xc0 | (c >> 6));
-            output[used++] = (unsigned char)(0x80 | (c & 63));
-        } else output[used++] = c;
+        unsigned u = code_point(control(bytes[i], modifiers), high);
+        if (u < 0x80) output[used++] = (unsigned char)u;
+        else if (u < 0x800) {
+            output[used++] = (unsigned char)(0xc0 | (u >> 6));
+            output[used++] = (unsigned char)(0x80 | (u & 63));
+        } else {
+            output[used++] = (unsigned char)(0xe0 | (u >> 12));
+            output[used++] = (unsigned char)(0x80 | ((u >> 6) & 63));
+            output[used++] = (unsigned char)(0x80 | (u & 63));
+        }
     }
     return used;
+}
+
+size_t terminal_encode_latin1(const unsigned char *bytes, size_t length,
+                              unsigned modifiers, unsigned char *output,
+                              size_t capacity)
+{
+    return terminal_encode_charset(bytes, length, NULL, modifiers, output, capacity);
 }

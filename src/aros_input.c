@@ -1,8 +1,64 @@
 #include "aros_input.h"
 #include "terminal_input.h"
 #include <devices/rawkeycodes.h>
+#include <dos/var.h>
+#include <proto/codesets.h>
+#include <proto/dos.h>
+#include <proto/exec.h>
 #include <proto/keymap.h>
+#include <stdlib.h>
 #include <string.h>
+
+/* The keymap gives the characters above 127 in the system's 8-bit character
+ * set, which Locale prefs save as ENV:CHARSET (ISO-8859-2 for a Polish
+ * setup). Their code points come from codesets.library, opened only when a
+ * key gives such a character. Without the variable, the library or the set,
+ * the bytes are Latin-1, as before. The variable is read again for each such
+ * key, so a change in Locale prefs applies without restarting. */
+struct Library *CodesetsBase;
+static char charset_name[64];
+static unsigned short charset_high[128];
+static int charset_loaded;
+
+static void close_codesets(void)
+{
+    if (CodesetsBase) CloseLibrary(CodesetsBase);
+    CodesetsBase = NULL;
+}
+
+static const unsigned short *keyboard_charset(void)
+{
+    char name[sizeof charset_name];
+    struct codeset *set;
+    int i;
+    if (GetVar((STRPTR)"CHARSET", (STRPTR)name, sizeof name, GVF_GLOBAL_ONLY) <= 0 || !name[0])
+        return NULL;
+    if (charset_loaded && !strcmp(name, charset_name))
+        return charset_loaded > 0 ? charset_high : NULL;
+    strcpy(charset_name, name);
+    charset_loaded = -1;
+    if (!CodesetsBase) {
+        CodesetsBase = OpenLibrary((CONST_STRPTR)"codesets.library", 6);
+        if (!CodesetsBase) return NULL;
+        atexit(close_codesets);
+    }
+    set = CodesetsFindA((CONST_STRPTR)name, NULL);
+    if (!set) return NULL;
+    for (i = 0; i < 128; ++i) {
+        unsigned u = set->table[128 + i].ucs4;
+        charset_high[i] = u > 0 && u <= 0xffff ? (unsigned short)u : 0;
+    }
+    charset_loaded = 1;
+    return charset_high;
+}
+
+static const unsigned short *mapped_charset(const unsigned char *bytes, WORD n)
+{
+    WORD i;
+    for (i = 0; i < n; ++i)
+        if (bytes[i] >= 128) return keyboard_charset();
+    return NULL;
+}
 
 int aros_input_capture(ArosRawKey *key, const struct IntuiMessage *message)
 {
@@ -68,5 +124,6 @@ size_t aros_input_encode(const ArosRawKey *key, unsigned char *output,
     event.ie_Qualifier &= ~(IEQUALIFIER_CONTROL | IEQUALIFIER_LALT);
     n = MapRawKey(&event, (STRPTR)mapped, sizeof mapped, NULL);
     if (n <= 0) return 0;
-    return terminal_encode_latin1(mapped, (size_t)n, modifiers, output, capacity);
+    return terminal_encode_charset(mapped, (size_t)n, mapped_charset(mapped, n),
+                                   modifiers, output, capacity);
 }

@@ -23,9 +23,15 @@ size_t terminal_encode_key(TerminalKey key, unsigned modifiers,
  * turned it on with CSI > 4 ; 1 m. Only Shift+Enter is sent this way
  * (CSI 27;2;13~); 0 for anything else, which then stays CR. Atomic as above. */
 size_t terminal_encode_modified_enter(unsigned modifiers, unsigned char *output, size_t capacity);
-/* Explicit Latin-1 default, not a Unicode keymap decoder. Shift/caps have
- * already been applied by the keymap. Ctrl maps ASCII @.._ and a..z,
- * space/2 to NUL and ? to DEL; Alt prefixes one ESC per mapped event. */
+/* A keymap's mapped bytes as UTF-8. Bytes 0x80..0xFF are characters of an
+ * 8-bit character set: `high` gives their code points (index byte - 0x80),
+ * and a NULL table or a 0 entry means Latin-1. Shift/caps have already been
+ * applied by the keymap. Ctrl maps ASCII @.._ and a..z, space/2 to NUL and
+ * ? to DEL; Alt prefixes one ESC per mapped event. */
+size_t terminal_encode_charset(const unsigned char *bytes, size_t length,
+                               const unsigned short *high, unsigned modifiers,
+                               unsigned char *output, size_t capacity);
+/* terminal_encode_charset with Latin-1. */
 size_t terminal_encode_latin1(const unsigned char *bytes, size_t length,
                               unsigned modifiers, unsigned char *output,
                               size_t capacity);

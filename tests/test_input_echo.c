@@ -65,6 +65,29 @@ static void text(void)
     assert(terminal_encode_latin1(NULL, 0, TERMINAL_ALT, out, sizeof out) == 0);
 }
 
+/* A Polish keymap gives ISO-8859-2 bytes: with that table they must become
+ * the Polish letters, not the Latin-1 characters of the same codes. */
+static void charset(void)
+{
+    unsigned short latin2[128] = {0};
+    unsigned char out[32];
+    /* ą ż ł ś ć ę ń ó Ą, as the pc105_pl keymap maps them. */
+    const unsigned char typed[] = {0xb1, 0xbf, 0xb3, 0xb6, 0xe6, 0xea, 0xf1, 0xf3, 0xa1};
+    latin2[0xb1 - 128] = 0x105; latin2[0xbf - 128] = 0x17c; latin2[0xb3 - 128] = 0x142;
+    latin2[0xb6 - 128] = 0x15b; latin2[0xe6 - 128] = 0x107; latin2[0xea - 128] = 0x119;
+    latin2[0xf1 - 128] = 0x144; latin2[0xf3 - 128] = 0xf3; latin2[0xa1 - 128] = 0x104;
+    assert(terminal_encode_charset(typed, sizeof typed, latin2, 0, out, sizeof out) == 18);
+    assert(!memcmp(out, "\xc4\x85\xc5\xbc\xc5\x82\xc5\x9b\xc4\x87\xc4\x99\xc5\x84\xc3\xb3\xc4\x84", 18));
+    /* Alt still prefixes ESC; a 0 entry stays Latin-1; ASCII is untouched. */
+    assert(terminal_encode_charset(typed, 1, latin2, TERMINAL_ALT, out, sizeof out) == 3 && !memcmp(out, "\033\xc4\x85", 3));
+    assert(terminal_encode_charset((const unsigned char *)"\xe9x", 2, latin2, 0, out, sizeof out) == 3 && !memcmp(out, "\xc3\xa9x", 3));
+    /* A three-byte character (the euro sign of ISO-8859-15) and atomicity. */
+    latin2[0xa4 - 128] = 0x20ac;
+    assert(terminal_encode_charset((const unsigned char *)"\xa4", 1, latin2, 0, out, sizeof out) == 3 && !memcmp(out, "\xe2\x82\xac", 3));
+    memset(out, 0xa5, sizeof out);
+    assert(terminal_encode_charset((const unsigned char *)"\xa4", 1, latin2, 0, out, 2) == 0 && out[0] == 0xa5);
+}
+
 /* Expansion, ring wrap/backpressure and close/reset must preserve order. */
 static void echo(void)
 {
@@ -104,7 +127,7 @@ static void echo(void)
 }
 int main(void)
 {
-    keys(); text(); echo();
+    keys(); text(); charset(); echo();
     puts("input/echo tests passed");
     return 0;
 }
