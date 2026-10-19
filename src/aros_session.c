@@ -1,4 +1,5 @@
 #include "aros_session.h"
+#include "perf_diag.h"
 #include "xterm_presentation.h"
 #include "session_command.h"
 #include "xterm_status.h"
@@ -74,6 +75,9 @@ static int start_timer(ArosSession *s,LONG usec)
  * full CPU instead of ending. */
 #define XSESSION_CLOSED_ERROR ERROR_DEVICE_NOT_MOUNTED
 
+#ifdef XTERM_PERF_DIAG
+static uint64_t perf_write_started;
+#endif
 static void service(ArosSession *s)
 {
     struct DosPacket *p=s->pending_read;
@@ -120,6 +124,8 @@ static void service(ArosSession *s)
                     (size_t)p->dp_Arg3-s->write_offset);
             if(s->write_offset!=(size_t)p->dp_Arg3) break;
             s->pending_write=NULL; s->write_offset=0;
+            PERF_DO(uint64_t waited=PERF_NOW()-perf_write_started; perf_diag.write_wait_us+=(unsigned long)waited;
+                    PERF_MAX(write_wait_max_us,waited));
             ReplyPkt(p,p->dp_Arg3,0);
         }
         /* The next writer in line, if any. */
@@ -472,7 +478,10 @@ void aros_session_poll(ArosSession *s)
                  * that only prints must not take Ctrl-C from the Shell. The
                  * foreground is whoever reads the console; commands run in
                  * the Shell's own process, so they are covered. */
+                PERF_DO(perf_write_started=PERF_NOW(); ++perf_diag.write_packets;
+                        perf_diag.write_bytes+=(unsigned long)p->dp_Arg3);
                 s->pending_write=p; s->write_offset=0; service(s);
+                PERF_DO(if(s->pending_write==p) ++perf_diag.write_waited);
             }
             break;
         case ACTION_END:

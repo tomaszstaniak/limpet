@@ -38,6 +38,7 @@
 #include <proto/gadtools.h>
 #include <libraries/gadtools.h>
 #include <cybergraphx/cybergraphics.h>
+#include "perf_diag.h"
 #include <devices/rawkeycodes.h>
 #include <devices/timer.h>
 #include <intuition/intuition.h>
@@ -440,6 +441,10 @@ static size_t output_pump(void)
         output_generation=process_session.input_generation;
         output_replies=replies_enabled();
     }
+    PERF_MAX(output_backlog_max,process_session.output.length+(output_length-output_offset));
+#ifdef XTERM_PERF_DIAG
+    uint64_t parse_started=PERF_NOW();
+#endif
     if(replies_enabled() && output_replies && output_generation==process_session.input_generation)
         n=reply_flow_write(&reply_flow,&screen,pending_output+output_offset,
                           output_length-output_offset,reply_send,&process_session);
@@ -448,6 +453,8 @@ static size_t output_pump(void)
         screen_write(&screen,pending_output+output_offset,n);
     }
     flood_diag_output(pending_output+output_offset,n);
+    PERF_DO(if(n) { ++perf_diag.pumps; perf_diag.pump_bytes+=n;
+                    perf_diag.parse_us+=(unsigned long)(PERF_NOW()-parse_started); });
     output_offset+=n;
     return n;
 }
@@ -744,6 +751,9 @@ static void draw_screen(struct Window *window)
     if(cursor && cursor_col && !screen_view_cell(&screen,screen.cursor_row,cursor_col).width)
         --cursor_col;
     ++paint_calls;
+#ifdef XTERM_PERF_DIAG
+    uint64_t draw_started=PERF_NOW(),upload_us=0; unsigned long rows_before=perf_diag.rows;
+#endif
     /* Never clear the text grid before uploading finished rows: that exposes
      * a blank frame on every keystroke. Only fill the unused margins, in the
      * edge cells' colours on the alternate screen (margin_fill.h). */
@@ -825,8 +835,14 @@ static void draw_screen(struct Window *window)
         ++paint_rows;
         /* A clipped/partial upload may already have changed visible pixels. */
         paint_damage_forget_row(&paint_damage,row);
-        if(WritePixelArray(row_pixels,0,0,pitch,rp,MARGIN,MARGIN+row*h,
-                          screen.columns*w,h,RECTFMT_RGB)==screen.columns*w*h) {
+#ifdef XTERM_PERF_DIAG
+        uint64_t upload_started=PERF_NOW();
+#endif
+        ULONG uploaded=WritePixelArray(row_pixels,0,0,pitch,rp,MARGIN,MARGIN+row*h,
+                          screen.columns*w,h,RECTFMT_RGB);
+        PERF_DO(upload_us+=PERF_NOW()-upload_started; ++perf_diag.rows;
+                perf_diag.pixels+=(unsigned long)screen.columns*w*h);
+        if(uploaded==screen.columns*w*h) {
             unsigned i;
             paint_damage_commit(&paint_damage,row,paint_row);
             flood_diag_upload(window,row,1);
@@ -835,6 +851,11 @@ static void draw_screen(struct Window *window)
     }
     kitty_blit_fast(rp,&screen);
     kitty_count_drawn(&screen);
+    PERF_DO(uint64_t spent=PERF_NOW()-draw_started; ++perf_diag.draws;
+            if(perf_diag.rows!=rows_before) ++perf_diag.draws_with_rows;
+            perf_diag.upload_us+=(unsigned long)upload_us;
+            perf_diag.raster_us+=(unsigned long)(spent-upload_us);
+            PERF_MAX(draw_max_us,spent));
 }
 
 #ifdef XTERM_DIAG_FORWARD
@@ -1870,9 +1891,13 @@ int main(int argc,char **argv)
         tick_close();
         close_main_window(window);xfont_close();return RETURN_FAIL;
     }
+    PERF_DO(perf_open());
     while (running) {
         struct IntuiMessage *message;
         int dirty=0;
+#ifdef XTERM_PERF_DIAG
+        uint64_t loop_started;
+#endif
         replies_sync();
         int paste_ready=paste.length && !paste.confirmation &&
             !reply_flow.length &&
@@ -1882,6 +1907,7 @@ int main(int argc,char **argv)
         if(!paste_ready && !keyboard_ready() && !flood_diag_ready() && !(echo_mode==2 && output_ready()))
             Wait((1UL<<window->UserPort->mp_SigBit)|SIGF_CHILD|tick_signal()|aros_drop_signal(&file_drop)|
                  aros_session_signals(&process_session)|diag_forward_signal()|flood_diag_signals());
+        PERF_DO(loop_started=PERF_NOW(); ++perf_diag.loops);
         diag_forward();
         process_session.columns=screen.columns;
         process_session.rows=screen.rows;
@@ -1989,6 +2015,15 @@ int main(int argc,char **argv)
             UWORD mouse_qualifiers=message->Qualifier;
             ArosRawKey key;
             int have_key=aros_input_capture(&key,message);
+#ifdef XTERM_PERF_DIAG
+            if(event==IDCMP_RAWKEY && !(code&IECODE_UP_PREFIX)) {
+                uint64_t stamp=(uint64_t)message->Seconds*1000000u+message->Micros,now=PERF_NOW();
+                ++perf_diag.keys;
+                if(code==0x4D) ++perf_diag.downs;
+                if(mouse_qualifiers&IEQUALIFIER_REPEAT) ++perf_diag.repeats;
+                if(now>stamp) PERF_MAX(key_latency_max_us,now-stamp);
+            }
+#endif
             ReplyMsg((struct Message *)message);
             flood_diag_event(event);
             if (event == IDCMP_MENUPICK) {
@@ -2372,10 +2407,14 @@ int main(int argc,char **argv)
                       total!=output_search.total) dirty=1;
         }
         if(running && dirty) { update_title(window,last_key); draw_screen(window); }
+        PERF_MAX(key_queue_max,keyboard.count);
+        PERF_MAX(input_backlog_max,process_session.input.length);
+        PERF_DO(PERF_MAX(loop_gap_max_us,PERF_NOW()-loop_started); perf_tick());
         if(running && (title_pending || title_hold || status_expiring() || foreground_watch ||
                        (echo_mode==2 && foreground.running))) tick_arm();
     }
     tick_close();
+    PERF_DO(perf_close());
     aros_session_dispose(&process_session);
 #ifdef XTERM_PKTWAIT_PROBE
     aros_handler_probe_stop();

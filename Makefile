@@ -14,7 +14,7 @@ UNICODE_FLAGS = -Ivendor/utf8proc -DUTF8PROC_STATIC
 INPUT_SRC = src/terminal_input.c src/echo_session.c
 EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c src/output_search.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
-SESSION_SRC = src/aros_session.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
+SESSION_SRC = src/aros_session.c src/perf_diag.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
@@ -55,6 +55,14 @@ abiv11-frontend:
 	mkdir -p build/abiv11
 	$(ABIV11_CXX) $(HB_FLAGS) --sysroot=$(ABIV11_SDK) -c $(HB_SRC) -o build/abiv11/harfbuzz.o
 	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -o build/abiv11/aros-xterm src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
+
+# DIAGNOSTIC frontend only (XTERM_PERF_DIAG): aggregated responsiveness
+# counters written once a second to $$XTERM_PERF_LOG. Never package or ship it.
+.PHONY: abiv11-perf
+abiv11-perf:
+	@test -f build/abiv11/harfbuzz.o || { echo "Run make abiv11-frontend first (ABIv11 HarfBuzz object)"; exit 1; }
+	mkdir -p build/abiv11/perf
+	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -DXTERM_PERF_DIAG -o build/abiv11/perf/aros-xterm src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 
 # Guest tools for the file drop check (docs/file-drop.md): what a program
 # receives (argv and ReadArgs), and a drawer of awkward names with icons.
