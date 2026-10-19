@@ -42,7 +42,11 @@ static const unsigned short *keyboard_charset(void)
         if (!CodesetsBase) return NULL;
         atexit(close_codesets);
     }
-    set = CodesetsFindA((CONST_STRPTR)name, NULL);
+    {
+        /* An unknown name must give Latin-1 (no table), not the library's default set. */
+        struct TagItem tags[] = { { CSA_FallbackToDefault, FALSE }, { TAG_DONE, 0 } };
+        set = CodesetsFindA((CONST_STRPTR)name, tags);
+    }
     if (!set) return NULL;
     for (i = 0; i < 128; ++i) {
         unsigned u = set->table[128 + i].ucs4;
