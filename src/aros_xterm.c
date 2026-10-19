@@ -1525,6 +1525,58 @@ static void tick_close(void)
     tick_ready=tick_armed=0;
 }
 
+/* Program output is drawn once it pauses, not after every write. A full-screen
+ * program sends one frame as many writes (Helix: about nine 1 KB writes per
+ * scrolled screen), and drawing after each one painted the frame's halves
+ * and made the program wait for every partial paint. The window is drawn
+ * when no output came for one settle period, or after SETTLE_HOLDS periods
+ * of continuous output, so streaming output still shows. Keys, resizes and
+ * anything else that sets `dirty` draw at once, held output included.
+ * The settle request shares the tick port: no extra signal bit. */
+#define SETTLE_MICROS 12000
+#define SETTLE_HOLDS 8
+static struct timerequest *settle_io;
+static int settle_ready,settle_armed,settle_activity,settle_holds;
+static void settle_open(void)
+{
+    if(!tick_ready) return;
+    if(!(settle_io=(struct timerequest *)CreateIORequest(tick_port,sizeof *settle_io))) return;
+    if(OpenDevice((CONST_STRPTR)TIMERNAME,UNIT_MICROHZ,(struct IORequest *)settle_io,0)) {
+        DeleteIORequest((struct IORequest *)settle_io); settle_io=NULL; return;
+    }
+    settle_ready=1;
+}
+static void settle_arm(void)
+{
+    settle_io->tr_node.io_Command=TR_ADDREQUEST;
+    settle_io->tr_time.tv_secs=0; settle_io->tr_time.tv_micro=SETTLE_MICROS;
+    SendIO((struct IORequest *)settle_io); settle_armed=1;
+}
+/* Output that would redraw: 0 when it is held for the settle timer. */
+static int settle_hold(void)
+{
+    if(!settle_ready) return 0;
+    if(settle_armed) settle_activity=1;
+    else { settle_holds=0; settle_activity=0; settle_arm(); }
+    PERF_DO(++perf_diag.held);
+    return 1;
+}
+/* 1 when held output is due to be drawn now. */
+static int settle_due(void)
+{
+    if(!settle_armed || !CheckIO((struct IORequest *)settle_io)) return 0;
+    WaitIO((struct IORequest *)settle_io); settle_armed=0;
+    if(settle_activity && ++settle_holds<SETTLE_HOLDS) { settle_activity=0; settle_arm(); return 0; }
+    return 1;
+}
+static void settle_close(void)
+{
+    if(!settle_ready) return;
+    if(settle_armed) { AbortIO((struct IORequest *)settle_io); WaitIO((struct IORequest *)settle_io); }
+    CloseDevice((struct IORequest *)settle_io); DeleteIORequest((struct IORequest *)settle_io);
+    settle_io=NULL; settle_ready=settle_armed=0;
+}
+
 /* Read the foreground again; a program's title ends when its command does.
    Returns nonzero when what the title shows may have changed. */
 static int foreground_poll(void)
@@ -1885,6 +1937,7 @@ int main(int argc,char **argv)
     }
     if(settings_message[0]) clip_status=settings_message;
     tick_open();
+    settle_open();
     update_title(window, last_key);
     draw_screen(window);
     if(!flood_diag_start(window)) {
@@ -1895,6 +1948,8 @@ int main(int argc,char **argv)
     while (running) {
         struct IntuiMessage *message;
         int dirty=0;
+        /* Output waiting for the settle timer to be drawn. */
+        static int output_held;
 #ifdef XTERM_PERF_DIAG
         uint64_t loop_started;
 #endif
@@ -1908,6 +1963,7 @@ int main(int argc,char **argv)
             Wait((1UL<<window->UserPort->mp_SigBit)|SIGF_CHILD|tick_signal()|aros_drop_signal(&file_drop)|
                  aros_session_signals(&process_session)|diag_forward_signal()|flood_diag_signals());
         PERF_DO(loop_started=PERF_NOW(); ++perf_diag.loops);
+        if(settle_due() && output_held) { dirty=1; PERF_DO(++perf_diag.settle_draws); }
         diag_forward();
         process_session.columns=screen.columns;
         process_session.rows=screen.rows;
@@ -1941,7 +1997,8 @@ int main(int argc,char **argv)
                    selection; output that changes or scrolls it drops it (L6). */
                 if(!(keep && selection_keep(&selection,&screen,kept,kept_length,&scrolled)))
                     selection.active=selection.dragging=0;
-                dirty=1;
+                if(settle_hold()) output_held=1;
+                else dirty=1;
             }
             free(kept);
             /* A new OSC title belongs to whatever runs right now; read the
@@ -2406,13 +2463,14 @@ int main(int argc,char **argv)
             } else if(offset!=screen.view_offset || index!=output_search.index ||
                       total!=output_search.total) dirty=1;
         }
-        if(running && dirty) { update_title(window,last_key); draw_screen(window); }
+        if(running && dirty) { update_title(window,last_key); draw_screen(window); output_held=0; }
         PERF_MAX(key_queue_max,keyboard.count);
         PERF_MAX(input_backlog_max,process_session.input.length);
         PERF_DO(PERF_MAX(loop_gap_max_us,PERF_NOW()-loop_started); perf_tick());
         if(running && (title_pending || title_hold || status_expiring() || foreground_watch ||
                        (echo_mode==2 && foreground.running))) tick_arm();
     }
+    settle_close();
     tick_close();
     PERF_DO(perf_close());
     aros_session_dispose(&process_session);
