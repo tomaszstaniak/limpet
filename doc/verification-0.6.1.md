@@ -14,21 +14,24 @@ Scope against `v0.6.0`: the CI pin of the reviewed protocol header
 (`aac268e`, no program change), the window-size query only with the
 8-bit CSI (`c703910`), the keyboard character set (`d10ca35`), the 12 px w
 (`29fe585`), margins (`81fb7a1`), COLORTERM (`2ad7b6f`), WaitForChar at end of
-input (`3c3c6c5`), writes to a closed window (`604d04e`), documentation.
+input (`3c3c6c5`), writes to a closed window (`604d04e`), Latin-1 for an
+unknown character set (`e6f354a`, after review), documentation.
 
 A first candidate (sources `c9cdb48`) was tested on 2026-10-19 night with the
 first two fixes; its archives are kept in `dist/0.6.1-candidate1/` and were
-not released.
+not released. Candidate 3 (`e46ed2c`, `dist/0.6.1-candidate3/`) passed the
+checks below except the review's character-set point; the released archive
+was then rebuilt and checked again (last table).
 
 ## Build
 
 | Item | Value |
 | --- | --- |
-| Sources | `e46ed2c0572771d6212e50fad240987451573527` |
+| Sources | `247999396645b03df40e7918d8943bdedb9e37f7` |
 | Compiler | `x86_64-aros-gcc` 10.5.0 |
 | SDK | ABIv11 2026.09 Developer SDK |
 | Commands | `make abiv11-frontend LIMPET_VERSION=0.6.1`, then `make abiv11-handler` with the same variables, then `tools/release/make-packages.sh 0.6.1 OUT abiv11` |
-| Program | 3,421,640 bytes, 4,728 more than 0.6.0 |
+| Program | 3,421,704 bytes, 4,792 more than 0.6.0 |
 | Archives | `Limpet-0.6.1-abiv11.zip`, `Limpet-handler-experimental-0.6.1-abiv11.zip`; hashes in their `SHA256SUMS` |
 
 ## Host tests
@@ -83,6 +86,11 @@ the release's `SHA256SUMS`), unpacked to RAM: with Helix preview 1:
 | Helix quits, then the window again | margins in the theme background |
 | `font_size=12`, `Type` of "new await window w W ww" | w at the letters' baseline, no gap (before: raised, smaller) |
 | Second window, Helix running, close gadget | window closes, Helix and the window's Limpet end (`Status`), host CPU 2.5 % (before: window stayed on "Closing: waiting for process", 97-99 %) |
+
+Released archive, final short check (pool v11-1, 12:50): `Version`
+0.6.1; Polish letters typed in Helix saved as UTF-8 to a file and `Type`d
+back; second window closed while Helix ran: window, Helix and its Limpet
+ended, host CPU 2.6 %.
 
 Not run again on this candidate: the 0.6.0 checks of Ctrl-D/E/F, Ctrl-\,
 Shift+Enter and the handler archive (their code paths did not change; the
