@@ -4,7 +4,7 @@ This page describes **Limpet 0.6.0** and **SDK 0.4.0** for AROS ABIv11,
 x86_64. It covers terminal features, application interfaces and the separate
 experimental `LIMPET:` console handler.
 
-Features added after 0.6.0 are listed under [Unreleased changes](#unreleased-changes).
+Features added after 0.6.1 are listed under [Unreleased changes](#unreleased-changes).
 For installation and platform requirements, see [compatibility](compatibility.md).
 
 ## Feature detection
@@ -767,12 +767,12 @@ part of the ABIv11 release and has not been built for ABIv11.
 ## Unreleased changes
 
 None that affect programs. The development tree may hold work on the
-experimental handler that is not in the 0.6.0 archive; see
+experimental handler that is not in the 0.6.1 archive; see
 [the handler guide](limpet-handler.md).
 
 ## References
 
 - [Protocol reference](protocols.md) and [SDK API](sdk/api.md)
 - [Changes by release](changes.md)
-- [0.6.0 verification record](verification-0.6.0.md), with earlier records
+- [0.6.1 verification record](verification-0.6.1.md), with earlier records
   linked from the corresponding releases
