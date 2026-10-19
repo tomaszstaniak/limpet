@@ -3,6 +3,17 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## Unreleased
+
+Fixed:
+
+- Full-screen programs scrolled slowly, and after a held cursor key they
+  kept moving for seconds after the key was released. Such a program sends
+  one screen in many small writes, and Limpet redrew the window after each
+  one, so the program waited for every partial redraw. Limpet now redraws
+  once the program's output pauses, and still from time to time while
+  output keeps coming. Keys and window changes still redraw at once.
+
 ## 0.6.1 (2026-10-19)
 
 Fixed:
