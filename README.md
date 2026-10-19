@@ -20,12 +20,12 @@ Image: NASA, ESA, CSA, STScI.
 
 ## Download
 
-- [Limpet 0.6.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.6.0)
+- [Limpet 0.6.1](https://github.com/tomaszstaniak/limpet/releases/tag/v0.6.1)
   for AROS ABIv11, x86_64.
 - [SDK 0.4.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.4.0)
   for application developers.
 - The separate `LIMPET:` console handler is an experimental download in the
-  0.6.0 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
+  0.6.1 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
 
 Earlier releases are listed on [GitHub](https://github.com/tomaszstaniak/limpet/releases).
 See the [terminal changelog](doc/changes.md) and [SDK changelog](sdk/CHANGES.md)

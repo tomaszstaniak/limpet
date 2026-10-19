@@ -4,16 +4,17 @@ Limpet and the SDK have separate version numbers and separate tags.
 
 | | Version | Archive | Git tag |
 | --- | --- | --- | --- |
-| Limpet (the terminal) | 0.6.0 | `Limpet-0.6.0-abiv11.zip` | `v0.6.0` |
+| Limpet (the terminal) | 0.6.1 | `Limpet-0.6.1-abiv11.zip` | `v0.6.1` |
 | Limpet SDK | 0.4.0 | `limpet-sdk-0.4.0.zip` | `sdk-v0.4.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
-Limpet 0.1.0 to 0.5.0 (tags `v0.1.0` to `v0.5.0`) are the earlier
+Limpet 0.1.0 to 0.6.0 (tags `v0.1.0` to `v0.6.0`) are the earlier
 terminal releases, and SDK 0.2.0 and 0.3.0 (tags `sdk-v0.2.0`,
 `sdk-v0.3.0`) the earlier SDK releases. 0.2.1 changes only the bundled
 HarfBuzz; the protocol and the SDK are the same as for 0.2.0. 0.3.0 adds
 the window title feature bit to the presentation reply, and SDK 0.3.0
 decodes it. 0.6.0 adds the Shift+Enter input bit, and SDK 0.4.0 names it.
+0.6.1 changes no protocol; SDK 0.4.0 stays current.
 An SDK 0.1.0 was prepared but never published; its sources are kept in
 `sdk/tests/compat-0.1.0` for the compatibility test.
 
@@ -75,8 +76,8 @@ caller's struct at run time.
 | 0.2.0 | Limpet 0.2.0, 0.2.1 | colours, styles, geometry and input modes |
 | 0.2.0 | Limpet 0.1.0 | everything marked "Since 0.1.0"; the input modes are reported as unknown, so a program does not turn them on |
 | 0.2.0 | Limpet 0.3.0 | everything as with 0.2.1; the window title is not decoded, so a program does not send one |
-| 0.3.0 | Limpet 0.3.0–0.6.0 | SDK 0.3.0 features, including window titles; the Shift+Enter bit is not named, so a program does not turn it on |
-| 0.4.0 | Limpet 0.6.0 | every SDK 0.4.0 feature, including Shift+Enter |
+| 0.3.0 | Limpet 0.3.0–0.6.1 | SDK 0.3.0 features, including window titles; the Shift+Enter bit is not named, so a program does not turn it on |
+| 0.4.0 | Limpet 0.6.0, 0.6.1 | every SDK 0.4.0 feature, including Shift+Enter |
 | 0.4.0 | Limpet 0.3.0–0.5.0 | as SDK 0.3.0; `XTY_INPUT_MODIFIED_ENTER` stays clear |
 | 0.3.0 | Limpet 0.2.x | as SDK 0.2.0; `limpet_can_set_title()` returns 0 |
 | any | a future Limpet | everything the SDK knows; newer fields are ignored until a newer SDK decodes them |
