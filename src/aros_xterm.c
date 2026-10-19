@@ -1,5 +1,6 @@
 #include "screen_model.h"
 #include "theme.h"
+#include "margin_fill.h"
 #include "aros_font.h"
 #include "cluster_font.h"
 #include "aros_input.h"
@@ -743,15 +744,18 @@ static void draw_screen(struct Window *window)
     if(cursor && cursor_col && !screen_view_cell(&screen,screen.cursor_row,cursor_col).width)
         --cursor_col;
     ++paint_calls;
-    colours(rp, theme.background, theme.background);
     /* Never clear the text grid before uploading finished rows: that exposes
-     * a blank frame on every keystroke. Only clear unused margins. */
-    RectFill(rp,0,0,window->GZZWidth-1,MARGIN-1);
-    RectFill(rp,0,MARGIN,MARGIN-1,window->GZZHeight-1);
-    if(MARGIN+screen.columns*w<(unsigned)window->GZZWidth)
-        RectFill(rp,MARGIN+screen.columns*w,MARGIN,window->GZZWidth-1,window->GZZHeight-1);
-    if(MARGIN+screen.rows*h<(unsigned)window->GZZHeight)
-        RectFill(rp,MARGIN,MARGIN+screen.rows*h,window->GZZWidth-1,window->GZZHeight-1);
+     * a blank frame on every keystroke. Only fill the unused margins, in the
+     * edge cells' colours on the alternate screen (margin_fill.h). */
+    {
+        static MarginRect margins[MARGIN_RECTS_MAX(MAX_ROWS,MAX_COLUMNS)];
+        MarginGeometry geometry={w,h,MARGIN,(unsigned)window->GZZWidth,(unsigned)window->GZZHeight};
+        size_t i,n=margin_rects(&screen,&theme,&geometry,margins,sizeof margins/sizeof *margins);
+        for(i=0;i<n;++i) {
+            colours(rp,margins[i].rgb,margins[i].rgb);
+            RectFill(rp,margins[i].x0,margins[i].y0,margins[i].x1,margins[i].y1);
+        }
+    }
     SetDrMd(rp, JAM2);
     for (row = 0; row < screen.rows; ++row) {
         unsigned pitch=screen.columns*w*3, y,x, images;

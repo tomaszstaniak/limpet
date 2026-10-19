@@ -19,7 +19,7 @@ SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h s
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
 CLUSTER_SRC = src/font_cache.c src/cluster_font.c
-THEME_SRC = src/theme.c src/settings.c
+THEME_SRC = src/theme.c src/settings.c src/margin_fill.c
 KITTY_SRC = src/kitty_graphics.c
 HYPERLINK_GUI_SRC = src/aros_hyperlink.c src/link_gesture.c
 
@@ -339,7 +339,7 @@ test: build/test_title_buffer
 test: build/test_osc_title
 test: build/test_window_title
 test: build/test_profile_prompt
-test: build/test_theme
+test: build/test_theme build/test_margin_fill
 test: build/test_geometry_reply
 test: build/test_mouse
 test: test-bracketed-paste
@@ -397,6 +397,11 @@ build/test_mouse: tests/test_mouse.c src/screen_model.c src/hyperlink.c src/scre
 build/test_geometry_reply: tests/test_geometry_reply.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
+
+build/test_margin_fill: tests/test_margin_fill.c src/margin_fill.c src/margin_fill.h src/theme.c src/theme.h src/settings.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) $< src/margin_fill.c src/theme.c src/settings.c src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
+	./$@
 
 build/test_theme: tests/test_theme.c src/theme.c src/theme.h src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
 	@mkdir -p build
