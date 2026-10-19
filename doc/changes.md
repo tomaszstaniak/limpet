@@ -21,7 +21,10 @@ Fixed:
 - A program that waited for keys with `WaitForChar()` and read only when
   it answered true never noticed that its window had been closed, and the
   window stayed on "Closing: waiting for process". At the end of input
-  `WaitForChar()` now answers true, so the next `Read()` returns 0.
+  `WaitForChar()` now answers true, so the next `Read()` returns 0. Writes
+  to the closed window fail with `ERROR_DEVICE_NOT_MOUNTED` instead of
+  `ERROR_BREAK`, which C libraries report as an interrupted call that
+  programs retry.
 - At 12 and 14 pixels, letters a pixel wider than the cell (w and W in Vera
   Mono) were drawn smaller and raised, which looked like a gap before them.
   They keep their height and baseline now.
