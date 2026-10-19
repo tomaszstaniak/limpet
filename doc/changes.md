@@ -38,6 +38,15 @@ New:
   24-bit colour (Helix shows its own theme with it). It is a local variable
   of the window's Shell; nothing is saved to `ENV:` or `ENVARC:`.
 
+Changes for programs:
+
+- `ESC [ 0 SPACE q` and `ESC [ SPACE q` (7-bit) get no answer any more; send
+  the window-size query with the 8-bit CSI, `0x9B 0 SPACE q`.
+- At the end of input (F5, Ctrl-\, a closed window) `WaitForChar()` answers
+  true and `Read()` returns 0. A loop that reads while `WaitForChar(fh, 0)`
+  is true must stop when `Read()` returns 0; `CON:` answers false there.
+- Writes to a closed window fail with `ERROR_DEVICE_NOT_MOUNTED`.
+
 The experimental [LIMPET:](limpet-handler.md) handler has the same fixes and
 the margin colours. `COLORTERM` is set only for sessions that Limpet starts.
 

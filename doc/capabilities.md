@@ -456,7 +456,10 @@ supports both consoles must decode both forms. Return to cooked mode with
 closed), so a program that waits and then reads sees the end of input.
 In 0.6.0 and earlier it answered false, like a timeout; a program that
 must support those versions should not rely on it alone to detect that the
-console has closed. See [read cancellation](#read-cancellation)
+console has closed. A loop that drains typed-ahead keys with
+`while (WaitForChar(fh, 0)) Read(...)` must stop when `Read()` returns 0,
+or it runs for ever once the window is closed. `CON:` answers false at end
+of input. See [read cancellation](#read-cancellation)
 for clients that keep an asynchronous read pending.
 
 **Example:** [`keys`](../sdk/examples/keys.c), which runs unchanged in both
