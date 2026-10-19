@@ -47,7 +47,7 @@ void perf_tick(void)
 {
     static const PerfDiag zero;
     PerfDiag *d=&perf_diag;
-    char line[768];
+    char line[1024];
     uint64_t now=perf_now();
     if(!perf_started) { perf_started=now; return; }
     if(now-perf_started<1000000u) return;
@@ -66,9 +66,13 @@ void perf_tick(void)
         used=strlen(line);
         snprintf(line+used,sizeof line-used,
             "pumps=%lu pump_bytes=%lu parse_us=%lu draws=%lu draws_with_rows=%lu rows=%lu pixels=%lu "
-            "raster_us=%lu upload_us=%lu draw_max=%lu loops=%lu loop_gap_max=%lu held=%lu settle_draws=%lu\n",
+            "raster_us=%lu upload_us=%lu draw_max=%lu loops=%lu loop_gap_max=%lu held=%lu settle_draws=%lu ",
             d->pumps,d->pump_bytes,d->parse_us,d->draws,d->draws_with_rows,d->rows,d->pixels,
             d->raster_us,d->upload_us,d->draw_max_us,d->loops,d->loop_gap_max_us,d->held,d->settle_draws);
+        used=strlen(line);
+        snprintf(line+used,sizeof line-used,
+            "cache_hits=%lu cache_misses=%lu cache_replaced=%lu miss_us=%lu glyph_us=%lu\n",
+            d->cache_hits,d->cache_misses,d->cache_replaced,d->miss_us,d->glyph_us);
         Write(perf_file,line,(LONG)strlen(line));
     }
     *d=zero; perf_started=now;

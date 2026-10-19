@@ -792,6 +792,9 @@ static void draw_screen(struct Window *window)
                 row_pixels[at]=bg>>16; row_pixels[at+1]=bg>>8; row_pixels[at+2]=bg;
             }
         }
+#ifdef XTERM_PERF_DIAG
+        uint64_t glyphs_started=PERF_NOW();
+#endif
         for (col = 0; col < screen.columns; ++col) {
             XTermCell cell=paint_row[col].cell;
             uint32_t scalars[XCLUSTER_MAX]; unsigned i,count;
@@ -816,6 +819,7 @@ static void draw_screen(struct Window *window)
             for(y=0;y<r->height;++y)
                 memcpy(row_pixels+y*pitch+col*w*3,rgb+y*r->width*3,r->width*3);
         }
+        PERF_DO(perf_diag.glyph_us+=(unsigned long)(PERF_NOW()-glyphs_started));
         if(h>1) for(col=0;col<screen.columns;++col)
             if(paint_row[col].flags&XPAINT_UNDERLINE) {
                 uint32_t fg=paint_row[col].fg;

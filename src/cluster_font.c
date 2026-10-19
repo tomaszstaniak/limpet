@@ -1,5 +1,6 @@
 #include "cluster_font.h"
 #include "aros_font.h"
+#include "perf_diag.h"
 #ifdef __AROS__
 #include <proto/freetype2.h>
 #else
@@ -18,7 +19,12 @@ typedef struct Entry {
     unsigned count, span, generation, valid;
     XClusterRaster raster;
 } Entry;
-static Entry entries[128];
+/* Direct-mapped by the cluster's hash; the size can be set at build time to
+ * measure (XCLUSTER_CACHE_ENTRIES). */
+#ifndef XCLUSTER_CACHE_ENTRIES
+#define XCLUSTER_CACHE_ENTRIES 128
+#endif
+static Entry entries[XCLUSTER_CACHE_ENTRIES];
 
 static hb_blob_t *font_table(hb_face_t *face,hb_tag_t tag,void *data)
 {
@@ -153,21 +159,16 @@ static int render(XClusterRaster *r,FT_Face face,hb_buffer_t *buffer)
     return XFONT_OK;
 }
 
-const XClusterRaster *xfont_cluster(const uint32_t *s,unsigned count,unsigned span)
+/* A cache miss: shape and render the cluster into its entry. */
+static void cluster_fill(Entry *e,const uint32_t *s,unsigned count,unsigned span)
 {
-    unsigned i,j,hash=2166136261u,order[5]={0,1,2,3,4};
-    static const XClusterRaster invalid={.status=XFONT_SIZE_ERROR};
-    Entry *e; XClusterRaster *r;
-    if(!s || !count || count>XCLUSTER_MAX || span<1 || span>2) return &invalid;
-    for(i=0;i<count;++i) hash=(hash^s[i])*16777619u;
-    e=&entries[(hash^span)%128]; r=&e->raster;
-    if(e->valid && e->generation==xfont_generation() && e->count==count && e->span==span &&
-       !memcmp(e->scalars,s,count*sizeof *s)) return r;
+    unsigned i,j,order[5]={0,1,2,3,4};
+    XClusterRaster *r=&e->raster;
     memset(e,0,sizeof *e); memcpy(e->scalars,s,count*sizeof *s);
     e->valid=1; e->count=count; e->span=span; e->generation=xfont_generation();
     r->width=xfont_width()*span; r->height=xfont_height();
-    if(!xfont_face(0)) { r->status=XFONT_CLOSED; return r; }
-    if(r->width>XRASTER_MAX || r->height>XRASTER_MAX) { r->status=XFONT_SIZE_ERROR; return r; }
+    if(!xfont_face(0)) { r->status=XFONT_CLOSED; return; }
+    if(r->width>XRASTER_MAX || r->height>XRASTER_MAX) { r->status=XFONT_SIZE_ERROR; return; }
     if(span==2) { order[0]=4; order[1]=2; order[2]=0; order[3]=1; order[4]=3; }
     for(i=0;i<count;++i) if(s[i]==0xfe0e) { order[0]=0;order[1]=1;order[2]=2;order[3]=3;order[4]=4; }
     r->status=XFONT_MISSING;
@@ -183,14 +184,14 @@ const XClusterRaster *xfont_cluster(const uint32_t *s,unsigned count,unsigned sp
             memset(r->pixels,0,sizeof r->pixels);
             r->glyphs=0; r->colour=0; r->source=order[i]; r->status=XFONT_OK;
             hb_buffer_destroy(buffer);
-            return r;
+            return;
         }
         for(j=0;j<n;++j) if(!info[j].codepoint) missing=1;
         if(!missing) {
             memset(r->pixels,0,sizeof r->pixels); r->colour=0; r->source=order[i];
             r->status=render(r,face,buffer);
             hb_buffer_destroy(buffer);
-            if(r->status==XFONT_OK) return r;
+            if(r->status==XFONT_OK) return;
         } else hb_buffer_destroy(buffer);
     }
     /* Stable visible fallback, not an apparently successful blank cluster. */
@@ -202,6 +203,26 @@ const XClusterRaster *xfont_cluster(const uint32_t *s,unsigned count,unsigned sp
                 r->pixels[y*r->width+x]=0xffffffff;
         }
     }
+    return;
+}
+
+const XClusterRaster *xfont_cluster(const uint32_t *s,unsigned count,unsigned span)
+{
+    unsigned i,hash=2166136261u;
+    static const XClusterRaster invalid={.status=XFONT_SIZE_ERROR};
+    Entry *e; XClusterRaster *r;
+    if(!s || !count || count>XCLUSTER_MAX || span<1 || span>2) return &invalid;
+    for(i=0;i<count;++i) hash=(hash^s[i])*16777619u;
+    e=&entries[(hash^span)%XCLUSTER_CACHE_ENTRIES]; r=&e->raster;
+    if(e->valid && e->generation==xfont_generation() && e->count==count && e->span==span &&
+       !memcmp(e->scalars,s,count*sizeof *s)) { PERF_DO(++perf_diag.cache_hits); return r; }
+    PERF_DO(++perf_diag.cache_misses;
+            if(e->valid && e->generation==xfont_generation()) ++perf_diag.cache_replaced);
+#ifdef XTERM_PERF_DIAG
+    { uint64_t started=PERF_NOW(); cluster_fill(e,s,count,span); perf_diag.miss_us+=(unsigned long)(PERF_NOW()-started); }
+#else
+    cluster_fill(e,s,count,span);
+#endif
     return r;
 }
 

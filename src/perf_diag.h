@@ -18,6 +18,7 @@ typedef struct {
     unsigned long draws,draws_with_rows,rows,pixels,raster_us,upload_us,draw_max_us;
     unsigned long loops,loop_gap_max_us;
     unsigned long held,settle_draws;
+    unsigned long cache_hits,cache_misses,cache_replaced,miss_us,glyph_us;
 } PerfDiag;
 extern PerfDiag perf_diag;
 uint64_t perf_now(void);
