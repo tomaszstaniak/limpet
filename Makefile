@@ -14,7 +14,7 @@ UNICODE_FLAGS = -Ivendor/utf8proc -DUTF8PROC_STATIC
 INPUT_SRC = src/terminal_input.c src/echo_session.c
 EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c src/output_search.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
-SESSION_SRC = src/aros_session.c src/perf_diag.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
+SESSION_SRC = src/aros_session.c src/perf_diag.c src/redraw_settle.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
@@ -347,7 +347,7 @@ test: build/test_title_buffer
 test: build/test_osc_title
 test: build/test_window_title
 test: build/test_profile_prompt
-test: build/test_theme build/test_margin_fill
+test: build/test_theme build/test_margin_fill build/test_redraw_settle
 test: build/test_geometry_reply
 test: build/test_mouse
 test: test-bracketed-paste
@@ -406,6 +406,9 @@ build/test_geometry_reply: tests/test_geometry_reply.c src/screen_model.c src/hy
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
 
+build/test_redraw_settle: tests/test_redraw_settle.c src/redraw_settle.c src/redraw_settle.h
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $< src/redraw_settle.c -o $@
 build/test_margin_fill: tests/test_margin_fill.c src/margin_fill.c src/margin_fill.h src/theme.c src/theme.h src/settings.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) $< src/margin_fill.c src/theme.c src/settings.c src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
@@ -677,6 +680,8 @@ test: $(HOST_TEST) build/test_replay build/test_graphemes build/test_input_echo 
 	./build/test_window_title
 	./build/test_profile_prompt
 	./build/test_theme
+	./build/test_margin_fill
+	./build/test_redraw_settle
 	./build/test_geometry_reply
 	./build/test_mouse
 	./build/test_boxdraw

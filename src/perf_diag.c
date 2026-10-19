@@ -10,7 +10,8 @@
 #include <proto/timer.h>
 
 PerfDiag perf_diag;
-struct Device *TimerBase;
+/* Shared with the redraw timer in aros_xterm.c. */
+extern struct Device *TimerBase;
 static struct timerequest perf_timer;
 static int perf_timer_open;
 static BPTR perf_file;
@@ -29,7 +30,8 @@ void perf_open(void)
     UBYTE path[256];
     memset(&perf_timer,0,sizeof perf_timer);
     if(!OpenDevice((CONST_STRPTR)TIMERNAME,UNIT_MICROHZ,(struct IORequest *)&perf_timer,0)) {
-        TimerBase=perf_timer.tr_node.io_Device; perf_timer_open=1;
+        if(!TimerBase) TimerBase=perf_timer.tr_node.io_Device;
+        perf_timer_open=1;
     }
     if(GetVar((CONST_STRPTR)"XTERM_PERF_LOG",path,sizeof path,GVF_GLOBAL_ONLY)>0 &&
        (perf_file=Open(path,MODE_READWRITE))) Seek(perf_file,0,OFFSET_END);
