@@ -21,11 +21,16 @@ static int reply_is(const char *want,size_t n)
 { int ok=got_length==n && !memcmp(got,want,n); got_length=0; return ok; }
 int main(void)
 {
-    /* Window bounds: 8-bit and 7-bit queries, with and without the 0. */
+    /* Window bounds: the 8-bit query, with and without the 0. */
     init(24,80,1);
     out("\x9b" "0 q",4); assert(REPLY("\x9b" "1;1;24;80 r"));
     out("\x9b" " q",3);  assert(REPLY("\x9b" "1;1;24;80 r"));
-    out("\033[0 q",5);   assert(REPLY("\x9b" "1;1;24;80 r"));
+    /* With ESC [ it is xterm's cursor style (DECSCUSR), which editors send
+       on exit while still in raw mode: no answer, nothing printed. */
+    out("\033[0 q",5);   assert(got_length==0);
+    out("\033[ q",4);    assert(got_length==0);
+    out("\033[2 q",5);   assert(got_length==0);
+    assert(screen_cell(&s,0,0)==' ' && s.cursor_row==0 && s.cursor_column==0);
     /* After a resize the new size. */
     assert(!screen_resize(&s,16,56));
     out("\x9b" "0 q",4); assert(REPLY("\x9b" "1;1;16;56 r"));
@@ -58,6 +63,6 @@ int main(void)
     out("\x9b" "6n",3); assert(got_length==0);
     assert(screen_cell(&s,0,0)==0xfffd);
     out("\033[6n",4); assert(REPLY("\033[1;4R"));
-    puts("amiga reports PASS: bounds (8-bit, 7-bit, with and without 0), after resize, split query, cursor in the query's introducer, UTF-8 continuation, VT unchanged");
+    puts("amiga reports PASS: bounds (8-bit, with and without 0), 7-bit SPACE q is cursor style, after resize, split query, cursor in the query's introducer, UTF-8 continuation, VT unchanged");
     return 0;
 }

@@ -518,9 +518,12 @@ static void execute_csi(XTermScreen *s, unsigned char command)
         }
         return;
     }
-    /* The Amiga console's window status request: CSI SPACE q or CSI 0 SPACE q.
-       console.device answers with the 8-bit CSI whatever began the query. */
-    if(command=='q' && s->csi_intermediate==' ' && s->amiga_pens && !s->csi_private &&
+    /* The Amiga console's window status request: CSI SPACE q or CSI 0 SPACE q,
+       answered with the 8-bit CSI. Only the 8-bit form is the request: with
+       ESC [ the same bytes are xterm's DECSCUSR (cursor style), which
+       programs send on exit, and an answer would reach the Shell as typed
+       input. As with CSI 6 n, the introducer decides. */
+    if(command=='q' && s->csi_intermediate==' ' && s->amiga_pens && s->csi_c1 && !s->csi_private &&
        s->param_count==1 && !s->params[0]) {
         if(s->reply && s->csi_reply_enabled) {
             char response[XSCREEN_REPLY_CAPACITY];
