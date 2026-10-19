@@ -3,6 +3,24 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.6.1 (unreleased)
+
+Fixed:
+
+- Letters typed on a keymap of another character set came out wrong:
+  Limpet read every character above 127 as Latin-1, so on a Polish keymap
+  ą arrived as ± and ż as ¿. Limpet now uses the character set chosen in
+  Locale preferences (`ENV:CHARSET`, through codesets.library). Without
+  that variable it keeps Latin-1, as before.
+- After a full-screen editor quit, the Shell could receive a stray line and
+  answer "object not found". Editors such as Helix send `ESC [ 0 SPACE q`
+  (the xterm cursor-style reset) when they leave; 0.6.0 read it as the
+  Amiga console's window-size query and answered on the input. That query is
+  now answered only when it starts with the 8-bit CSI (0x9B), as with the
+  cursor query.
+
+The experimental [LIMPET:](limpet-handler.md) handler has the same fixes.
+
 ## 0.6.0 (2026-10-18)
 
 For users:

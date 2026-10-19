@@ -23,6 +23,17 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in 0.6.1
+------------
+
+- Fixed: letters typed on a keymap of another character set came out
+  wrong, for example a Polish ą as ±. Limpet now uses the character set
+  chosen in Locale preferences (ENV:CHARSET, for Polish ISO-8859-2).
+  Without it, characters above 127 are read as Latin-1, as before.
+- Fixed: after a full-screen editor such as Helix quit, the Shell could
+  receive a stray line and answer "object not found".
+
+
 New in 0.6.0
 ------------
 

@@ -48,7 +48,7 @@ Text is UTF-8. An invalid byte is shown as U+FFFD.
 | `CSI 5 n`, `CSI 6 n`, `CSI ? 6 n` | status, cursor position | reply in raw mode only |
 | `CSI 18 t` | text area size | reply `CSI 8 ; rows ; cols t`, raw mode only |
 | `0x9B 6 n` | cursor position, Amiga form | **0.6.0**; reply `0x9B row ; col R`, raw mode only |
-| `CSI 0 SPACE q`, `CSI SPACE q` (either introducer) | window bounds, Amiga form | **0.6.0**; reply `0x9B 1 ; 1 ; rows ; cols SPACE r`, raw mode only |
+| `0x9B 0 SPACE q`, `0x9B SPACE q` (8-bit CSI) | window bounds, Amiga form | **0.6.0**; reply `0x9B 1 ; 1 ; rows ; cols SPACE r`, raw mode only. With `ESC [` it is xterm's cursor style and gets no reply since 0.6.1 |
 
 Other `CSI >` sequences are ignored. Anything else is ignored. In
 particular there is no reply to device

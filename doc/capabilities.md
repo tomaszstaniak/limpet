@@ -44,7 +44,7 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Find in output](#find-in-output) | RAmiga+F or Ctrl+Shift+F | 0.5.0 |
 | [Settings](#settings) | ENV:Limpet/Limpet.conf | 0.5.0 |
 | [Console handler](#limpet-console-handler) | LIMPET:; separate experimental archive | 0.5.0 |
-| [Amiga console reports](#amiga-console-reports) | `CSI 0 SPACE q`, `CSI 6 n` with the 8-bit CSI | 0.6.0 |
+| [Amiga console reports](#amiga-console-reports) | `CSI 0 SPACE q`, `CSI 6 n` with the 8-bit CSI | 0.6.0; `SPACE q` 8-bit only since 0.6.1 |
 | [Ctrl-D/E/F, Ctrl-\\](#ctrl-c) | break signals and end of input, as in `CON:` | 0.6.0 |
 
 ## Presentation query
@@ -248,7 +248,11 @@ Since **0.6.0**, a Shell session also answers the two reports of the Amiga
 console, so a program written for `CON:` can ask Limpet for the window size
 and the cursor position.
 
-- `CSI 0 SPACE q` (or `CSI SPACE q`) answers `0x9B 1;1;rows;columns SPACE r`.
+- `CSI 0 SPACE q` (or `CSI SPACE q`) sent with the 8-bit CSI (`0x9B`)
+  answers `0x9B 1;1;rows;columns SPACE r`. Sent with `ESC [`, the same
+  bytes are xterm's cursor-style request (DECSCUSR), which full-screen
+  programs send when they quit; Limpet ignores it and sends nothing (0.6.0
+  answered it, and the reply reached the Shell as input).
 - `CSI 6 n` sent with the 8-bit CSI (`0x9B`) answers `0x9B row;column R`.
   Sent with `ESC [`, it answers `ESC [ row ; column R` as before.
 
@@ -424,6 +428,12 @@ total.
 **Cooked mode** (default): Limpet edits the line itself (see line
 editing in the [user-interface table](#user-interface-features)). The
 program receives the finished line on Enter.
+
+Characters arrive as UTF-8. A keymap gives the letters above 127 in the
+system's 8-bit character set; since **0.6.1** Limpet converts them with the
+set chosen in Locale preferences (`ENV:CHARSET`, for example ISO-8859-2 for
+a Polish keymap), through codesets.library. Without `ENV:CHARSET`, or
+without that library, they are read as Latin-1, as in earlier versions.
 
 **Raw mode:** `SetMode(Input(), 1)`. The program receives every key as it
 is pressed. Cursor keys arrive as `ESC [ A` to `ESC [ D`. In `CON:` they
