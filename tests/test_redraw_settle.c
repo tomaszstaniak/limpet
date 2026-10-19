@@ -38,7 +38,7 @@ static void steady_stream(void)
     uint64_t t,drawn_at[4]; unsigned n=0;
     redraw_settle_init(&s,1,Q,L);
     for(t=0;t<350000 && n<4;t+=2000) {
-        if(redraw_settle_due(&s,t)) { drawn_at[n++]=t; redraw_settle_drawn(&s); }
+        if(redraw_settle_due(&s,t)) { drawn_at[n++]=t; redraw_settle_drawn(&s,0); }
         redraw_settle_output(&s,t);
         assert(redraw_settle_wake(&s,t)<=L);
     }
@@ -65,7 +65,7 @@ static void forced_draw_then_new_batch(void)
 {
     redraw_settle_init(&s,1,Q,L);
     redraw_settle_output(&s,0); redraw_settle_output(&s,90000);
-    redraw_settle_drawn(&s);
+    redraw_settle_drawn(&s,0);
     assert(!redraw_settle_due(&s,90000+L) && redraw_settle_wake(&s,90000+L)==0);
     redraw_settle_output(&s,95000);
     redraw_settle_output(&s,104000);
@@ -79,6 +79,24 @@ static void forced_draw_then_new_batch(void)
     redraw_settle_output(&s,190000);
     assert(!redraw_settle_due(&s,194999));
     assert(redraw_settle_due(&s,95000+L));
+}
+
+/* Slow drawing stretches the limit to twice the last draw's cost, so a
+ * steady stream leaves the program most of the time; fast drawing keeps
+ * the plain limit, and a quiet pause still draws early. */
+static void slow_draw_stretches_limit(void)
+{
+    uint64_t t;
+    redraw_settle_init(&s,1,Q,L);
+    redraw_settle_drawn(&s,120000);
+    for(t=0;t<240000;t+=5000) { assert(!redraw_settle_due(&s,t)); redraw_settle_output(&s,t); }
+    assert(redraw_settle_due(&s,240000));
+    redraw_settle_drawn(&s,30000);
+    for(t=300000;t<300000+L;t+=5000) { assert(!redraw_settle_due(&s,t)); redraw_settle_output(&s,t); }
+    assert(redraw_settle_due(&s,300000+L));
+    redraw_settle_drawn(&s,120000);
+    redraw_settle_output(&s,500000);
+    assert(!redraw_settle_due(&s,500000+Q-1) && redraw_settle_due(&s,500000+Q));
 }
 
 static void without_timer(void)
@@ -98,7 +116,8 @@ static void limit_not_below_quiet(void)
 int main(void)
 {
     single_write(); burst_of_short_writes(); steady_stream(); late_wakeup();
-    forced_draw_then_new_batch(); without_timer(); limit_not_below_quiet();
+    forced_draw_then_new_batch(); slow_draw_stretches_limit(); without_timer();
+    limit_not_below_quiet();
     puts("redraw settle: ok");
     return 0;
 }

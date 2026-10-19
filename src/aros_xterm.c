@@ -1599,11 +1599,14 @@ static int settle_poll(void)
     settle_arm(redraw_settle_wake(&settle,now));
     return 0;
 }
-/* The window was drawn: nothing is held, and no old wake-up stays queued. */
-static void settle_drawn(void)
+/* The window was drawn, starting at `started` (settle_now): nothing is
+ * held, and no old wake-up stays queued. */
+static void settle_drawn(uint64_t started)
 {
+    uint64_t cost;
     if(!settle.timed) return;
-    redraw_settle_drawn(&settle);
+    cost=settle_now()-started;
+    redraw_settle_drawn(&settle,cost>UINT32_MAX?UINT32_MAX:(uint32_t)cost);
     settle_cancel();
 }
 static void settle_close(void)
@@ -2499,7 +2502,10 @@ int main(int argc,char **argv)
             } else if(offset!=screen.view_offset || index!=output_search.index ||
                       total!=output_search.total) dirty=1;
         }
-        if(running && dirty) { update_title(window,last_key); draw_screen(window); settle_drawn(); }
+        if(running && dirty) {
+            uint64_t started=settle.timed?settle_now():0;
+            update_title(window,last_key); draw_screen(window); settle_drawn(started);
+        }
         PERF_MAX(key_queue_max,keyboard.count);
         PERF_MAX(input_backlog_max,process_session.input.length);
         PERF_DO(PERF_MAX(loop_gap_max_us,PERF_NOW()-loop_started); perf_tick());
