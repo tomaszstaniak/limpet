@@ -18,8 +18,25 @@ Fixed:
   Amiga console's window-size query and answered on the input. That query is
   now answered only when it starts with the 8-bit CSI (0x9B), as with the
   cursor query.
+- A program that waited for keys with `WaitForChar()` and read only when
+  it answered true never noticed that its window had been closed, and the
+  window stayed on "Closing: waiting for process". At the end of input
+  `WaitForChar()` now answers true, so the next `Read()` returns 0.
+- At 12 and 14 pixels, letters a pixel wider than the cell (w and W in Vera
+  Mono) were drawn smaller and raised, which looked like a gap before them.
+  They keep their height and baseline now.
 
-The experimental [LIMPET:](limpet-handler.md) handler has the same fixes.
+New:
+
+- Full-screen programs such as Helix fill the whole window: the margin
+  around the text takes the colour of the cells next to it while a program
+  uses the alternate screen, instead of a frame in the theme's background.
+- Programs started in a Limpet window see `COLORTERM=truecolor` and can use
+  24-bit colour (Helix shows its own theme with it). It is a local variable
+  of the window's Shell; nothing is saved to `ENV:` or `ENVARC:`.
+
+The experimental [LIMPET:](limpet-handler.md) handler has the same fixes and
+the margin colours. `COLORTERM` is set only for sessions that Limpet starts.
 
 ## 0.6.0 (2026-10-18)
 

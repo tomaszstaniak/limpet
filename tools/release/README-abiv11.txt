@@ -32,6 +32,15 @@ New in 0.6.1
   Without it, characters above 127 are read as Latin-1, as before.
 - Fixed: after a full-screen editor such as Helix quit, the Shell could
   receive a stray line and answer "object not found".
+- Fixed: a program waiting for keys did not notice that its window had
+  been closed, and the window stayed on "Closing: waiting for process".
+- Fixed: at font sizes 12 and 14, the letter w looked raised, with a gap
+  before it.
+- Full-screen programs such as Helix fill the whole window: the margin
+  around the text takes their background colour.
+- Programs started in a Limpet window see COLORTERM=truecolor and can use
+  24-bit colour (Helix shows its own colour theme). Nothing is saved to
+  ENV: or ENVARC:.
 
 
 New in 0.6.0

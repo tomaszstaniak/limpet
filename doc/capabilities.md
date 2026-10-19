@@ -100,7 +100,7 @@ The presentation query reports one of three colour levels.
 | INDEXED256 | 2 | adds `38;5;n` and `48;5;n` |
 | RGB | 3 | adds `38;2;r;g;b` and `48;2;r;g;b` |
 
-Limpet 0.6.0 reports level 3. The colour capability covers semicolon forms
+Limpet 0.6.0 and later report level 3. The colour capability covers semicolon forms
 and 7-bit CSI only; it does not guarantee colon forms (`38:2::r:g:b`) or
 the 8-bit CSI byte 0x9B.
 
@@ -111,6 +111,16 @@ than the SDK as unknown.
 **Usage:** `limpet_sgr_ansi()` for the 16 colours, `limpet_sgr_rgb()` for
 24-bit colour with automatic reduction to the 256-colour cube. End colours
 with SGR 39/49 or SGR 0.
+
+Programs that do not use the presentation query usually look at the
+environment instead. Since **0.6.1** a Limpet window's Shell has the local
+variable `COLORTERM=truecolor`, which the programs it starts (and `Run` jobs)
+inherit; it is not written to `ENV:` and `TERM` is not set. The `LIMPET:`
+handler does not set it.
+
+On the alternate screen, the window margin around the grid takes the
+background of the neighbouring edge cells (0.6.1), so a full-screen program's
+background fills the window.
 
 If colour is unavailable, omit SGR sequences and use text labels for status
 and errors. Basic SGR colours follow the [Workbench pens rule](#sgr-30-37-as-workbench-pens).
@@ -441,9 +451,12 @@ arrive as the 8-bit CSI byte 0x9B followed by the letter. A program that
 supports both consoles must decode both forms. Return to cooked mode with
 `SetMode(Input(), 0)` on every exit path.
 
-`Read()` returns input bytes or zero at EOF. `WaitForChar()` returning
-false does not distinguish a timeout from EOF; do not use it alone to
-detect that the console has closed. See [read cancellation](#read-cancellation)
+`Read()` returns input bytes or zero at EOF. Since **0.6.1**,
+`WaitForChar()` answers true at EOF (after F5, Ctrl-\ or when the window is
+closed), so a program that waits and then reads sees the end of input.
+In 0.6.0 and earlier it answered false, like a timeout; a program that
+must support those versions should not rely on it alone to detect that the
+console has closed. See [read cancellation](#read-cancellation)
 for clients that keep an asynchronous read pending.
 
 **Example:** [`keys`](../sdk/examples/keys.c), which runs unchanged in both
