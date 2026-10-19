@@ -431,8 +431,8 @@ void aros_session_poll(ArosSession *s)
             if(p->dp_Arg1<0) ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
             else if(s->pending_wait || s->pending_read)
                 ReplyPkt(p,DOSFALSE,ERROR_OBJECT_IN_USE);
-            else if(s->input.length) ReplyPkt(p,DOSTRUE,0);
-            else if(s->eof || s->eof_once || !p->dp_Arg1) ReplyPkt(p,DOSFALSE,0);
+            else if(s->input.length || s->eof || s->eof_once) ReplyPkt(p,DOSTRUE,0);
+            else if(!p->dp_Arg1) ReplyPkt(p,DOSFALSE,0);
             else if(start_timer(s,(LONG)p->dp_Arg1))
                 ReplyPkt(p,DOSFALSE,ERROR_NO_FREE_STORE);
             else s->pending_wait=p;

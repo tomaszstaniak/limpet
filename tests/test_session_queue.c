@@ -13,7 +13,7 @@ int main(void)
     /* Timeout must not mask queued input; EOF releases an empty waiter. */
     assert(session_queue_wait(&q,0,0)==-1);
     assert(session_queue_wait(&q,0,1)==0);
-    assert(session_queue_wait(&q,1,0)==0);
+    assert(session_queue_wait(&q,1,0)==1); /* end of input: a Read returns at once */
     assert(session_queue_write(&q,in,sizeof in)==XSESSION_CAPACITY);
     assert(session_queue_wait(&q,0,0)==1);
     assert(session_queue_wait(&q,0,1)==1);

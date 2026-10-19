@@ -1,6 +1,10 @@
 #include "session_queue.h"
+/* At the end of input WaitForChar answers true: a Read then returns at once
+ * with 0 and the program learns the window is gone. Answering false made a
+ * closed window look like an expired timeout, and a program that polls
+ * before it reads (a Rust event loop, Helix) waited for good. */
 int session_queue_wait(const XSessionQueue *q,int eof,int expired)
-{ return q->length ? 1 : (eof || expired ? 0 : -1); }
+{ return q->length || eof ? 1 : (expired ? 0 : -1); }
 size_t session_queue_write(XSessionQueue *q,const unsigned char *b,size_t n)
 {
     size_t i;
