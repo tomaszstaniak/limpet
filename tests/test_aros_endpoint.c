@@ -234,7 +234,7 @@ int main(void)
     CHECK(call(ACTION_FREE_LOCK,(IPTR)lock,0,0)==DOSTRUE);
     FreeDosObject(DOS_FILEHANDLE,files[1]); files[1]=NULL;
     CHECK(call(ACTION_WRITE,files[0]->fh_Arg1,(IPTR)"x",1)==-1);
-    CHECK(packet->dp_Res2==ERROR_BREAK);
+    CHECK(packet->dp_Res2==ERROR_DEVICE_NOT_MOUNTED);
     close_input(0); CHECK(!aros_session_dispose(&session));
     start(); aros_session_stop(&session); CHECK(!aros_session_dispose(&session));
     puts("PASS endpoint stop: pending EOF, reject new opens/writes, cancel before open");
@@ -251,7 +251,7 @@ int main(void)
         submit(ACTION_WRITE,files[0]->fh_Arg1,(IPTR)burst,sizeof burst);
         aros_session_poll(&session); CHECK(session.pending_write);
         aros_session_stop(&session); CHECK(receive()==-1);
-        CHECK(packet->dp_Res2==ERROR_BREAK);
+        CHECK(packet->dp_Res2==ERROR_DEVICE_NOT_MOUNTED);
         close_input(0); CHECK(!aros_session_dispose(&session));
     }
     puts("PASS endpoint stop: held lock, timed wait, blocked write");

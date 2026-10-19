@@ -68,6 +68,12 @@ static int start_timer(ArosSession *s,LONG usec)
     return 0;
 }
 
+/* Writes to a window that has been closed fail with this error. Not
+ * ERROR_BREAK: C libraries turn that into EINTR, which callers retry (Rust's
+ * write_all does, for good), so a program writing to a closed window spun at
+ * full CPU instead of ending. */
+#define XSESSION_CLOSED_ERROR ERROR_DEVICE_NOT_MOUNTED
+
 static void service(ArosSession *s)
 {
     struct DosPacket *p=s->pending_read;
@@ -98,7 +104,7 @@ static void service(ArosSession *s)
     while((p=s->pending_write)) {
         if(s->stopping) {
             s->pending_write=NULL; s->write_offset=0;
-            ReplyPkt(p,-1,ERROR_BREAK);
+            ReplyPkt(p,-1,XSESSION_CLOSED_ERROR);
         } else {
             if(s->console && !s->line.raw) {
                 const unsigned char *bytes=(const unsigned char *)p->dp_Arg2;
@@ -455,7 +461,7 @@ void aros_session_poll(ArosSession *s)
             if((id!=2 && id!=3 && !(s->console && id==1)) || !(s->handles&(1UL<<(id-1))) ||
                p->dp_Arg3<0 || (p->dp_Arg3 && !p->dp_Arg2))
                 ReplyPkt(p,-1,ERROR_BAD_NUMBER);
-            else if(s->stopping) ReplyPkt(p,-1,ERROR_BREAK);
+            else if(s->stopping) ReplyPkt(p,-1,XSESSION_CLOSED_ERROR);
             else if(!p->dp_Arg3) ReplyPkt(p,0,0);
             else if(s->pending_write) {
                 if(s->write_waiting<XSESSION_WRITERS) s->write_wait[s->write_waiting++]=p;
