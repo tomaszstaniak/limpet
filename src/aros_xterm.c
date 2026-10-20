@@ -733,6 +733,35 @@ static void kitty_count_drawn(const XTermScreen *s)
     }
 }
 
+static unsigned char *frame_pixels;
+static size_t frame_size;
+/* Rows [first,end) of frame_pixels, already committed to paint_damage. */
+static void upload_run(struct Window *window,struct RastPort *rp,const XTermScreen *screen,
+                       unsigned w,unsigned h,unsigned pitch,unsigned first,unsigned end,
+                       const unsigned *images,uint64_t *upload_us)
+{
+    unsigned row,i,width=screen->columns*w,height=(end-first)*h;
+    ULONG uploaded;
+    (void)window;
+#ifdef XTERM_PERF_DIAG
+    uint64_t started=PERF_NOW();
+#endif
+    uploaded=WritePixelArray(frame_pixels+(size_t)first*h*pitch,0,0,pitch,rp,MARGIN,MARGIN+first*h,
+                             width,height,RECTFMT_RGB);
+    PERF_DO(*upload_us+=PERF_NOW()-started; perf_diag.rows+=end-first;
+            perf_diag.pixels+=(unsigned long)width*height);
+    (void)upload_us;
+    if(uploaded!=width*height) {
+        paint_damage_invalidate(&paint_damage);
+        for(row=first;row<end;++row) flood_diag_upload(window,row,0);
+        return;
+    }
+    for(row=first;row<end;++row) {
+        flood_diag_upload(window,row,1);
+        for(i=0;i<XKITTY_MAX_IMAGES;++i) if(images[row]&(1u<<i)) kitty_mark_rows(i,row,row+1);
+    }
+}
+
 static void draw_screen(struct Window *window)
 {
     const XTermScreen *display=display_screen();
@@ -742,7 +771,9 @@ static void draw_screen(struct Window *window)
     XTermScreen screen=*display;
     struct RastPort *rp = window->RPort;
     unsigned row, col;
-    unsigned w = xfont_width(), h = xfont_height();
+    unsigned w = xfont_width(), h = xfont_height(), pitch;
+    int run_first=-1;
+    static unsigned run_images[MAX_ROWS];
     unsigned cursor_col=screen.cursor_column;
     int cursor=(!screen.view_offset || display==&command_view) && screen.cursor_visible;
     /* `screen` here is the local copy; the live view is anything but the
@@ -753,8 +784,9 @@ static void draw_screen(struct Window *window)
     if(cursor && cursor_col && !screen_view_cell(&screen,screen.cursor_row,cursor_col).width)
         --cursor_col;
     ++paint_calls;
+    uint64_t upload_us=0;
 #ifdef XTERM_PERF_DIAG
-    uint64_t draw_started=PERF_NOW(),upload_us=0; unsigned long rows_before=perf_diag.rows;
+    uint64_t draw_started=PERF_NOW(); unsigned long rows_before=perf_diag.rows;
 #endif
     /* Never clear the text grid before uploading finished rows: that exposes
      * a blank frame on every keystroke. Only fill the unused margins, in the
@@ -769,8 +801,22 @@ static void draw_screen(struct Window *window)
         }
     }
     SetDrMd(rp, JAM2);
+    pitch=screen.columns*w*3;
+    /* Changed rows are rasterised into one buffer and uploaded as runs of
+     * adjacent rows, one WritePixelArray each. Uploading every row as soon
+     * as it was rasterised showed a scrolled screen half old and half new
+     * for most of a redraw (a line doubled where the two halves met, read
+     * as glyphs growing at the bottom). The run still lands row by row in
+     * the window, but within the upload, not across the rasterising.
+     * Without the buffer (no memory) rows go up one at a time as before. */
+    if((size_t)screen.rows*h*pitch>frame_size) {
+        if(frame_pixels) FreeVec(frame_pixels);
+        frame_size=(size_t)screen.rows*h*pitch;
+        if(!(frame_pixels=AllocVec(frame_size,MEMF_ANY))) frame_size=0;
+    }
     for (row = 0; row < screen.rows; ++row) {
-        unsigned pitch=screen.columns*w*3, y,x, images;
+        unsigned y,x, images;
+        unsigned char *pixels=frame_pixels?frame_pixels+(size_t)row*h*pitch:row_pixels;
         for (col = 0; col < screen.columns; ++col) {
             XTermCell cell = screen_view_cell(&screen, row, col);
             int found=finding?search_marks[row*screen.columns+col]:0;
@@ -784,12 +830,17 @@ static void draw_screen(struct Window *window)
                   (link_hovered && hyperlink_contains(&screen,&hovered_link,row,col)))
                  ?XPAINT_UNDERLINE:0);
         }
-        if(!paint_damage_changed(&paint_damage,row,paint_row)) continue;
+        if(!paint_damage_changed(&paint_damage,row,paint_row)) {
+            if(run_first>=0) upload_run(window,rp,&screen,w,h,pitch,(unsigned)run_first,row,
+                                        run_images,&upload_us);
+            run_first=-1;
+            continue;
+        }
         for (col = 0; col < screen.columns; ++col) {
             uint32_t bg=paint_row[col].bg;
             for(y=0;y<h;++y) for(x=0;x<w;++x) {
                 unsigned at=y*pitch+(col*w+x)*3;
-                row_pixels[at]=bg>>16; row_pixels[at+1]=bg>>8; row_pixels[at+2]=bg;
+                pixels[at]=bg>>16; pixels[at+1]=bg>>8; pixels[at+2]=bg;
             }
         }
 #ifdef XTERM_PERF_DIAG
@@ -806,7 +857,7 @@ static void draw_screen(struct Window *window)
                 uint32_t fg=paint_row[col].fg;
                 for(y=0;y<h;++y) for(x=0;x<w;++x) if(boxdraw_pixel(cell.ch,w,h,x,y)) {
                     unsigned at=y*pitch+(col*w+x)*3;
-                    row_pixels[at]=fg>>16; row_pixels[at+1]=fg>>8; row_pixels[at+2]=fg;
+                    pixels[at]=fg>>16; pixels[at+1]=fg>>8; pixels[at+2]=fg;
                 }
                 continue;
             }
@@ -817,7 +868,7 @@ static void draw_screen(struct Window *window)
                r->width>screen.columns*w-col*w || r->height>h) continue;
             xfont_cluster_rgb(r,paint_row[col].fg,paint_row[col].bg,rgb);
             for(y=0;y<r->height;++y)
-                memcpy(row_pixels+y*pitch+col*w*3,rgb+y*r->width*3,r->width*3);
+                memcpy(pixels+y*pitch+col*w*3,rgb+y*r->width*3,r->width*3);
         }
         PERF_DO(perf_diag.glyph_us+=(unsigned long)(PERF_NOW()-glyphs_started));
         if(h>1) for(col=0;col<screen.columns;++col)
@@ -825,7 +876,7 @@ static void draw_screen(struct Window *window)
                 uint32_t fg=paint_row[col].fg;
                 for(x=0;x<w;++x) {
                     unsigned at=(h-2)*pitch+(col*w+x)*3;
-                    row_pixels[at]=fg>>16; row_pixels[at+1]=fg>>8; row_pixels[at+2]=fg;
+                    pixels[at]=fg>>16; pixels[at+1]=fg>>8; pixels[at+2]=fg;
                 }
             }
         for(col=0;col<screen.columns;++col) if(paint_row[col].flags&XPAINT_CURSOR) {
@@ -833,18 +884,25 @@ static void draw_screen(struct Window *window)
             if(width>(screen.columns-col)*w) width=(screen.columns-col)*w;
             for(x=0;x<width;++x) {
                 unsigned at=(h-1)*pitch+(col*w+x)*3;
-                row_pixels[at]=theme.cursor>>16;
-                row_pixels[at+1]=theme.cursor>>8; row_pixels[at+2]=theme.cursor;
+                pixels[at]=theme.cursor>>16;
+                pixels[at+1]=theme.cursor>>8; pixels[at+2]=theme.cursor;
             }
         }
-        images=kitty_composite(&screen,images_live,row,row_pixels,pitch);
+        images=kitty_composite(&screen,images_live,row,pixels,pitch);
         ++paint_rows;
+        if(frame_pixels) {
+            /* Committed now; a failed upload of the run invalidates all. */
+            paint_damage_commit(&paint_damage,row,paint_row);
+            run_images[row]=images;
+            if(run_first<0) run_first=(int)row;
+            continue;
+        }
         /* A clipped/partial upload may already have changed visible pixels. */
         paint_damage_forget_row(&paint_damage,row);
 #ifdef XTERM_PERF_DIAG
         uint64_t upload_started=PERF_NOW();
 #endif
-        ULONG uploaded=WritePixelArray(row_pixels,0,0,pitch,rp,MARGIN,MARGIN+row*h,
+        ULONG uploaded=WritePixelArray(pixels,0,0,pitch,rp,MARGIN,MARGIN+row*h,
                           screen.columns*w,h,RECTFMT_RGB);
         PERF_DO(upload_us+=PERF_NOW()-upload_started; ++perf_diag.rows;
                 perf_diag.pixels+=(unsigned long)screen.columns*w*h);
@@ -855,6 +913,8 @@ static void draw_screen(struct Window *window)
             for(i=0;i<XKITTY_MAX_IMAGES;++i) if(images&(1u<<i)) kitty_mark_rows(i,row,row+1);
         } else flood_diag_upload(window,row,0);
     }
+    if(run_first>=0) upload_run(window,rp,&screen,w,h,pitch,(unsigned)run_first,screen.rows,
+                                run_images,&upload_us);
     kitty_blit_fast(rp,&screen);
     kitty_count_drawn(&screen);
     PERF_DO(perf_draw_delay());
@@ -1992,6 +2052,7 @@ int main(int argc,char **argv)
     if(!flood_diag_start(window)) {
         settle_close();
         tick_close();
+        if(frame_pixels) { FreeVec(frame_pixels); frame_pixels=NULL; frame_size=0; }
         close_main_window(window);xfont_close();return RETURN_FAIL;
     }
     PERF_DO(perf_open());
@@ -2522,6 +2583,7 @@ int main(int argc,char **argv)
     }
     settle_close();
     tick_close();
+    if(frame_pixels) { FreeVec(frame_pixels); frame_pixels=NULL; frame_size=0; }
     PERF_DO(perf_close());
     aros_session_dispose(&process_session);
 #ifdef XTERM_PKTWAIT_PROBE
