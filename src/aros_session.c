@@ -309,7 +309,14 @@ void aros_session_poll(ArosSession *s)
                 else if(!xterm_presentation_reply((void *)p->dp_Arg2,sizeof in,s->rows,s->columns,
                         s->amiga_pens?XTY_COLOR_PENS:0))
                     ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
-                else ReplyPkt(p,DOSTRUE,0);
+                else {
+                    if(s->presentation_features) {
+                        memcpy(&in,(void *)p->dp_Arg2,sizeof in);
+                        in.values[8]|=s->presentation_features();
+                        memcpy((void *)p->dp_Arg2,&in,sizeof in);
+                    }
+                    ReplyPkt(p,DOSTRUE,0);
+                }
             }
             break;
         }

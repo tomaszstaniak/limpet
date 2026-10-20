@@ -37,3 +37,16 @@ Its original OFL license is `NotoColorEmoji-LICENSE.txt`. It is optional and
 application-local. HarfBuzz shapes clusters before FreeType loads the bitmap
 strike; the application downsamples into bounded cell rasters. No global font
 installation is performed.
+
+## DejaVu Sans Mono Nerd Font Mono 3.4.0
+
+Unmodified `DejaVuSansMNerdFontMono-Regular.ttf` from the official pinned release:
+https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/DejaVuSansMono.tar.xz
+The release's unchanged `LICENSE.txt` is `DejaVu-NerdFont-LICENSE.txt`.
+SHA-256: `f0ad5d5e932a02c7c0169b67bb4a7a1d8ecde33ab42c7d584b4c91cebef98300`.
+Used as the default primary monospace font when present; explicit configured fonts
+still take precedence. Without it the existing Vera Mono default remains.
+All 268 distinct icons in eza 0.23.5's map occur in the cmap and have advance
+1233/2048 em (FontTools 4.67.0, 2026-10-21). Runtime capability advertisement
+additionally checks actual font-chain lookup, advance and terminal scalar widths.
+This host coverage check does not establish native rendering.

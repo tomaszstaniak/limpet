@@ -22,8 +22,8 @@ static inline int xterm_presentation_reply(void *block,size_t bytes,
                   XTY_PRESENT_KNOWN_FEATURES;
     out.values[7]=XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT|XTY_INPUT_WHEEL_REPORT|XTY_INPUT_MODIFIED_ENTER;
     out.values[6]=interpretation;
-    out.values[8]=XTY_FEATURE_TITLE;
-    out.values[1]=XTY_COLOR_RGB;out.values[2]=XTY_STYLE_BOLD_RESET;
+    out.values[8]=XTY_FEATURE_TITLE|XTY_FEATURE_OSC8;
+    out.values[1]=XTY_COLOR_RGB;out.values[2]=XTY_STYLE_BOLD_RESET|XTY_STYLE_UNDERLINE_RESET|XTY_STYLE_INVERSE_RESET;
     out.values[3]=XTY_LINE_CR|XTY_LINE_ERASE_EOL;
     if(rows && columns) {
         out.values[0]|=XTY_PRESENT_KNOWN_GEOMETRY;

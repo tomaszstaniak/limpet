@@ -14,6 +14,10 @@ int xfont_open_main(const char *primary)
         "PROGDIR:Fonts/NotoColorEmoji.ttf"
     };
     if (primary) paths[0] = primary;
+    else {
+        FILE *icons=fopen("PROGDIR:Fonts/DejaVuSansMNerdFontMono-Regular.ttf","rb");
+        if(icons) { fclose(icons);paths[0]="PROGDIR:Fonts/DejaVuSansMNerdFontMono-Regular.ttf"; }
+    }
     /* No start-up banner on stdout: see the note on optional faces in
        font_cache.c. Errors are still printed. */
     return xfont_open_extended(paths) ? -1 : 0;

@@ -259,7 +259,14 @@ static void dispatch(ArosTtyPackets *s,TtyEnd end,struct DosPacket *p)
             else if(!xterm_presentation_reply((void *)p->dp_Arg2,sizeof control,
                     s->service.pair.geometry.rows,s->service.pair.geometry.columns,0))
                 ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
-            else ReplyPkt(p,DOSTRUE,0);
+            else {
+                    if(s->presentation_features) {
+                        memcpy(&control,(void *)p->dp_Arg2,sizeof control);
+                        control.values[8]|=s->presentation_features();
+                        memcpy((void *)p->dp_Arg2,&control,sizeof control);
+                    }
+                    ReplyPkt(p,DOSTRUE,0);
+                }
             return;
         }
         if((control.operation==XTY_SET_CONFIG || control.operation==XTY_SET_CONFIG_DISCARD_INPUT ||

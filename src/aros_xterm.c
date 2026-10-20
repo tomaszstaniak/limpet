@@ -1,3 +1,4 @@
+#include "eza_icon_contract.h"
 #include "screen_model.h"
 #include "theme.h"
 #include "margin_fill.h"
@@ -1971,6 +1972,17 @@ static void fit_grid(struct Window *window)
     if(cols!=screen.columns || rows!=screen.rows) screen_resize(&screen,rows,cols);
 }
 
+static unsigned font_presentation_features(void)
+{
+    static unsigned generation,features;
+    unsigned current=xfont_generation();
+    if(current!=generation) {
+        features=eza_icon_features(xfont_glyph,screen_scalar_width,xfont_width());
+        generation=current;
+    }
+    return features;
+}
+
 int main(int argc,char **argv)
 {
     struct Window *window;
@@ -2176,6 +2188,7 @@ int main(int argc,char **argv)
         process_session.columns=screen.columns;
         process_session.rows=screen.rows;
         process_session.presentation_enabled=1;
+        process_session.presentation_features=font_presentation_features;
         process_session.amiga_pens=screen.amiga_pens;
         aros_session_poll(&process_session);
         if(drop_files(closing)) dirty=1;

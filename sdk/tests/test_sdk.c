@@ -217,7 +217,7 @@ static void test_decode(void)
     /* This terminal confirms window titles; a reply from Limpet 0.2.x has
        no feature bit, so the title is not confirmed even if values[8]
        were not zero. */
-    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && p.features == XTY_FEATURE_TITLE);
+    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && p.features == (XTY_FEATURE_TITLE|XTY_FEATURE_OSC8));
     assert(limpet_can_set_title(&p));
     {
         XtyControl old = c;

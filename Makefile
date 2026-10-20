@@ -623,7 +623,7 @@ package: $(OUT) build/font-probe-aros build/test_font_aros build/test_cluster_fo
 	cp build/test_aros_clip_job build/aros-xterm-demo/test-clip-job
 	cp build/test_clipboard_text_aros build/aros-xterm-demo/test-clip-codec
 	cp build/clip-probe build/aros-xterm-demo/clip-probe
-	cp $(FONT_ASSETS)/Unifont.otf $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/NotoEmoji-OFL.txt $(FONT_ASSETS)/COPYING $(FONT_ASSETS)/OFL-1.1.txt $(FONT_ASSETS)/README.md build/aros-xterm-demo/Fonts/
+	cp $(FONT_ASSETS)/DejaVuSansMNerdFontMono-Regular.ttf $(FONT_ASSETS)/DejaVu-NerdFont-LICENSE.txt $(FONT_ASSETS)/NerdFonts-LICENSE.md $(FONT_ASSETS)/Unifont.otf $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/NotoEmoji-OFL.txt $(FONT_ASSETS)/COPYING $(FONT_ASSETS)/OFL-1.1.txt $(FONT_ASSETS)/README.md build/aros-xterm-demo/Fonts/
 	cp data/unicode-17.0/LICENSE.txt build/aros-xterm-demo/UNICODE-LICENSE.txt
 	cp README.md build/aros-xterm-demo/README.md
 	cp $(FONT_ASSETS)/NotoColorEmoji.ttf $(FONT_ASSETS)/NotoColorEmoji-LICENSE.txt build/aros-xterm-demo/Fonts/
@@ -734,7 +734,7 @@ $(OUT): tools/flood_diag.h
 package-flood: build/bench-flood build/session-peer
 	mkdir -p build/flood-diagnostic/Fonts
 	cp build/bench-flood build/session-peer build/flood-diagnostic/
-	cp $(FONT_ASSETS)/Unifont.otf $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/NotoColorEmoji.ttf build/flood-diagnostic/Fonts/
+	cp $(FONT_ASSETS)/DejaVuSansMNerdFontMono-Regular.ttf $(FONT_ASSETS)/DejaVu-NerdFont-LICENSE.txt $(FONT_ASSETS)/NerdFonts-LICENSE.md $(FONT_ASSETS)/Unifont.otf $(FONT_ASSETS)/NotoEmoji.ttf $(FONT_ASSETS)/NotoColorEmoji.ttf build/flood-diagnostic/Fonts/
 	cp $(FONT_ASSETS)/NotoEmoji-OFL.txt $(FONT_ASSETS)/COPYING $(FONT_ASSETS)/OFL-1.1.txt $(FONT_ASSETS)/NotoColorEmoji-LICENSE.txt build/flood-diagnostic/Fonts/
 	cp build/native-config.json build/flood-diagnostic/BUILD-CONFIG.json
 
@@ -1297,3 +1297,17 @@ build/test_input_order: tests/test_input_order.c src/input_order.c src/input_ord
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all \
 		$(UNICODE_FLAGS) $< src/input_order.c src/paste.c $(UNICODE_SRC) -o $@
+
+# Full eza icon coverage needs actual glyph presence and one-cell metrics.
+test: test-icon-contract
+.PHONY: test-icon-contract
+test-icon-contract: build/test_icon_contract
+	./build/test_icon_contract
+build/test_icon_contract: tests/test_icon_contract.c src/eza_icon_contract.h src/aros_font.h sdk/include/limpet/tty_control.h
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -O2 -Wall -Wextra -Werror $< -o $@
+
+.PHONY: abiv11-icon-font-probe
+abiv11-icon-font-probe:
+	mkdir -p build/abiv11/probes
+	$(ABIV11_GCC) $(ABIV11_CFLAGS) -o build/abiv11/probes/test_icon_font tests/test_icon_font.c src/font_cache.c src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(ABIV11_LDFLAGS) -lfreetype2 -lm

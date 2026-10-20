@@ -243,6 +243,7 @@ void aros_pty_poll(ArosSession *s)
         (void)tty_pair_set_geometry(&endpoint.service.pair,&g);
     }
     endpoint.presentation_enabled=s->presentation_enabled;
+    endpoint.presentation_features=s->presentation_features;
     pump(s);
     if(s->task_id && ChildStatus(s->task_id)==CHILD_EXITED) {
         ChildFree(s->task_id);s->task_id=0;s->exited=1;s->eof=1;

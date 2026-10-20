@@ -27,6 +27,7 @@ typedef struct {
     TtyHandle exports[TTY_SERVICE_HANDLES]; /* Survive stop until ACTION_END. */
     TtyEnd export_ends[TTY_SERVICE_HANDLES];
     int stopping;
+    unsigned (*presentation_features)(void); /* Renderer-owned live font evidence. */
     int presentation_enabled; /* Renderer owner opt-in; generic PTYs stay zero. */
     /* Optional owner hook for ACTION_CHANGE_SIGNAL, the DOS console contract
        for the Ctrl-C target (con-handler's breaktask). Set after init. With
