@@ -19,8 +19,15 @@ Fixed:
 - While a full-screen program scrolled, the window was often seen half old
   and half new, with one line doubled where the halves met (it could look
   like larger letters appearing at the bottom). Limpet now prepares all
-  changed lines first and puts them on screen in one go, so this is now
-  much rarer.
+  changed lines first and puts them on screen in one go.
+
+Added:
+
+- Synchronized output (`CSI ? 2026 h` / `l`): a program that marks where
+  each screen update starts and ends is shown one whole update at a time,
+  so a scrolling editor no longer shows lines of two screens at once. A
+  program that leaves an update open is still shown after a quarter of a
+  second. Programs that do not use the marks are drawn as before.
 
 ## 0.6.1 (2026-10-19)
 

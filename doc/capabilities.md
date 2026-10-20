@@ -35,6 +35,7 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Mouse reporting](#mouse-reporting) | modes 1000, 1002, 1006 | 0.1.0 |
 | [Bracketed paste](#bracketed-paste) | mode 2004; presentation input bit | 0.2.0 |
 | [Resize reports](#resize-reports) | mode 2048; presentation input bit | 0.2.0 |
+| [Synchronized output](#synchronized-output) | mode 2026 | 0.6.2 |
 | [Wheel reports](#wheel-reports) | Limpet mode 2100; presentation input bit | 0.2.0 |
 | [Shift+Enter](#shiftenter) | `CSI > 4 ; 1 m`; presentation input bit | 0.6.0 |
 | [Window title](#window-title) | OSC 0/2; presentation feature bit | 0.3.0 |
@@ -537,6 +538,23 @@ paste. `CSI ? 2048 l` turns it off.
 
 **Detection:** `XTY_INPUT_RESIZE_REPORT` in `LimpetPresentation.input` (known
 bit 32). With Limpet 0.1.0, use the presentation query or `CSI 18 t`.
+
+## Synchronized output
+
+Mode 2026 lets a program mark one screen update so that Limpet shows it
+whole. Without it, Limpet draws when the output pauses, and a program that
+writes an update in several pieces may be shown half old and half new.
+
+**Usage:** send `CSI ? 2026 h` before an update and `CSI ? 2026 l` after
+it. While an update is open Limpet keeps reading and parsing but draws
+nothing (keys, the title and status messages included); it draws when the
+update ends. An update left open longer than 250 ms is drawn anyway, and
+closing the window is never held. Programs that do not send the marks are
+drawn as before.
+
+**Detection:** none yet; terminals that do not know the mode ignore it, so
+a program can send it unconditionally. `DECRQM` (`CSI ? 2026 $ p`) is not
+answered.
 
 ## Wheel reports
 
