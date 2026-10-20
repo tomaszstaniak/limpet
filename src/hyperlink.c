@@ -24,7 +24,29 @@ static int http_target(const char *p,int launch)
     }
     return 1;
 }
-int hyperlink_open_safe(const char *p) { return http_target(p,1); }
+static unsigned unhex(unsigned char c)
+{ return c<='9'?c-'0':(c|32)-'a'+10; }
+int hyperlink_file_path(const char *url,char *out,size_t capacity)
+{
+    size_t i,n=0;int volume=0;
+    if(!url || !out || !capacity || strncmp(url,"file:///",8)) return 0;
+    for(i=8;url[i] && i<XHYPERLINK_LIMIT;++i) {
+        unsigned char c=(unsigned char)url[i];
+        if(c=='%') {
+            if(i+2>=XHYPERLINK_LIMIT || !url[i+1] || !url[i+2] || !hex((unsigned char)url[i+1]) || !hex((unsigned char)url[i+2])) return 0;
+            c=(unsigned char)(16*unhex((unsigned char)url[i+1])+unhex((unsigned char)url[i+2]));i+=2;
+        } else if(c<=32 || c>=127 || c=='?' || c=='#' || c=='\\') return 0;
+        if(c<32 || c==127 || n+1>=capacity) return 0;
+        if(!volume && c=='/') return 0;
+        if(c==':') { if(volume || !n) return 0;volume=1; }
+        out[n++]=(char)c;
+    }
+    if(i>=XHYPERLINK_LIMIT || !volume) return 0;
+    out[n]=0;return 1;
+}
+int hyperlink_open_safe(const char *p)
+{ char path[XHYPERLINK_LIMIT];return http_target(p,1) || hyperlink_file_path(p,path,sizeof path); }
+
 void hyperlinks_init(XHyperlinks *l)
 { if(l) { memset(l,0,sizeof *l); l->next_token=1; } }
 void screen_attach_links(XTermScreen *s,XHyperlinks *l)
@@ -32,7 +54,7 @@ void screen_attach_links(XTermScreen *s,XHyperlinks *l)
 uint32_t hyperlink_register(XHyperlinks *l,const char *p)
 {
     unsigned slot; uint32_t token;
-    if(!l || !http_target(p,0) || !l->next_token || l->next_token==XHYPERLINK_INVALID)
+    if(!l || !(http_target(p,0) || hyperlink_open_safe(p)) || !l->next_token || l->next_token==XHYPERLINK_INVALID)
         return XHYPERLINK_INVALID;
     token=l->next_token++; slot=l->next_slot;
     l->next_slot=(slot+1)%XHYPERLINK_ENTRIES;

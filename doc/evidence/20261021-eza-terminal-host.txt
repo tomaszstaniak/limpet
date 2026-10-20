@@ -1,0 +1,81 @@
+2026-10-21 terminal capability and local-file regression checks
+Host: macOS arm64. Native: x86_64 ABIv11 binaries compiled only; no VM touched.
+Toolchain: <ABIv11 toolchain>/x86_64-aros-gcc
+SDK: <ABIv11 SDK>
+Font: assets/fonts/DejaVuSansMNerdFontMono-Regular.ttf (official v3.4.0)
+Native builds: abiv11-frontend, abiv11-handler, abiv11-icon-font-probe, abiv11-file-link-probe.
+What this did NOT show: native rendering, Workbench availability, actual file-open success, or runtime pipe behavior.
+
+$ make test-presentation test-icon-contract test-sdk
+./build/test_presentation
+PRESENTATION PASS: wire layout, geometry, pen interpretation, title feature, unknown fields, rejection preserves request
+cc -std=c99 -O2 -Wall -Wextra -Werror tests/test_icon_contract.c -o build/test_icon_contract
+./build/test_icon_contract
+cc -std=c99 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all \
+		-Isdk/include -Isdk/tests/host sdk/tests/test_sdk.c sdk/src/limpet_format.c sdk/src/limpet_query.c -o build/test_sdk
+./build/test_sdk
+LIMPET SDK PASS: query against the terminal's reply code, refusals, malformed and future replies, SGR, OSC 8, window title, Kitty framing and limits
+/Library/Developer/CommandLineTools/usr/bin/make -C sdk host-check
+cc -std=gnu99 -Wall -Wextra -Werror -Iinclude -Itests/host -c src/limpet_format.c -o build/host/limpet_format.o
+cc -std=gnu99 -Wall -Wextra -Werror -Iinclude -Itests/host -c src/limpet_query.c -o build/host/limpet_query.o
+c++ -std=c++11 -Wall -Wextra -Werror -fsyntax-only -Iinclude -Itests/host -x c++ include/limpet/limpet.h
+sh sdk/tests/test_sdk_compat.sh
+SDK 0.1.0 client, reply then: status=ok known&31=31 color=3 styles=1 lines=3 rows=24 columns=80 pens=1
+SDK 0.1.0 client, reply now:  status=ok known&31=31 color=3 styles=1 lines=3 rows=24 columns=80 pens=1
+SDK COMPAT PASS: an SDK 0.1.0 client reads the current reply as it read its own terminal's
+SDK BINARY GUARD PASS: an object built with the 0.1.0 header must be rebuilt
+SDK 0.2.0 client, reply then: status=ok known&31=31 color=3 styles=1 lines=3 rows=24 columns=80 pens=1 input=7
+SDK 0.2.0 client, reply now:  status=ok known&31=31 color=3 styles=1 lines=3 rows=24 columns=80 pens=1 input=15
+SDK COMPAT PASS: an SDK 0.2.0 client reads the current reply as it read its own terminal's
+SDK BINARY GUARD PASS: an object built with the 0.2.0 header must be rebuilt
+SDK 0.3.0 client, reply then: status=ok known&31=31 color=3 styles=1 lines=3 rows=24 columns=80 pens=1 input=7 features=1
+SDK 0.3.0 client, reply now:  status=ok known&31=31 color=3 styles=1 lines=3 rows=24 columns=80 pens=1 input=15 features=1
+SDK COMPAT PASS: an SDK 0.3.0 client reads the current reply as it read its own terminal's
+SDK BINARY PASS: an object built with the 0.3.0 header links against the new library and reads the reply
+
+exit=0
+
+$ build/test_hyperlink
+hyperlinks: ok
+
+exit=0
+
+$ python3 -m unittest discover -s tests -p test_font_assets.py
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.012s
+
+OK
+
+exit=0
+
+$ /tmp/eza-contract-tests
+
+running 16 tests
+test confirmed_contract_tests::styles_require_their_own_bits ... ok
+test confirmed_contract_tests::oversized_osc_is_discarded_until_terminator ... ok
+test more_tests::displays_native_protection_in_dos_order ... ok
+test file_uri_tests::amiga_paths_are_local_uri_paths_with_escaped_bytes ... ok
+test parent_bytes_tests::invalid_parent_bytes_are_escaped ... ok
+test path_tests::amiga_names_and_invalid_bytes_are_preserved ... ok
+test more_tests::reduces_rgb_only_when_unconfirmed ... ok
+test contract_regression_tests::osc_payload_never_leaks ... ok
+test more_tests::maps_amiga_pens_without_rewriting_index_arguments ... ok
+test contract_regression_tests::unconfirmed_styles_are_stripped ... ok
+test tests::accepts_any_console_with_contract ... ok
+test confirmed_contract_tests::confirmed_osc8_survives_every_write_boundary ... ok
+test writer_tests::split_sequences_map_and_plain_strips ... ok
+test tests::ignores_unknown_bits ... ok
+test tests::refuses_unknown_absent_or_invalid ... ok
+test trailing_tests::directory_separator_and_parent_references ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+exit=0
+
+ABIv11 frontend+handler rebuild completed exit0 after local-file dispatch change.
+d1be55797270f8cb3ae990b8595191eb7a879181b89c43de8945b26888cc0cea  build/abiv11/aros-xterm
+f2514b9250cfb7d160b53a2c060515efb4b0d88b766778dc32c6013bce625cb6  build/abiv11/aros-xterm-worker
+f0ce9e20d46cea9939780dcbb6ebcc610aa22020ca9903335fc44dc1d11b1269  build/abiv11/probes/test_icon_font
+cb29fb4badf9d36606df02f84dd0cce3511a1a5f237876231993a58b62f0d9b2  build/abiv11/probes/test_file_link_aros

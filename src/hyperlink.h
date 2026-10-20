@@ -24,9 +24,12 @@ void hyperlinks_init(XHyperlinks *);
 void screen_attach_links(struct XTermScreen *, XHyperlinks *);
 int hyperlink_at(const struct XTermScreen *, unsigned, unsigned, XHyperlinkHit *);
 int hyperlink_contains(const struct XTermScreen *, const XHyperlinkHit *, unsigned, unsigned);
-/* Strict launch policy; never decodes percent triplets. OpenURL configuration
- * remains trusted: it must quote its URL substitution in browser templates. */
+/* Strict launch policy. HTTP targets retain percent triplets for OpenURL.
+ * Local file targets decode to a DOS path for Workbench without shell parsing. */
 int hyperlink_open_safe(const char *);
+/* Local file:///Volume:path only; percent decoding never invokes a shell.
+ * Remote authorities, control bytes and relative/Unix paths are rejected. */
+int hyperlink_file_path(const char *,char *,size_t);
 /* Parser interface: rejected explicit targets receive a nonzero sentinel. */
 uint32_t hyperlink_register(XHyperlinks *, const char *);
 #endif

@@ -7,6 +7,7 @@
 #include <libraries/openurl.h>
 #include <defines/openurl.h>
 #include <string.h>
+#include <proto/workbench.h>
 
 static void worker(void)
 {
@@ -14,6 +15,19 @@ static void worker(void)
     struct Library *OpenURLBase;
     struct TagItem tags[]={{URL_Launch,TRUE},{TAG_DONE,0}};
     Wait(SIGBREAKF_CTRL_F);
+    {
+        char path[XHYPERLINK_LIMIT];
+        if(hyperlink_file_path(j->url,path,sizeof path)) {
+            struct Library *WorkbenchBase=OpenLibrary((CONST_STRPTR)"workbench.library",0);
+            j->result=-1;
+            if(WorkbenchBase) {
+                struct TagItem local_tags[]={{TAG_DONE,0}};
+                j->result=OpenWorkbenchObjectA((STRPTR)path,local_tags)?0:-2;
+                CloseLibrary(WorkbenchBase);
+            }
+            return;
+        }
+    }
     OpenURLBase=OpenLibrary((CONST_STRPTR)"openurl.library",0);
     j->result=-1;
     if(OpenURLBase) {

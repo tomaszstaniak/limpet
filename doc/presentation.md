@@ -88,3 +88,24 @@ and the ABIv11 compile do not establish native rendering or user interaction.
 Native acceptance must query the actual Limpet output, inspect icons across long
 and grid listings, confirm underline/inverse and click an OSC8 link, and verify
 files/pipes remain plain when eza requests `always`.
+
+### Local file targets
+
+OSC8 registration accepts `file:///Volume:path` as a local AmigaDOS target.
+The decoder preserves UTF8/filename bytes from percent triplets and rejects
+remote authorities, relative or Unix paths, malformed escapes, NUL and controls.
+HTTP(S) links keep the existing OpenURL path. File links bypass OpenURL command
+templates and pass the decoded path directly to `OpenWorkbenchObjectA` inside
+the existing link worker. This requests Workbench's normal
+file/default-tool or drawer handling; availability and success remain native
+runtime results, not properties of the parser capability.
+
+`make abiv11-file-link-probe` builds `build/abiv11/probes/test_file_link_aros`.
+Run it with stdout redirected to a named report. It creates and retains only
+`RAM:eza link fixture.txt`, feeds its OSC8 sequence one byte at a time, resolves
+the linked cell to `file:///RAM:eza%20link%20fixture.txt`, decodes it and checks
+`Lock`/`NameFromLock` against the real fixture. RC0 establishes actual native
+path lookup. Then list that fixture with eza's confirmed hyperlink mode in
+Limpet and use the ordinary link gesture to check Workbench dispatch. Preserve
+the result before deleting that exact RAM fixture. Parser tests alone establish
+neither Workbench availability nor a successful file open.

@@ -24,6 +24,22 @@ int main(void)
       "https://x/\n","https://x/a b","https://x/\"","https://x/'","https://x/`",
       "https://x/$","https://x/*","https://x/\\","https://x/<","https://x/>",
       "https://x/|","https://x/\xc3\xa9","https://x/%","https://x/%0g"};
+    { char path[XHYPERLINK_LIMIT];
+      assert(hyperlink_file_path("file:///RAM:doc%20name.txt",path,sizeof path));
+      assert(!strcmp(path,"RAM:doc name.txt"));
+      assert(hyperlink_open_safe("file:///RAM:doc%20name.txt"));
+    }
+    { const char *sequence="\033]8;;file:///RAM:doc%20name.txt\033\\Document\033]8;;\a";
+      size_t at;
+      for(at=0;at<=strlen(sequence);++at) {
+        reset(4,40);screen_write(&s,(const unsigned char *)sequence,at);
+        write_text(sequence+at);expect(0,2,"file:///RAM:doc%20name.txt");
+      }
+    }
+    { char path[2048];const char *invalid[]={"file://server/RAM:a","file:///RAM:a%00b","file:///RAM:a%1bb","file:///RAM:a?x","file:///RAM:a#x","file:///RAM:a%","file:///RAM:a%gg","file:///a/b","file:///:a","file:///RAM:a:b"};
+      for(i=0;i<sizeof invalid/sizeof *invalid;++i) assert(!hyperlink_file_path(invalid[i],path,sizeof path));
+      assert(hyperlink_file_path("file:///RAM:a%23%3f%25.txt",path,sizeof path));assert(!strcmp(path,"RAM:a#?%.txt"));
+    }
     reset(4,30);
     write_text("\033]8;id=test;https://example.org/a\033"); write_text("\\A\033[0mB");
     expect(0,0,"https://example.org/a"); assert(hyperlink_contains(&s,&hit,0,1));

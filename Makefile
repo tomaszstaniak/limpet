@@ -1311,3 +1311,8 @@ build/test_icon_contract: tests/test_icon_contract.c src/eza_icon_contract.h src
 abiv11-icon-font-probe:
 	mkdir -p build/abiv11/probes
 	$(ABIV11_GCC) $(ABIV11_CFLAGS) -o build/abiv11/probes/test_icon_font tests/test_icon_font.c src/font_cache.c src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(ABIV11_LDFLAGS) -lfreetype2 -lm
+
+.PHONY: abiv11-file-link-probe
+abiv11-file-link-probe:
+	mkdir -p build/abiv11/probes
+	$(ABIV11_GCC) $(ABIV11_CFLAGS) -o build/abiv11/probes/test_file_link_aros tests/test_file_link_aros.c src/hyperlink.c src/screen_model.c $(UNICODE_SRC) $(ABIV11_LDFLAGS) -lm
