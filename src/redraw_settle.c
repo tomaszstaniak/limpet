@@ -1,9 +1,11 @@
 #include "redraw_settle.h"
 
-void redraw_settle_init(RedrawSettle *s,int timed,uint32_t quiet_us,uint32_t limit_us)
+void redraw_settle_init(RedrawSettle *s,int timed,uint32_t quiet_us,uint32_t limit_us,
+                        uint32_t stretch_max_us)
 {
     s->timed=timed; s->held=0; s->first=s->last=0; s->cost=0;
     s->quiet=quiet_us; s->limit=limit_us<quiet_us?quiet_us:limit_us;
+    s->stretch_max=stretch_max_us<s->limit?s->limit:stretch_max_us;
 }
 
 int redraw_settle_output(RedrawSettle *s,uint64_t now)
@@ -14,10 +16,16 @@ int redraw_settle_output(RedrawSettle *s,uint64_t now)
     return 0;
 }
 
-static uint64_t due_at(const RedrawSettle *s)
+uint32_t redraw_settle_limit(const RedrawSettle *s)
 {
     uint64_t stretch=2*(uint64_t)s->cost;
-    uint64_t quiet=s->last+s->quiet,limit=s->first+(stretch>s->limit?stretch:s->limit);
+    if(stretch>s->stretch_max) stretch=s->stretch_max;
+    return stretch>s->limit?(uint32_t)stretch:s->limit;
+}
+
+static uint64_t due_at(const RedrawSettle *s)
+{
+    uint64_t quiet=s->last+s->quiet,limit=s->first+redraw_settle_limit(s);
     return quiet<limit?quiet:limit;
 }
 

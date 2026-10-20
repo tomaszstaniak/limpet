@@ -1546,14 +1546,16 @@ static struct timerequest *settle_io;
 static int settle_armed;
 static void settle_open(void)
 {
-    redraw_settle_init(&settle,0,REDRAW_SETTLE_QUIET_US,REDRAW_SETTLE_LIMIT_US);
+    redraw_settle_init(&settle,0,REDRAW_SETTLE_QUIET_US,REDRAW_SETTLE_LIMIT_US,
+                       REDRAW_SETTLE_STRETCH_MAX_US);
     if(!tick_ready) return;
     if(!(settle_io=(struct timerequest *)CreateIORequest(tick_port,sizeof *settle_io))) return;
     if(OpenDevice((CONST_STRPTR)TIMERNAME,UNIT_MICROHZ,(struct IORequest *)settle_io,0)) {
         DeleteIORequest((struct IORequest *)settle_io); settle_io=NULL; return;
     }
     if(!TimerBase) TimerBase=settle_io->tr_node.io_Device;
-    redraw_settle_init(&settle,1,REDRAW_SETTLE_QUIET_US,REDRAW_SETTLE_LIMIT_US);
+    redraw_settle_init(&settle,1,REDRAW_SETTLE_QUIET_US,REDRAW_SETTLE_LIMIT_US,
+                       REDRAW_SETTLE_STRETCH_MAX_US);
 }
 static uint64_t settle_now(void)
 {

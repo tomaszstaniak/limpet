@@ -5,12 +5,13 @@
 
 #define Q REDRAW_SETTLE_QUIET_US
 #define L REDRAW_SETTLE_LIMIT_US
+#define M REDRAW_SETTLE_STRETCH_MAX_US
 
 static RedrawSettle s;
 
 static void single_write(void)
 {
-    redraw_settle_init(&s,1,Q,L);
+    redraw_settle_init(&s,1,Q,L,M);
     assert(!redraw_settle_due(&s,0) && redraw_settle_wake(&s,0)==0);
     assert(redraw_settle_output(&s,1000)==0);
     assert(redraw_settle_wake(&s,1000)==Q);
@@ -22,7 +23,7 @@ static void single_write(void)
 static void burst_of_short_writes(void)
 {
     uint64_t t;
-    redraw_settle_init(&s,1,Q,L);
+    redraw_settle_init(&s,1,Q,L,M);
     for(t=0;t<=27000;t+=3000) {
         assert(!redraw_settle_due(&s,t));
         assert(redraw_settle_output(&s,t)==0);
@@ -36,7 +37,7 @@ static void burst_of_short_writes(void)
 static void steady_stream(void)
 {
     uint64_t t,drawn_at[4]; unsigned n=0;
-    redraw_settle_init(&s,1,Q,L);
+    redraw_settle_init(&s,1,Q,L,M);
     for(t=0;t<350000 && n<4;t+=2000) {
         if(redraw_settle_due(&s,t)) { drawn_at[n++]=t; redraw_settle_drawn(&s,0); }
         redraw_settle_output(&s,t);
@@ -49,12 +50,12 @@ static void steady_stream(void)
 /* A wake-up that comes late draws at once; it never waits another period. */
 static void late_wakeup(void)
 {
-    redraw_settle_init(&s,1,Q,L);
+    redraw_settle_init(&s,1,Q,L,M);
     redraw_settle_output(&s,0);
     assert(redraw_settle_due(&s,250000));
     assert(redraw_settle_wake(&s,250000)==0);
     /* Writes kept coming but the loop looked late: the limit has passed. */
-    redraw_settle_init(&s,1,Q,L);
+    redraw_settle_init(&s,1,Q,L,M);
     redraw_settle_output(&s,0); redraw_settle_output(&s,L+5000);
     assert(redraw_settle_due(&s,L+5000));
 }
@@ -63,7 +64,7 @@ static void late_wakeup(void)
  * output starts a new batch with its own limit. */
 static void forced_draw_then_new_batch(void)
 {
-    redraw_settle_init(&s,1,Q,L);
+    redraw_settle_init(&s,1,Q,L,M);
     redraw_settle_output(&s,0); redraw_settle_output(&s,90000);
     redraw_settle_drawn(&s,0);
     assert(!redraw_settle_due(&s,90000+L) && redraw_settle_wake(&s,90000+L)==0);
@@ -87,7 +88,7 @@ static void forced_draw_then_new_batch(void)
 static void slow_draw_stretches_limit(void)
 {
     uint64_t t;
-    redraw_settle_init(&s,1,Q,L);
+    redraw_settle_init(&s,1,Q,L,M);
     redraw_settle_drawn(&s,120000);
     for(t=0;t<240000;t+=5000) { assert(!redraw_settle_due(&s,t)); redraw_settle_output(&s,t); }
     assert(redraw_settle_due(&s,240000));
@@ -99,16 +100,33 @@ static void slow_draw_stretches_limit(void)
     assert(!redraw_settle_due(&s,500000+Q-1) && redraw_settle_due(&s,500000+Q));
 }
 
+/* One outlier (a draw that took 5 s, e.g. the guest was paused) stretches
+ * the next limit only up to the cap, and the next normal draw restores the
+ * plain limit. */
+static void outlier_capped_then_normal(void)
+{
+    uint64_t t;
+    redraw_settle_init(&s,1,Q,L,M);
+    redraw_settle_drawn(&s,5000000);
+    assert(redraw_settle_limit(&s)==M);
+    for(t=0;t<M;t+=5000) { assert(!redraw_settle_due(&s,t)); redraw_settle_output(&s,t); }
+    assert(redraw_settle_due(&s,M));
+    redraw_settle_drawn(&s,25000);
+    assert(redraw_settle_limit(&s)==L);
+    for(t=M+40000;t<M+40000+L;t+=5000) { assert(!redraw_settle_due(&s,t)); redraw_settle_output(&s,t); }
+    assert(redraw_settle_due(&s,M+40000+L));
+}
+
 static void without_timer(void)
 {
-    redraw_settle_init(&s,0,Q,L);
+    redraw_settle_init(&s,0,Q,L,M);
     assert(redraw_settle_output(&s,0)==1);
     assert(!redraw_settle_due(&s,1000000) && redraw_settle_wake(&s,0)==0);
 }
 
 static void limit_not_below_quiet(void)
 {
-    redraw_settle_init(&s,1,20000,5000);
+    redraw_settle_init(&s,1,20000,5000,1000);
     redraw_settle_output(&s,0);
     assert(!redraw_settle_due(&s,19999) && redraw_settle_due(&s,20000));
 }
@@ -116,7 +134,8 @@ static void limit_not_below_quiet(void)
 int main(void)
 {
     single_write(); burst_of_short_writes(); steady_stream(); late_wakeup();
-    forced_draw_then_new_batch(); slow_draw_stretches_limit(); without_timer();
+    forced_draw_then_new_batch(); slow_draw_stretches_limit(); outlier_capped_then_normal();
+    without_timer();
     limit_not_below_quiet();
     puts("redraw settle: ok");
     return 0;
