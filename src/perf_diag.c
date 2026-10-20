@@ -16,6 +16,31 @@ static struct timerequest perf_timer;
 static int perf_timer_open;
 static BPTR perf_file;
 static uint64_t perf_started;
+static unsigned long perf_delay_ms,perf_spike_ms;
+
+static unsigned long perf_var(CONST_STRPTR name)
+{
+    UBYTE value[16]; unsigned long ms=0; LONG i,n;
+    n=GetVar(name,value,sizeof value,GVF_GLOBAL_ONLY);
+    for(i=0;i<n && value[i]>='0' && value[i]<='9';++i) ms=ms*10+(value[i]-'0');
+    return n>0?ms:0;
+}
+static void perf_read_vars(void)
+{
+    unsigned long spike;
+    perf_delay_ms=perf_var((CONST_STRPTR)"XTERM_PERF_DRAW_DELAY_MS");
+    if((spike=perf_var((CONST_STRPTR)"XTERM_PERF_DRAW_SPIKE_MS"))) {
+        perf_spike_ms=spike; DeleteVar((CONST_STRPTR)"XTERM_PERF_DRAW_SPIKE_MS",GVF_GLOBAL_ONLY);
+    }
+}
+void perf_draw_delay(void)
+{
+    unsigned long ms=perf_delay_ms;
+    if(perf_spike_ms) { ms=perf_spike_ms; perf_spike_ms=0; }
+    if(!ms) return;
+    perf_diag.forced_delay_ms+=ms;
+    Delay((ms+19)/20);
+}
 
 uint64_t perf_now(void)
 {
@@ -33,6 +58,7 @@ void perf_open(void)
         if(!TimerBase) TimerBase=perf_timer.tr_node.io_Device;
         perf_timer_open=1;
     }
+    perf_read_vars();
     if(GetVar((CONST_STRPTR)"XTERM_PERF_LOG",path,sizeof path,GVF_GLOBAL_ONLY)>0 &&
        (perf_file=Open(path,MODE_READWRITE))) Seek(perf_file,0,OFFSET_END);
 }
@@ -47,7 +73,7 @@ void perf_tick(void)
 {
     static const PerfDiag zero;
     PerfDiag *d=&perf_diag;
-    char line[1024];
+    char line[1280];
     uint64_t now=perf_now();
     if(!perf_started) { perf_started=now; return; }
     if(now-perf_started<1000000u) return;
@@ -71,11 +97,16 @@ void perf_tick(void)
             d->raster_us,d->upload_us,d->draw_max_us,d->loops,d->loop_gap_max_us,d->held,d->settle_draws);
         used=strlen(line);
         snprintf(line+used,sizeof line-used,
-            "cache_hits=%lu cache_misses=%lu cache_replaced=%lu miss_us=%lu glyph_us=%lu\n",
+            "cache_hits=%lu cache_misses=%lu cache_replaced=%lu miss_us=%lu glyph_us=%lu ",
             d->cache_hits,d->cache_misses,d->cache_replaced,d->miss_us,d->glyph_us);
+        used=strlen(line);
+        snprintf(line+used,sizeof line-used,
+            "draws_quiet=%lu draws_limit=%lu limit_max_ms=%lu forced_delay_ms=%lu\n",
+            d->draws_quiet,d->draws_limit,d->limit_max_ms,d->forced_delay_ms);
         Write(perf_file,line,(LONG)strlen(line));
     }
     *d=zero; perf_started=now;
+    perf_read_vars();
 }
 #else
 /* ISO C wants at least one declaration in a translation unit. */

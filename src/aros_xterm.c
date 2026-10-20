@@ -857,6 +857,7 @@ static void draw_screen(struct Window *window)
     }
     kitty_blit_fast(rp,&screen);
     kitty_count_drawn(&screen);
+    PERF_DO(perf_draw_delay());
     PERF_DO(uint64_t spent=PERF_NOW()-draw_started; ++perf_diag.draws;
             if(perf_diag.rows!=rows_before) ++perf_diag.draws_with_rows;
             perf_diag.upload_us+=(unsigned long)upload_us;
@@ -1597,7 +1598,12 @@ static int settle_poll(void)
     }
     if(!settle.held) return 0;
     now=settle_now();
-    if(redraw_settle_due(&settle,now)) return 1;
+    if(redraw_settle_due(&settle,now)) {
+        PERF_DO(uint32_t limit=redraw_settle_limit(&settle);
+                if(now>=settle.first+limit) ++perf_diag.draws_limit; else ++perf_diag.draws_quiet;
+                PERF_MAX(limit_max_ms,limit/1000));
+        return 1;
+    }
     settle_arm(redraw_settle_wake(&settle,now));
     return 0;
 }

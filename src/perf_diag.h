@@ -19,6 +19,7 @@ typedef struct {
     unsigned long loops,loop_gap_max_us;
     unsigned long held,settle_draws;
     unsigned long cache_hits,cache_misses,cache_replaced,miss_us,glyph_us;
+    unsigned long draws_quiet,draws_limit,limit_max_ms,forced_delay_ms;
 } PerfDiag;
 extern PerfDiag perf_diag;
 uint64_t perf_now(void);
@@ -26,6 +27,11 @@ void perf_open(void);
 void perf_close(void);
 /* Writes and resets the counters once a second has passed. */
 void perf_tick(void);
+/* Test of the redraw schedule only: lengthens a draw by the milliseconds in
+ * XTERM_PERF_DRAW_DELAY_MS (every draw) or XTERM_PERF_DRAW_SPIKE_MS (the
+ * next draw once; the variable is deleted). Read once a second. Not a
+ * benchmark: it makes draws slow on purpose. */
+void perf_draw_delay(void);
 #define PERF_NOW() perf_now()
 #define PERF_DO(statement) do { statement; } while(0)
 #define PERF_MAX(field,value) do { unsigned long v_=(unsigned long)(value); \
