@@ -49,7 +49,7 @@ strings $x/limpet-handler | grep -qx limpet-console || { print -u2 "limpet-handl
 cp $root/tools/xterm-console/{LIMPET.mountlist,Install-Handler,Remove-Handler} $x/
 sed "s/@VERSION@/$ver/g" $root/tools/xterm-console/README-Handler.txt > $x/README-Handler.txt
 (cd $out/stage-handler && zip -qrX $out/Limpet-handler-experimental-$ver-abiv11.zip Limpet)
-unzip -l $out/Limpet-$ver-abiv11.zip | grep -qi 'handler\|limpet-console\|mountlist\|xterm' && { print -u2 "main archive carries handler files"; exit 1; }
+unzip -Z1 $out/Limpet-$ver-abiv11.zip | grep -qi 'handler\|limpet-console\|mountlist\|xterm' && { print -u2 "main archive carries handler files"; exit 1; }
 if [[ $only != abiv11 ]]; then
 # mainline PTY preview
 d=$out/stage-pty/LimpetPTY; common $d
