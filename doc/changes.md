@@ -16,6 +16,11 @@ Fixed:
   program keeps most of the machine). Long output such as `Type` of a large
   file also finishes several times sooner. Keys and window changes still
   redraw at once.
+- While a full-screen program scrolled, the window was often seen half old
+  and half new, with one line doubled where the halves met (it could look
+  like larger letters appearing at the bottom). Limpet now prepares all
+  changed lines first and puts them on screen in one go, so this is now
+  much rarer.
 
 ## 0.6.1 (2026-10-19)
 
