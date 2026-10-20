@@ -430,9 +430,24 @@ static int output_ready(void)
         return XSESSION_CAPACITY-process_session.input.length>=reply_flow.length-reply_flow.offset;
     return output_offset<output_length || process_session.output.length;
 }
+/* Bytes of p up to and including the first end of a synchronized frame
+ * (CSI ? 2026 l), or n. Parsing stops there so the finished frame is drawn
+ * before the next one starts to arrive in the same read: once any of the
+ * next frame is parsed, the finished one is gone from the model. A marker
+ * split across two reads is not found; the frame is then drawn with the
+ * next one, as without the marks. */
+static size_t sync_frame_end(const unsigned char *p,size_t n)
+{
+    static const unsigned char end[]="\033[?2026l";
+    size_t i;
+    if(n<sizeof end-1) return n;
+    for(i=0;i+sizeof end-1<=n;++i)
+        if(p[i]==0x1b && !memcmp(p+i,end,sizeof end-1)) return i+sizeof end-1;
+    return n;
+}
 static size_t output_pump(void)
 {
-    size_t n;
+    size_t n,take;
     replies_sync();
     /* Retain the unread suffix before acknowledging any more child output.
      * A blocked response is retried even if its query ended the last chunk. */
@@ -447,11 +462,12 @@ static size_t output_pump(void)
 #ifdef XTERM_PERF_DIAG
     uint64_t parse_started=PERF_NOW();
 #endif
+    take=sync_frame_end(pending_output+output_offset,output_length-output_offset);
     if(replies_enabled() && output_replies && output_generation==process_session.input_generation)
         n=reply_flow_write(&reply_flow,&screen,pending_output+output_offset,
-                          output_length-output_offset,reply_send,&process_session);
+                          take,reply_send,&process_session);
     else {
-        n=output_length-output_offset;
+        n=take;
         screen_write(&screen,pending_output+output_offset,n);
     }
     flood_diag_output(pending_output+output_offset,n);
@@ -734,6 +750,8 @@ static void kitty_count_drawn(const XTermScreen *s)
 }
 
 #ifdef XTERM_PERF_DIAG
+static RedrawSettle settle;
+static int sync_open;
 /* Why the next draw happens: 1 settle quiet, 2 settle limit, 0 other. */
 static int perf_draw_reason;
 /* Line numbers in the first 8 columns (Helix's gutter) must rise from row
@@ -743,7 +761,8 @@ static int perf_draw_reason;
 static int perf_model_torn(const XTermScreen *s)
 {
     unsigned row,col,numbered=0; long prev=-1; int torn=0;
-    for(row=0;row<s->rows;++row) {
+    /* The last two rows are Helix's status and command lines (":28"). */
+    for(row=0;row+2<s->rows;++row) {
         long n=-1;
         for(col=0;col<8 && col<s->columns;++col) {
             uint32_t ch=screen_view_cell(s,row,col).ch;
@@ -754,6 +773,22 @@ static int perf_model_torn(const XTermScreen *s)
         ++numbered;
         if(prev>=0 && n<=prev) torn=1;
         prev=n;
+    }
+    if(torn && numbered>=4) {
+        /* r<reason> o<frame open> k<key> then the numbers, for the log. */
+        char *out=perf_diag.torn_sample; size_t room=sizeof perf_diag.torn_sample,used;
+        snprintf(out,room,"r%d,o%d,h%d:",perf_draw_reason,sync_open,settle.held);
+        for(row=0;row<s->rows;++row) {
+            long n=-1;
+            for(col=0;col<8 && col<s->columns;++col) {
+                uint32_t ch=screen_view_cell(s,row,col).ch;
+                if(ch>='0' && ch<='9') n=(n<0?0:n*10)+(long)(ch-'0');
+                else if(n>=0) break;
+            }
+            used=strlen(out);
+            if(used+8>=room) break;
+            if(n>=0) snprintf(out+used,room-used,"%ld,",n); else snprintf(out+used,room-used,"_,");
+        }
     }
     return numbered<4?-1:torn;
 }
@@ -1687,8 +1722,8 @@ static int settle_hold(void)
  * each frame is drawn once per frame, never half-written. Without the marks
  * a terminal can only guess from pauses in the output, and a program that
  * writes one frame in pieces pauses mid-frame too (Helix in this window:
- * about a third of all redraws while a key was held showed lines of two
- * frames). A frame left open longer than SYNC_LIMIT_US is drawn anyway, so
+ * about half of all redraws while a key was held showed lines of two
+ * frames; a key, the title's timer or a pause in the output each started one). A frame left open longer than SYNC_LIMIT_US is drawn anyway, so
  * a program that never ends one cannot freeze the window. */
 #define SYNC_LIMIT_US 250000u
 static int sync_open;
@@ -1705,7 +1740,7 @@ static int sync_track(void)
 {
     int ended=screen.sync_ends!=sync_seen_ends;
     sync_seen_ends=screen.sync_ends;
-    if(screen.sync_update && !sync_open && settle.timed) { sync_open=1; sync_began=settle_now(); }
+    if(screen.sync_update && (!sync_open || ended) && settle.timed) { sync_open=1; sync_began=settle_now(); }
     else if(!screen.sync_update) sync_open=0;
     return ended && !sync_open;
 }
@@ -2120,9 +2155,9 @@ int main(int argc,char **argv)
     PERF_DO(perf_open());
     while (running) {
         struct IntuiMessage *message;
-        int dirty=0,key_dirty=0;
-        /* A key's redraw waiting for the end of an open frame. */
-        static int key_deferred;
+        int dirty=0;
+        /* A redraw waiting for the end of an open frame. */
+        static int draw_deferred;
 #ifdef XTERM_PERF_DIAG
         uint64_t loop_started;
 #endif
@@ -2173,7 +2208,7 @@ int main(int argc,char **argv)
                 if(!settle_hold()) dirty=1;
             }
             free(kept);
-            if(sync_track() && (settle.held || key_deferred)) { dirty=1; key_deferred=0; }
+            if(sync_track() && (settle.held || draw_deferred)) { dirty=1; draw_deferred=0; }
             /* A new OSC title belongs to whatever runs right now; read the
                foreground first, it may have started since the last look. */
             if(screen.title_serial!=program_title.serial) {
@@ -2571,19 +2606,12 @@ int main(int argc,char **argv)
                     else if(bytes[0]=='d') screen_scroll_view(&screen,-5);
                     else if(bytes[0]=='r') replay();
                 }
-                key_dirty=1;
+                dirty=1;
             }
         }
         if(!closing && !output_search.open && keyboard_ready()) {
-            if(key_queue_drain(&keyboard,16,keyboard_deliver,NULL)) key_dirty=1;
+            if(key_queue_drain(&keyboard,16,keyboard_deliver,NULL)) dirty=1;
         }
-        /* A key drawn while a frame is open would show half of it; it is
-         * drawn with the frame's end (or the frame's time limit). */
-        if(key_dirty) {
-            if(sync_holding()) key_deferred=1;
-            else dirty=1;
-        }
-        if(key_deferred && !sync_holding()) { dirty=1; key_deferred=0; }
         /* Another reader, another session or no raw client: a bracketed
            paste and a pending resize report belong to the old owner. */
         if(order_session_generation!=session_generation ||
@@ -2643,6 +2671,12 @@ int main(int argc,char **argv)
             } else if(offset!=screen.view_offset || index!=output_search.index ||
                       total!=output_search.total) dirty=1;
         }
+        /* Anything drawn while a frame is open (a key, the title's timer,
+         * a status message) would paint the half of it that has arrived;
+         * it is drawn with the frame's end, or at the frame's time limit.
+         * Closing draws at once. */
+        if(dirty && !closing && sync_holding()) { draw_deferred=1; dirty=0; }
+        else if(draw_deferred && !sync_holding()) { dirty=1; draw_deferred=0; }
         if(running && dirty) {
             uint64_t started=settle.timed?settle_now():0;
             update_title(window,last_key); draw_screen(window); settle_drawn(started);

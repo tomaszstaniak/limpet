@@ -24,6 +24,8 @@ typedef struct {
      * (Helix's gutter) out of order: a frame not fully received yet. By
      * what made the draw: settle quiet, settle limit, anything else. */
     unsigned long model_checked,model_torn_quiet,model_torn_limit,model_torn_other;
+    /* The gutter numbers of the last torn draw this second, and its state. */
+    char torn_sample[240];
 } PerfDiag;
 extern PerfDiag perf_diag;
 uint64_t perf_now(void);
