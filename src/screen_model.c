@@ -550,6 +550,10 @@ static void execute_csi(XTermScreen *s, unsigned char command)
                 }
                 else if(s->params[i]==2004) s->bracketed_paste=command=='h';
                 else if(s->params[i]==2048) s->resize_report=command=='h';
+                else if(s->params[i]==2026) {
+                    if(command=='l' && s->sync_update) ++s->sync_ends;
+                    s->sync_update=command=='h';
+                }
                 else if(s->params[i]==2100) s->wheel_report=command=='h';
             }
         }

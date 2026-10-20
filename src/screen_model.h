@@ -61,6 +61,11 @@ typedef struct XTermScreen {
     unsigned mouse_tracking, mouse_sgr, mouse_generation;
     unsigned bracketed_paste;   /* DEC 2004: the client wants pastes framed */
     unsigned resize_report;     /* DEC 2048: the client wants size changes in band */
+    /* DEC 2026 (synchronized output): set while the client says a frame is
+     * still being written; sync_ends counts the ends, so a whole frame that
+     * arrives in one read is still seen as complete. */
+    unsigned sync_update;
+    unsigned long sync_ends;
     unsigned wheel_report;      /* private 2100: wheel steps as SGR reports, buttons not taken (hardcode L5) */
     unsigned modify_enter;      /* CSI > 4 ; 1 m: Shift+Enter as CSI 27;2;13~ in raw mode (Bishop) */
     /* Optional synchronous reply sink; must copy bytes and not reenter this

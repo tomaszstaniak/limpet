@@ -347,7 +347,7 @@ test: build/test_title_buffer
 test: build/test_osc_title
 test: build/test_window_title
 test: build/test_profile_prompt
-test: build/test_theme build/test_margin_fill build/test_redraw_settle
+test: build/test_theme build/test_margin_fill build/test_redraw_settle build/test_sync_update
 test: build/test_geometry_reply
 test: build/test_mouse
 test: test-bracketed-paste
@@ -406,6 +406,9 @@ build/test_geometry_reply: tests/test_geometry_reply.c src/screen_model.c src/hy
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
 
+build/test_sync_update: tests/test_sync_update.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
 build/test_redraw_settle: tests/test_redraw_settle.c src/redraw_settle.c src/redraw_settle.h
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $< src/redraw_settle.c -o $@
@@ -682,6 +685,7 @@ test: $(HOST_TEST) build/test_replay build/test_graphemes build/test_input_echo 
 	./build/test_theme
 	./build/test_margin_fill
 	./build/test_redraw_settle
+	./build/test_sync_update
 	./build/test_geometry_reply
 	./build/test_mouse
 	./build/test_boxdraw
