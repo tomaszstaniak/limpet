@@ -1683,6 +1683,32 @@ static int settle_hold(void)
     PERF_DO(++perf_diag.held);
     return 1;
 }
+/* Synchronized output (DEC 2026): a program that marks the start and end of
+ * each frame is drawn once per frame, never half-written. Without the marks
+ * a terminal can only guess from pauses in the output, and a program that
+ * writes one frame in pieces pauses mid-frame too (Helix in this window:
+ * about a third of all redraws while a key was held showed lines of two
+ * frames). A frame left open longer than SYNC_LIMIT_US is drawn anyway, so
+ * a program that never ends one cannot freeze the window. */
+#define SYNC_LIMIT_US 250000u
+static int sync_open;
+static uint64_t sync_began;
+static unsigned long sync_seen_ends;
+/* 1 while drawing waits for the end of a frame. */
+static int sync_holding(void)
+{
+    return sync_open && settle.timed && settle_now()-sync_began<SYNC_LIMIT_US;
+}
+/* After output: track begin and end. Returns 1 when a frame just ended
+ * and held output (or a deferred key) should be drawn now. */
+static int sync_track(void)
+{
+    int ended=screen.sync_ends!=sync_seen_ends;
+    sync_seen_ends=screen.sync_ends;
+    if(screen.sync_update && !sync_open && settle.timed) { sync_open=1; sync_began=settle_now(); }
+    else if(!screen.sync_update) sync_open=0;
+    return ended && !sync_open;
+}
 /* Every pass of the loop: 1 when held output is due to be drawn now. */
 static int settle_poll(void)
 {
@@ -1692,6 +1718,7 @@ static int settle_poll(void)
     }
     if(!settle.held) return 0;
     now=settle_now();
+    if(sync_holding()) { settle_arm(sync_began+SYNC_LIMIT_US-now); return 0; }
     if(redraw_settle_due(&settle,now)) {
         PERF_DO(uint32_t limit=redraw_settle_limit(&settle);
                 if(now>=settle.first+limit) { ++perf_diag.draws_limit; perf_draw_reason=2; }
@@ -2093,7 +2120,9 @@ int main(int argc,char **argv)
     PERF_DO(perf_open());
     while (running) {
         struct IntuiMessage *message;
-        int dirty=0;
+        int dirty=0,key_dirty=0;
+        /* A key's redraw waiting for the end of an open frame. */
+        static int key_deferred;
 #ifdef XTERM_PERF_DIAG
         uint64_t loop_started;
 #endif
@@ -2144,6 +2173,7 @@ int main(int argc,char **argv)
                 if(!settle_hold()) dirty=1;
             }
             free(kept);
+            if(sync_track() && (settle.held || key_deferred)) { dirty=1; key_deferred=0; }
             /* A new OSC title belongs to whatever runs right now; read the
                foreground first, it may have started since the last look. */
             if(screen.title_serial!=program_title.serial) {
@@ -2541,12 +2571,19 @@ int main(int argc,char **argv)
                     else if(bytes[0]=='d') screen_scroll_view(&screen,-5);
                     else if(bytes[0]=='r') replay();
                 }
-                dirty=1;
+                key_dirty=1;
             }
         }
         if(!closing && !output_search.open && keyboard_ready()) {
-            if(key_queue_drain(&keyboard,16,keyboard_deliver,NULL)) dirty=1;
+            if(key_queue_drain(&keyboard,16,keyboard_deliver,NULL)) key_dirty=1;
         }
+        /* A key drawn while a frame is open would show half of it; it is
+         * drawn with the frame's end (or the frame's time limit). */
+        if(key_dirty) {
+            if(sync_holding()) key_deferred=1;
+            else dirty=1;
+        }
+        if(key_deferred && !sync_holding()) { dirty=1; key_deferred=0; }
         /* Another reader, another session or no raw client: a bracketed
            paste and a pending resize report belong to the old owner. */
         if(order_session_generation!=session_generation ||
