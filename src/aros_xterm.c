@@ -733,6 +733,32 @@ static void kitty_count_drawn(const XTermScreen *s)
     }
 }
 
+#ifdef XTERM_PERF_DIAG
+/* Why the next draw happens: 1 settle quiet, 2 settle limit, 0 other. */
+static int perf_draw_reason;
+/* Line numbers in the first 8 columns (Helix's gutter) must rise from row
+ * to row; a repeat or a step back means the model holds part of an old and
+ * part of a new frame. Rows without a number (wrapped lines, status) are
+ * skipped. Returns -1 when fewer than 4 rows have a number (not Helix). */
+static int perf_model_torn(const XTermScreen *s)
+{
+    unsigned row,col,numbered=0; long prev=-1; int torn=0;
+    for(row=0;row<s->rows;++row) {
+        long n=-1;
+        for(col=0;col<8 && col<s->columns;++col) {
+            uint32_t ch=screen_view_cell(s,row,col).ch;
+            if(ch>='0' && ch<='9') n=(n<0?0:n*10)+(long)(ch-'0');
+            else if(n>=0) break;
+        }
+        if(n<0) continue;
+        ++numbered;
+        if(prev>=0 && n<=prev) torn=1;
+        prev=n;
+    }
+    return numbered<4?-1:torn;
+}
+#endif
+
 static unsigned char *frame_pixels;
 static size_t frame_size;
 /* Rows [first,end) of frame_pixels, already committed to paint_damage. */
@@ -780,6 +806,14 @@ static void draw_screen(struct Window *window)
        command editor's view, and only while not scrolled into history. */
     int images_live=display!=&command_view && !screen.view_offset;
     if(!paint_damage_geometry(&paint_damage,screen.rows,screen.columns)) return;
+#ifdef XTERM_PERF_DIAG
+    { int t=perf_model_torn(&screen);
+      if(t>=0) { ++perf_diag.model_checked;
+                 if(t) { if(perf_draw_reason==1) ++perf_diag.model_torn_quiet;
+                         else if(perf_draw_reason==2) ++perf_diag.model_torn_limit;
+                         else ++perf_diag.model_torn_other; } }
+      perf_draw_reason=0; }
+#endif
     kitty_damage(&screen,images_live);
     if(cursor && cursor_col && !screen_view_cell(&screen,screen.cursor_row,cursor_col).width)
         --cursor_col;
@@ -1660,7 +1694,8 @@ static int settle_poll(void)
     now=settle_now();
     if(redraw_settle_due(&settle,now)) {
         PERF_DO(uint32_t limit=redraw_settle_limit(&settle);
-                if(now>=settle.first+limit) ++perf_diag.draws_limit; else ++perf_diag.draws_quiet;
+                if(now>=settle.first+limit) { ++perf_diag.draws_limit; perf_draw_reason=2; }
+                else { ++perf_diag.draws_quiet; perf_draw_reason=1; }
                 PERF_MAX(limit_max_ms,limit/1000));
         return 1;
     }

@@ -20,6 +20,10 @@ typedef struct {
     unsigned long held,settle_draws;
     unsigned long cache_hits,cache_misses,cache_replaced,miss_us,glyph_us;
     unsigned long draws_quiet,draws_limit,limit_max_ms,forced_delay_ms;
+    /* Draws whose screen model had line numbers in the first columns
+     * (Helix's gutter) out of order: a frame not fully received yet. By
+     * what made the draw: settle quiet, settle limit, anything else. */
+    unsigned long model_checked,model_torn_quiet,model_torn_limit,model_torn_other;
 } PerfDiag;
 extern PerfDiag perf_diag;
 uint64_t perf_now(void);

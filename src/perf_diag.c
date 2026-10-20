@@ -73,7 +73,7 @@ void perf_tick(void)
 {
     static const PerfDiag zero;
     PerfDiag *d=&perf_diag;
-    char line[1280];
+    char line[1536];
     uint64_t now=perf_now();
     if(!perf_started) { perf_started=now; return; }
     if(now-perf_started<1000000u) return;
@@ -101,8 +101,12 @@ void perf_tick(void)
             d->cache_hits,d->cache_misses,d->cache_replaced,d->miss_us,d->glyph_us);
         used=strlen(line);
         snprintf(line+used,sizeof line-used,
-            "draws_quiet=%lu draws_limit=%lu limit_max_ms=%lu forced_delay_ms=%lu\n",
+            "draws_quiet=%lu draws_limit=%lu limit_max_ms=%lu forced_delay_ms=%lu ",
             d->draws_quiet,d->draws_limit,d->limit_max_ms,d->forced_delay_ms);
+        used=strlen(line);
+        snprintf(line+used,sizeof line-used,
+            "model_checked=%lu model_torn_quiet=%lu model_torn_limit=%lu model_torn_other=%lu\n",
+            d->model_checked,d->model_torn_quiet,d->model_torn_limit,d->model_torn_other);
         Write(perf_file,line,(LONG)strlen(line));
     }
     *d=zero; perf_started=now;
