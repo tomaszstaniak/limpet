@@ -11,8 +11,11 @@ Fixed:
   kept moving for seconds after the key was released. Such a program sends
   one screen in many small writes, and Limpet redrew the window after each
   one, so the program waited for every partial redraw. Limpet now redraws
-  once the program's output pauses, and still from time to time while
-  output keeps coming. Keys and window changes still redraw at once.
+  once the program's output pauses, and up to about ten times a second while
+  output keeps coming (less often when redrawing itself is slow, so the
+  program keeps most of the machine). Long output such as `Type` of a large
+  file also finishes several times sooner. Keys and window changes still
+  redraw at once.
 
 ## 0.6.1 (2026-10-19)
 
