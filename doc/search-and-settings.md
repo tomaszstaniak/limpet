@@ -80,7 +80,7 @@ An example:
 
 | Key | Value | Default | Takes effect |
 | --- | --- | --- | --- |
-| `font` | path of a monospace TrueType or OpenType font | Vera Mono (`FONTS:TrueType/VeraMono.ttf`) | in new windows |
+| `font` | path of a monospace TrueType or OpenType font | DejaVu Sans Mono Nerd Font (`PROGDIR:Fonts/DejaVuSansMNerdFontMono-Regular.ttf`) when present, else Vera Mono (`FONTS:TrueType/VeraMono.ttf`) | in new windows |
 | `font_size` | 8 to 20 pixels | 13 | in new windows |
 | `theme` | path of a theme file (see the Themes drawer) | the built-in dark theme | at once with Project > Reload settings, and in new windows |
 | `scrollback` | 100 to 1000 lines | 256 | in new windows |
@@ -103,7 +103,7 @@ number out of range or a line without `=` makes Limpet ignore the file and
 use its built-in settings; the title bar says which line is wrong, for
 example `Settings: Limpet.conf line 2: scrollback takes 100 to 1000;
 built-in settings used`. A font that cannot be used (missing, damaged, not
-monospace, too large for a cell) falls back to Vera Mono, and a theme that
+monospace, too large for a cell) falls back to the default font, and a theme that
 cannot be read to the built-in dark theme; both say so in the title bar.
 If there is not enough memory for the scrollback asked for, Limpet uses the
 default and says so.

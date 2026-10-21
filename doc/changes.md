@@ -28,6 +28,18 @@ Added:
   so a scrolling editor no longer shows lines of two screens at once. A
   program that leaves an update open is still shown after a quarter of a
   second. Programs that do not use the marks are drawn as before.
+- Links to local files: an OSC 8 link `file:///Volume:path` (with `%XX`
+  escapes for spaces and other bytes) opens with Ctrl+click as a Workbench
+  double-click would, through its default tool. HTTP and HTTPS links still
+  go to OpenURL. Remote hosts, relative and Unix paths are not accepted.
+- The archive includes DejaVu Sans Mono Nerd Font, which is now the default
+  font when no `font` is set in `Limpet.conf`. It has the file-type icons
+  that `eza --icons` uses, drawn one cell wide. A font set in `Limpet.conf`
+  is still used as before.
+- Programs can ask Limpet (through the presentation query of the Limpet SDK)
+  which text styles it draws, whether it opens OSC 8 links, and whether its
+  font has the eza icons in one cell; eza uses this to decide on styles,
+  `--hyperlink` and `--icons`.
 
 ## 0.6.1 (2026-10-19)
 

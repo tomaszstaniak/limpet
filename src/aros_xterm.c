@@ -1881,15 +1881,15 @@ static void settings_theme(void)
     }
 }
 
-/* Main font at the chosen size; if that fails, Vera Mono at that size, then
-   Vera Mono at 13 px, which is what Limpet always had. */
+/* Main font at the chosen size; if that fails, the default font (the bundled
+   Nerd font when present, else Vera Mono) at that size, then at 13 px. */
 static int settings_font(void)
 {
     xfont_set_size(settings.font_size);
     if(!xfont_open_main(settings.font[0]?settings.font:NULL)) return 0;
     if(settings.font[0]) {
         snprintf(settings_message,sizeof settings_message,
-                 "Settings: font %.80s is not a usable monospace font; Vera Mono",settings.font);
+                 "Settings: font %.80s is not a usable monospace font; default font",settings.font);
         if(!xfont_open_main(NULL)) return 0;
     }
     xfont_set_size(XSETTINGS_FONT_SIZE_DEFAULT);

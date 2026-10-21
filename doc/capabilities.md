@@ -665,7 +665,7 @@ apply it during the current session.
 
 | Key | Range or value | Default |
 | --- | --- | --- |
-| `font` | path to a monospace TrueType or OpenType font | `FONTS:TrueType/VeraMono.ttf` |
+| `font` | path to a monospace TrueType or OpenType font | `PROGDIR:Fonts/DejaVuSansMNerdFontMono-Regular.ttf` when present, else `FONTS:TrueType/VeraMono.ttf` |
 | `font_size` | 8–20 pixels | 13 |
 | `theme` | path to a theme file | built-in dark theme |
 | `scrollback` | 100–1000 lines at 160 columns | 256 |
@@ -674,7 +674,7 @@ apply it during the current session.
 **Project > Reload settings** applies the theme immediately. Font, size and
 history limits apply to new windows. A bad file is rejected as a whole, with
 the line number in the title bar; a failed reload preserves the current
-settings. An unavailable font falls back to Vera Mono.
+settings. An unavailable font falls back to the default font.
 
 Scrollback uses about 2.7 MB per 100 lines, including the workspace needed
 for reflow. Command history is kept only for the lifetime of the window.

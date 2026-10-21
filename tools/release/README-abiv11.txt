@@ -23,6 +23,22 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in this test version
+------------------------
+
+- Links to local files: Ctrl+click on an OSC 8 link file:///Volume:path
+  opens the file as a Workbench double-click would. HTTP and HTTPS links
+  still open through OpenURL.
+- The drawer includes DejaVu Sans Mono Nerd Font (Fonts/), the default font
+  when Limpet.conf sets none. It has the file-type icons of eza --icons,
+  one cell wide. A font set in Limpet.conf is used as before.
+- Programs can ask which text styles Limpet draws, whether it opens OSC 8
+  links and whether its font has the eza icons (Limpet SDK presentation
+  query). eza uses this for its colours, --hyperlink and --icons.
+- Faster scrolling in full-screen programs and synchronized output
+  (CSI ? 2026 h/l), as in 0.6.2-test1.
+
+
 New in 0.6.1
 ------------
 
@@ -165,8 +181,9 @@ Requirements
 ------------
 
 - AROS ABIv11, x86_64. This version was tested on AROS One 1.3.
-- The system fonts FONTS:TrueType/VeraMono.ttf and
-  FONTS:TrueType/OpenSans-Regular.ttf (installed with the system).
+- The system font FONTS:TrueType/OpenSans-Regular.ttf, and
+  FONTS:TrueType/VeraMono.ttf when the bundled font is removed or another
+  font is set (both installed with the system).
 - freetype2.library (part of the system).
 
 
@@ -215,7 +232,9 @@ Limpet reads ENV:Limpet/Limpet.conf when a window opens, or
 ENVARC:Limpet/Limpet.conf when ENV: has none; without either it works as
 before. One key=value per line, # starts a comment:
 
-    font=FONTS:TrueType/VeraMono.ttf   a monospace TrueType/OpenType font
+    font=FONTS:TrueType/VeraMono.ttf   a monospace TrueType/OpenType font;
+                                       without it, Fonts/DejaVuSansMNerd-
+                                       FontMono-Regular.ttf from the drawer
     font_size=13                       8 to 20 pixels
     theme=SYS:Utilities/Limpet/Themes/light.theme
     scrollback=256                     100 to 1000 lines at 160 columns
