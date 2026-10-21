@@ -19,6 +19,11 @@ mkdir -p $out
 common() {  # $1 = drawer
     mkdir -p $1/Fonts $1/Themes $1/Licenses
     cp $root/assets/fonts/NotoEmoji.ttf $root/assets/fonts/Unifont.otf $1/Fonts/
+    # The primary font when present: complete eza icon repertoire in one cell
+    # (XTY_FEATURE_NERD_ICONS_EZA/ICON_WIDTH_ONE are offered only with it).
+    cp $root/assets/fonts/DejaVuSansMNerdFontMono-Regular.ttf $1/Fonts/
+    cp $root/assets/fonts/DejaVu-NerdFont-LICENSE.txt $1/Licenses/DejaVuSansM-NerdFont-LICENSE.txt
+    cp $root/assets/fonts/NerdFonts-LICENSE.md $1/Licenses/NerdFonts-LICENSE.md
     cp $root/themes/*.theme $1/Themes/
     cp $root/vendor/harfbuzz/COPYING $1/Licenses/HarfBuzz-COPYING.txt
     cp $root/vendor/utf8proc/LICENSE.md $1/Licenses/utf8proc-LICENSE.md
