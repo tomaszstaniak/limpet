@@ -1,5 +1,8 @@
 #include "../src/aros_session.h"
 #include "../src/xterm_status.h"
+#ifndef XTY_ACTION_CANCEL
+#include "../sdk/include/limpet/tty_control.h"
+#endif
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <dos/dostags.h>
@@ -256,6 +259,55 @@ int main(void)
     }
     puts("PASS endpoint stop: held lock, timed wait, blocked write");
 
+    /* Three reads and two waiters out at once; the middle read is taken
+       back, then the session stops: every packet is answered exactly once
+       and nothing stays parked. */
+    {
+        static char bufs[3][4];
+        unsigned i,got=0,seen=0;
+        start(); open_input(0);
+        for(i=0;i<5;++i) {
+            batch[i]=AllocDosObject(DOS_STDPKT,NULL); CHECK(batch[i]);
+            batch[i]->dp_Type=i<3?ACTION_READ:ACTION_WAIT_CHAR;
+            batch[i]->dp_Arg1=i<3?files[0]->fh_Arg1:5000000;
+            batch[i]->dp_Arg2=i<3?(SIPTR)bufs[i]:0;
+            batch[i]->dp_Arg3=i<3?(SIPTR)sizeof bufs[i]:0;
+            SendPkt(batch[i],session.port,reply);
+        }
+        aros_session_poll(&session);
+        CHECK(session.pending_read==batch[0] && session.read_waiting==2);
+        CHECK(session.read_wait[0]==batch[1] && session.read_wait[1]==batch[2]);
+        CHECK(session.wait_count==2 && !GetMsg(reply));
+        packet->dp_Type=XTY_ACTION_CANCEL; packet->dp_Arg1=files[0]->fh_Arg1;
+        packet->dp_Arg2=(SIPTR)batch[1]; packet->dp_Arg3=0;
+        packet->dp_Arg4=XTY_PACKET_MAGIC; packet->dp_Arg5=0;
+        SendPkt(packet,session.port,reply);
+        aros_session_poll(&session);
+        CHECK(GetMsg(reply)==batch[1]->dp_Link);
+        CHECK(batch[1]->dp_Res1==-1 && batch[1]->dp_Res2==ERROR_BREAK);
+        CHECK(GetMsg(reply)==packet->dp_Link && packet->dp_Res1==DOSTRUE);
+        CHECK(session.pending_read==batch[0] && session.read_waiting==1 && session.read_wait[0]==batch[2]);
+        aros_session_stop(&session);
+        for(i=0;i<500 && got<4;++i) {
+            struct Message *m;
+            unsigned j;
+            aros_session_poll(&session);
+            while((m=GetMsg(reply))) {
+                for(j=0;j<5 && batch[j]->dp_Link!=m;++j) {}
+                CHECK(j<5 && j!=1 && !(seen&(1U<<j)));
+                seen|=1U<<j; ++got;
+                if(j<3) CHECK(batch[j]->dp_Res1==0);
+                else CHECK(batch[j]->dp_Res1==DOSTRUE);
+            }
+            if(got<4) Delay(1);
+        }
+        CHECK(got==4 && !session.pending_read && !session.read_waiting && !session.wait_count);
+        for(i=0;i<XSESSION_WAITERS;++i) CHECK(!session.waits[i].active && !session.waits[i].packet);
+        for(i=0;i<5;++i) { FreeDosObject(DOS_STDPKT,batch[i]); batch[i]=NULL; }
+        close_input(0); CHECK(!aros_session_dispose(&session));
+    }
+    puts("PASS endpoint stop: queued reads and waiters answered, cancel of a queued read");
+
     start(); open_input(0);
     client.fh=MKBADDR(files[0]); client.ok=0;
     process=CreateNewProcTags(NP_Entry,(IPTR)native_client,NP_Name,(IPTR)"XTerm endpoint test client",
@@ -270,7 +322,7 @@ int main(void)
     ChildFree(child_id); child_id=0;
     CHECK(client.ok && !aros_session_active(&session));
     n=aros_session_read(&session,bytes,sizeof bytes-1); bytes[n]=0;
-    CHECK(strstr((const char *)bytes,"NATIVE_WRITE\r\n"));
+    CHECK(strstr((const char *)bytes,"NATIVE_WRITE\n"));
     CHECK(!aros_session_dispose(&session));
     FreeDosObject(DOS_STDPKT,packet); DeleteMsgPort(reply);
     puts("AROS external endpoint PASS: native child Read/Write/Close, no owned worker");

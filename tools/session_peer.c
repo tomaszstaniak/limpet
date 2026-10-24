@@ -80,7 +80,7 @@ int main(int argc,char **argv)
         if(!WaitForChar(Input(),5000000) || IoErr()) return 20;
         if(!WaitForChar(Input(),0) || Read(Input(),&c,1)!=1 || c!='X') return 20;
         if(!emit("WAIT EOF\r\n")) return 20;
-        if(WaitForChar(Input(),5000000) || IoErr()) return 20;
+        if(!WaitForChar(Input(),5000000) || IoErr()) return 20;
         if(Read(Input(),&c,1)!=0) return 20;
         emit("WAIT PASS\r\n"); return 0;
     }

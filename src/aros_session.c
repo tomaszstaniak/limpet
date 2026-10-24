@@ -513,7 +513,8 @@ void aros_session_poll(ArosSession *s)
             else if(s->pending_read && s->read_waiting==XSESSION_READERS)
                 ReplyPkt(p,-1,ERROR_OBJECT_IN_USE);
             else {
-                /* As CON:, the last program to ask for input gets the breaks. */
+                /* As CON:, the last program to ask for input gets the breaks,
+                   also when its read waits behind another one. */
                 if(s->console) aros_break_bind(&s->breaker,p->dp_Port->mp_SigTask);
                 if(s->pending_read) s->read_wait[s->read_waiting++]=p;
                 else s->pending_read=p;

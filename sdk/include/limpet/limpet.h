@@ -25,9 +25,9 @@
 #include "tty_control.h"
 
 #define LIMPET_SDK_VERSION_MAJOR 0
-#define LIMPET_SDK_VERSION_MINOR 4
+#define LIMPET_SDK_VERSION_MINOR 5
 #define LIMPET_SDK_VERSION_PATCH 0
-#define LIMPET_SDK_VERSION_STRING "0.4.0"
+#define LIMPET_SDK_VERSION_STRING "0.5.0"
 
 /* Binary guard. SDK 0.2 appended `input` and SDK 0.3 `features` to
    LimpetPresentation, so a function that fills the struct writes more than

@@ -1,13 +1,26 @@
 # Limpet SDK changes
 
-## Unreleased (2026-10-21)
+## 0.5.0 (2026-10-24)
 
-- Additive style bits describe underline/inverse and reserve distinct dim, italic,
-  blink, hidden and strike capabilities. Limpet confirms only implemented styles.
-- Feature bits confirm OSC 8 and the complete eza 0.23.5 Nerd Font icon repertoire
-  with one-cell metrics. Icon bits require current renderer/font evidence.
-- No structure, packet size, operation or link name changes: older clients ignore
-  new bits; the 0.1/0.2/0.3 compatibility checks remain passing.
+Works with Limpet 0.1.0 to 0.7.0.
+
+Added:
+
+- Style bits in `LimpetPresentation.styles` for each attribute and its reset:
+  `XTY_STYLE_DIM_RESET`, `XTY_STYLE_ITALIC_RESET`,
+  `XTY_STYLE_UNDERLINE_RESET`, `XTY_STYLE_BLINK_RESET`,
+  `XTY_STYLE_INVERSE_RESET`, `XTY_STYLE_HIDDEN_RESET`,
+  `XTY_STYLE_STRIKE_RESET`. Limpet 0.7.0 sets underline and inverse, the
+  styles it draws.
+- Feature bits in `LimpetPresentation.features`: `XTY_FEATURE_OSC8` (the
+  terminal opens OSC 8 links), `XTY_FEATURE_NERD_ICONS_EZA` and
+  `XTY_FEATURE_ICON_WIDTH_ONE` (its font has the file-type icons of eza
+  0.23.5, each one cell wide; a program should use the icons only when both
+  are set). Limpet 0.7.0 sets the icon bits only when its font has every one
+  of those icons, one cell wide; its bundled Nerd Font does.
+
+Unchanged: structures, packet sizes, operations and function names. Programs
+built with SDK 0.3.0 or 0.4.0 work unchanged and ignore the new bits.
 
 ## 0.4.0 (2026-10-18)
 

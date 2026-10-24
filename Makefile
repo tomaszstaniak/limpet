@@ -96,6 +96,13 @@ abiv11-read-cancel:
 	mkdir -p build/abiv11
 	$(ABIV11_GCC) -O2 -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include -o build/abiv11/read-cancel tests/read_cancel.c -L$(ABIV11_SDK)/lib
 
+# The packet endpoint's own test (tests/test_aros_endpoint.c), for ABIv11.
+.PHONY: abiv11-endpoint-test
+abiv11-endpoint-test:
+	@test -n "$(ABIV11_GCC)" || { echo "Set ABIV11_GCC to the x86_64 ABIv11 compiler"; exit 1; }
+	mkdir -p build/abiv11/probes
+	$(ABIV11_GCC) $(ABIV11_CFLAGS) -o build/abiv11/probes/test_aros_endpoint tests/test_aros_endpoint.c $(SESSION_SRC) $(ABIV11_LDFLAGS)
+
 # The same check against the 0.4.0 candidate's close, which it must fail
 # (needs this git checkout).
 .PHONY: abiv11-drop-close-old

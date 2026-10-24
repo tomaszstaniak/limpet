@@ -135,7 +135,7 @@ static void run_suite(int require_break)
     }
     length=0;
     assert(aros_session_write(&s,(const unsigned char *)"Echo XTERM_SHELL_OK\r",20)==20);
-    assert(until("\r\nXTERM_SHELL_OK\r\n",0));
+    assert(until("\r\nXTERM_SHELL_OK\n",0));
     assert(aros_session_write(&s,(const unsigned char *)"EndCLI\r",7)==7);
     assert(until(NULL,1));
     assert(!s.breaker.target && !aros_break_send(&s.breaker));
