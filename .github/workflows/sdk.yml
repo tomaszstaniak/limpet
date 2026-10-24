@@ -21,8 +21,9 @@ jobs:
       # was built from 921bc72d...; Limpet 0.2.0 adds the presentation input
       # field (known bit 32: DEC 2004, DEC 2048, private 2100); Limpet 0.3.0
       # the features field (known bit 64: window title); Limpet 0.6.0 the
-      # input bit 8 (Shift+Enter, CSI > 4 ; 1 m). Older clients are checked
+      # input bit 8 (Shift+Enter, CSI > 4 ; 1 m); Limpet 0.7.0 the style bits
+      # and the OSC 8 and icon feature bits (SDK 0.5.0). Older clients are checked
       # by sdk/tests/test_sdk_compat.sh.
       - name: Protocol header is the reviewed one
         run: |
-          echo "53c8c07797ad897a64ad54a60877f1ae9887536d86087c66a6eb4bff7c015907  sdk/include/limpet/tty_control.h" | sha256sum -c -
+          echo "e251be4ac5b6108ee0616a2a4ac47514878e6ddd8b633dfed491e126a7b1858f  sdk/include/limpet/tty_control.h" | sha256sum -c -
