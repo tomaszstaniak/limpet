@@ -1,10 +1,10 @@
 # Limpet capabilities
 
-This page describes **Limpet 0.6.0** and **SDK 0.4.0** for AROS ABIv11,
+This page describes **Limpet 0.7.0** and **SDK 0.5.0** for AROS ABIv11,
 x86_64. It covers terminal features, application interfaces and the separate
 experimental `LIMPET:` console handler.
 
-Features added after 0.6.1 are listed under [Unreleased changes](#unreleased-changes).
+Nothing has been added since 0.7.0; see [Unreleased changes](#unreleased-changes).
 For installation and platform requirements, see [compatibility](compatibility.md).
 
 ## Feature detection
@@ -30,12 +30,15 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Window size](#window-size) | presentation query, CSI 18 t; `TIOCGWINSZ` fixed in 0.5.0 | 0.1.0 |
 | [Cursor movement](#cursor-movement-and-erasing), [alternate screen](#alternate-screen) | VT sequences | 0.1.0 |
 | [Unicode](#unicode-text) | UTF-8 text | 0.1.0 |
-| [Links](#hyperlinks) | OSC 8; automatic HTTP/HTTPS detection | 0.1.0 |
+| [Links](#hyperlinks) | OSC 8; automatic HTTP/HTTPS detection | 0.1.0; local file links 0.7.0 |
+| [Style and icon bits](#presentation-query) | presentation query: styles Limpet draws, OSC 8, eza icons in one cell; bundled Nerd Font | 0.7.0 |
+| Several readers and waiters | up to 16 reads and 16 waiters at once; line feed mode (`CSI 20 h` / `l`) | 0.7.0 |
+| Console geometry packet | `ACTION_CONSOLE_GETGEOMETRY`, see [protocols](protocols.md#dos-packets-public-console-geometry) | 0.7.0 |
 | [Inline images](#inline-images) | Kitty graphics subset | 0.1.0 |
 | [Mouse reporting](#mouse-reporting) | modes 1000, 1002, 1006 | 0.1.0 |
 | [Bracketed paste](#bracketed-paste) | mode 2004; presentation input bit | 0.2.0 |
 | [Resize reports](#resize-reports) | mode 2048; presentation input bit | 0.2.0 |
-| [Synchronized output](#synchronized-output) | mode 2026 | 0.6.2 |
+| [Synchronized output](#synchronized-output) | mode 2026 | 0.7.0 |
 | [Wheel reports](#wheel-reports) | Limpet mode 2100; presentation input bit | 0.2.0 |
 | [Shift+Enter](#shiftenter) | `CSI > 4 ; 1 m`; presentation input bit | 0.6.0 |
 | [Window title](#window-title) | OSC 0/2; presentation feature bit | 0.3.0 |
@@ -315,7 +318,10 @@ bar; Ctrl+click opens it through OpenURL, and Ctrl+Shift+click copies it.
 `limpet_osc8_open()` refuses URIs with spaces, control characters or
 non-ASCII bytes, so outside text cannot inject sequences.
 
-**Limits:** Limpet opens only `http://` and `https://` targets of at most
+**Limits:** Limpet opens `http://` and `https://` targets through OpenURL and, since
+0.7.0, `file:///Volume:path` targets (bytes escaped as `%XX`) through
+Workbench, as a double-click would, with the file's default tool. Remote
+hosts, relative paths and Unix paths are not accepted. Targets are at most
 2047 bytes. Other schemes are shown as text and do nothing on click. 64
 explicit targets are remembered per window; older ones become plain text.
 
@@ -738,33 +744,31 @@ The broader PTY cancellation API remains experimental.
 
 ## LIMPET: console handler
 
-The separate **0.6.0 experimental handler** lets a program open a Limpet
+The separate **0.7.0 experimental handler** lets a program open a Limpet
 console through DOS:
 
 ```text
 NewShell WINDOW LIMPET:
 ```
 
-It is distributed as `Limpet-handler-experimental-0.6.0-abiv11.zip`, not
+It is distributed as `Limpet-handler-experimental-0.7.0-abiv11.zip`, not
 installed by the main archive or apkg. Installation lasts until reboot and
 does not replace `CON:`. Programs opening `CON:` still get the system console.
 
-The released handler supports console names with geometry and title, cooked
+The handler supports console names with geometry and title, cooked
 and raw input, Shell scripts, redirection and multiple writers, and, since
-0.6.0, the Amiga console's reports, Ctrl-D/E/F and Ctrl-\. Important
-limits in **the 0.6.0 handler**:
+0.6.0, the Amiga console's reports, Ctrl-D/E/F and Ctrl-\, and, since
+0.7.0, several readers and waiters at once, line feed mode and the console
+geometry packet. Important limits in **the 0.7.0 handler**:
 
-- only one reader or `WaitForChar` request can be pending;
 - `AUTO` opens the window immediately; `WINDOW` is rejected;
-- raw-mode LF moves down without returning to column 1;
 - the console information exposes dimensions, but is not a working
   `console.device` endpoint for direct device I/O;
 - startup is slow and each window uses about 32.5 MiB. Memory recovery over
   repeated opens and closes has not been established.
 
 For installation, see [the handler guide](limpet-handler.md#install-and-remove).
-The guide includes development changes; the list above describes the
-released 0.6.0 archive.
+The list above describes the 0.7.0 handler.
 
 ## Terminal settings (termios) and PTY
 
@@ -787,13 +791,11 @@ part of the ABIv11 release and has not been built for ABIv11.
 
 ## Unreleased changes
 
-None that affect programs. The development tree may hold work on the
-experimental handler that is not in the 0.6.1 archive; see
-[the handler guide](limpet-handler.md).
+None after 0.7.0.
 
 ## References
 
 - [Protocol reference](protocols.md) and [SDK API](sdk/api.md)
 - [Changes by release](changes.md)
-- [0.6.1 verification record](verification-0.6.1.md), with earlier records
+- [0.7.0 verification record](verification-0.7.0.md), with earlier records
   linked from the corresponding releases

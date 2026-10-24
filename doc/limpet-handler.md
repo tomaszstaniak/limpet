@@ -13,7 +13,7 @@ Scope of this stage: AROS ABIv11 x86_64, tested on AROS One 1.3 under
 QEMU. Not built or run on mainline, not run on ABIv11 2026.09 or real
 hardware.
 
-The table describes the handler of the 0.6.0 archive. For a short list of
+The table describes the handler of the 0.7.0 archive. For a short list of
 its limits, see the [capability reference](capabilities.md#limpet-console-handler).
 
 ## Install and remove
@@ -109,6 +109,7 @@ records](verification-0.5.0.md#limpet-handler-experimental) and
 | `ACTION_DISK_INFO`: `id_InUse` as a console.device request (posixc `TIOCGWINSZ`) | partly: an `IOStdReq` whose unit is a `ConUnit` with the grid's size and the window, read-only (fixed in this stage; was 0, and `TIOCGWINSZ` crashed) | `aros_session.c` | `disk_info.unit`; `tty-winsize` |
 | I/O sent to that console.device request | not supported: it is no device; a program doing it fails | | none |
 | Amiga console reports: window bounds (`CSI [0] SPACE q`), cursor (`CSI 6 n`), with the 8-bit or the 7-bit CSI | supported, one-based as AmigaOS and mainline AROS answer: `0x9B 1;1;rows;columns SPACE r`, cursor in the query's introducer; the new size after a resize. ABIv11's CON: answers both one lower | `screen_model.c` | `test_amiga_reports`; `report.*`, `report.*.after_resize` |
+| Console geometry (`ACTION_CONSOLE_GETGEOMETRY`, `0x434f4e47`) | supported: columns, rows and the pixel size of whole cells, as in [protocols](protocols.md#dos-packets-public-console-geometry); upstream AROS PR #1763 is still open | `aros_session.c` | `console-geometry-probe` |
 | Line feed mode (`CSI 20 h` / `CSI 20 l`) | supported as console.device has it: on from the start in every console window, cooked and raw, so a line feed also returns the carriage; `CSI 20 l` turns it off, `CSI 20 h` on. VT and PTY sessions start with it off | `screen_model.c` | `lf.control`; `test_amiga_reports` |
 | Amiga raw input events (`CSI n {`) | not supported (ABIv11 CON: does not report them either) | | none |
 | Output: Amiga console sequences | partly: Limpet's VT subset with SGR 30-37/40-47 as pens; not checked one by one against console.device's set | `screen_model.c` | Shell prompt, `List`, `Search` |

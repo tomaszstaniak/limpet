@@ -1,9 +1,9 @@
 # Protocol reference
 
-This reference covers **Limpet 0.6.0**. Applications use escape sequences
+This reference covers **Limpet 0.7.0**. Applications use escape sequences
 through standard I/O and the control protocol through DOS packets on the same
 handle. See the [capability reference](capabilities.md) for feature detection
-and [unreleased changes](capabilities.md#unreleased-changes) for development additions.
+and the version of each feature.
 
 All escape sequences below are 7-bit: `ESC` is 0x1B, `CSI` means `ESC [`,
 `OSC` means `ESC ]`, `APC` means `ESC _`, `ST` means `ESC \`. The 8-bit C1
@@ -133,9 +133,9 @@ ends.
 `CON:` sends cursor keys as 0x9B followed by the letter. Programs that run
 in both consoles decode both.
 
-## DOS packets: public console geometry (unreleased)
+## DOS packets: public console geometry
 
-The development build answers `ACTION_CONSOLE_GETGEOMETRY` (`0x434f4e47`),
+Limpet 0.7.0 and later answer `ACTION_CONSOLE_GETGEOMETRY` (`0x434f4e47`),
 following the proposed AROS `dos/consoleinfo.h` contract in
 [PR1763](https://github.com/aros-development-team/AROS/pull/1763), checked at
 `4fd9618699101fa6425146d7d0c0eb7767fe23cf`. The upstream PR is still open.

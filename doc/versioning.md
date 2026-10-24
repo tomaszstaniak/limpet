@@ -4,17 +4,19 @@ Limpet and the SDK have separate version numbers and separate tags.
 
 | | Version | Archive | Git tag |
 | --- | --- | --- | --- |
-| Limpet (the terminal) | 0.6.1 | `Limpet-0.6.1-abiv11.zip` | `v0.6.1` |
-| Limpet SDK | 0.4.0 | `limpet-sdk-0.4.0.zip` | `sdk-v0.4.0` |
+| Limpet (the terminal) | 0.7.0 | `Limpet-0.7.0-abiv11.zip` | `v0.7.0` |
+| Limpet SDK | 0.5.0 | `limpet-sdk-0.5.0.zip` | `sdk-v0.5.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
-Limpet 0.1.0 to 0.6.0 (tags `v0.1.0` to `v0.6.0`) are the earlier
-terminal releases, and SDK 0.2.0 and 0.3.0 (tags `sdk-v0.2.0`,
-`sdk-v0.3.0`) the earlier SDK releases. 0.2.1 changes only the bundled
+Limpet 0.1.0 to 0.6.1 (tags `v0.1.0` to `v0.6.1`) are the earlier
+terminal releases, and SDK 0.2.0 to 0.4.0 (tags `sdk-v0.2.0`
+to `sdk-v0.4.0`) the earlier SDK releases. 0.2.1 changes only the bundled
 HarfBuzz; the protocol and the SDK are the same as for 0.2.0. 0.3.0 adds
 the window title feature bit to the presentation reply, and SDK 0.3.0
 decodes it. 0.6.0 adds the Shift+Enter input bit, and SDK 0.4.0 names it.
-0.6.1 changes no protocol; SDK 0.4.0 stays current.
+0.6.1 changes no protocol. 0.7.0 adds style bits, an OSC 8 bit and icon
+feature bits to the presentation reply, and SDK 0.5.0 names them; the
+layout of the presentation packet is unchanged.
 An SDK 0.1.0 was prepared but never published; its sources are kept in
 `sdk/tests/compat-0.1.0` for the compatibility test.
 
@@ -47,6 +49,7 @@ What this means in practice, checked by tests and on AROS:
 | SDK 0.1 and 0.2.0 sources | Limpet 0.3.0 | decode the reply exactly as they decoded their own terminal's (`sdk/tests/test_sdk_compat.sh`) |
 | SDK 0.3.0 | Limpet 0.2.1 | everything as with SDK 0.2.0; the title is not confirmed, so nothing is sent (hardcode built with SDK 0.3.0 in Limpet 0.2.1, AROS One 1.3, 2026-10-11) |
 | SDK 0.3.0 | Limpet 0.3.0 | all seven fields (`hello`, AROS One 1.3, 2026-10-11) |
+| SDK 0.3.0 and 0.4.0 sources | Limpet 0.7.0 | decode the reply exactly as they decoded their own terminal's (`sdk/tests/test_sdk_compat.sh`) |
 | any | `CON:` | `LIMPET_UNSUPPORTED`, plain text |
 
 ### Source compatibility
@@ -59,7 +62,7 @@ minor version.
 ### Binary compatibility
 
 Binary compatibility is not guaranteed in SDK 0.x. Structures such as `LimpetPresentation` may grow at the
-end (0.2.0 added `input`, 0.3.0 `features`; 0.4.0 added only a bit), so every object that uses the SDK must be
+end (0.2.0 added `input`, 0.3.0 `features`; 0.4.0 and 0.5.0 added only bits), so every object that uses the SDK must be
 compiled with the same SDK version as the library it links with. Rebuild
 after updating the SDK.
 
@@ -76,8 +79,10 @@ caller's struct at run time.
 | 0.2.0 | Limpet 0.2.0, 0.2.1 | colours, styles, geometry and input modes |
 | 0.2.0 | Limpet 0.1.0 | everything marked "Since 0.1.0"; the input modes are reported as unknown, so a program does not turn them on |
 | 0.2.0 | Limpet 0.3.0 | everything as with 0.2.1; the window title is not decoded, so a program does not send one |
-| 0.3.0 | Limpet 0.3.0–0.6.1 | SDK 0.3.0 features, including window titles; the Shift+Enter bit is not named, so a program does not turn it on |
-| 0.4.0 | Limpet 0.6.0, 0.6.1 | every SDK 0.4.0 feature, including Shift+Enter |
+| 0.3.0 | Limpet 0.3.0–0.7.0 | SDK 0.3.0 features, including window titles; the Shift+Enter bit is not named, so a program does not turn it on |
+| 0.4.0 | Limpet 0.6.0–0.7.0 | every SDK 0.4.0 feature, including Shift+Enter; the new 0.7.0 bits are not named, so a program ignores them |
+| 0.5.0 | Limpet 0.7.0 | every SDK 0.5.0 feature, including the style, OSC 8 and icon bits |
+| 0.5.0 | Limpet 0.1.0–0.6.1 | as SDK 0.4.0; the new bits stay clear |
 | 0.4.0 | Limpet 0.3.0–0.5.0 | as SDK 0.3.0; `XTY_INPUT_MODIFIED_ENTER` stays clear |
 | 0.3.0 | Limpet 0.2.x | as SDK 0.2.0; `limpet_can_set_title()` returns 0 |
 | any | a future Limpet | everything the SDK knows; newer fields are ignored until a newer SDK decodes them |

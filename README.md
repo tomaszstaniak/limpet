@@ -20,12 +20,12 @@ Image: NASA, ESA, CSA, STScI.
 
 ## Download
 
-- [Limpet 0.6.1](https://github.com/tomaszstaniak/limpet/releases/tag/v0.6.1)
+- [Limpet 0.7.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.7.0)
   for AROS ABIv11, x86_64.
-- [SDK 0.4.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.4.0)
+- [SDK 0.5.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.5.0)
   for application developers.
 - The separate `LIMPET:` console handler is an experimental download in the
-  0.6.1 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
+  0.7.0 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
 
 Earlier releases are listed on [GitHub](https://github.com/tomaszstaniak/limpet/releases).
 See the [terminal changelog](doc/changes.md) and [SDK changelog](sdk/CHANGES.md)
@@ -113,7 +113,7 @@ input. If the console does not support it, the application can use plain text.
 | --- | --- |
 | ![hello example in Limpet](doc/screenshots/sdk-hello.png) | ![examples in CON:](doc/screenshots/sdk-con-fallback.png) |
 
-The SDK archive (`limpet-sdk-0.4.0.zip`, tag `sdk-v0.4.0`) contains the
+The SDK archive (`limpet-sdk-0.5.0.zip`, tag `sdk-v0.5.0`) contains the
 headers, a prebuilt library for ABIv11, the library sources, eight
 examples and this documentation.
 
