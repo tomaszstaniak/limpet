@@ -42,8 +42,6 @@ Missing compared with CON:
   one-based, as AmigaOS answers; the CON: of ABIv11 answers one lower;
 - Ctrl-\ waits its turn behind keys typed before it; CON: ends input at
   once;
-- in raw mode a line feed moves down without going to the left edge;
-- one program at a time may read or wait for keys;
 - about 32 MB of memory per window, and a start of 15-25 s under QEMU;
 - programs that use the console.device behind the window cannot;
 - memory: 10 windows opened and closed in a row left about 87 KB less
