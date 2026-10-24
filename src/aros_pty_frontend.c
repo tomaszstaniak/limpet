@@ -239,7 +239,7 @@ void aros_pty_poll(ArosSession *s)
 {
     if(owner!=s || !initialized) return;
     if(s->columns && s->rows) {
-        TtyGeometry g={TTY_PAIR_VERSION,s->rows,s->columns,0,0};
+        TtyGeometry g={TTY_PAIR_VERSION,s->rows,s->columns,s->pixel_width,s->pixel_height};
         (void)tty_pair_set_geometry(&endpoint.service.pair,&g);
     }
     endpoint.presentation_enabled=s->presentation_enabled;

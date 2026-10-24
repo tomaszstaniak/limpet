@@ -1,3 +1,4 @@
+#include "console_geometry.h"
 #include "aros_session.h"
 #include "perf_diag.h"
 #include "xterm_presentation.h"
@@ -294,6 +295,16 @@ void aros_session_poll(ArosSession *s)
             ReplyPkt(p,result,error); continue;
         }
         switch(p->dp_Type) {
+        case ACTION_CONSOLE_GETGEOMETRY:
+            if(id<1 || id>3 || !(s->handles&(1UL<<(id-1))) || s->stopping)
+                ReplyPkt(p,DOSFALSE,ERROR_INVALID_LOCK);
+            else if(!s->console || !s->presentation_enabled)
+                ReplyPkt(p,DOSFALSE,ERROR_ACTION_NOT_KNOWN);
+            else if(!console_geometry_reply((void *)p->dp_Arg2,(SIPTR)p->dp_Arg3,
+                        p->dp_Arg4,s->columns,s->rows,s->pixel_width,s->pixel_height))
+                ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
+            else ReplyPkt(p,DOSTRUE,0);
+            break;
         case XTY_ACTION_CONTROL: {
             XtyControl in;
             if(id<1 || id>3 || !(s->handles&(1UL<<(id-1))))

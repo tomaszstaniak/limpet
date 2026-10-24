@@ -27,6 +27,7 @@ typedef struct {
     int console,shell;
     unsigned input_generation;
     unsigned columns,rows; /* Optional display geometry, zero without a GUI. */
+    unsigned pixel_width,pixel_height; /* Complete cells only, excluding margins. */
     unsigned (*presentation_features)(void); /* Renderer-owned live font evidence. */
     int presentation_enabled; /* Set by an attached XTerm renderer only. */
     int amiga_pens; /* The renderer reads SGR 30-37/40-47 as pens (op 13 says so). */

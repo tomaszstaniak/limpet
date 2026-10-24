@@ -133,6 +133,29 @@ ends.
 `CON:` sends cursor keys as 0x9B followed by the letter. Programs that run
 in both consoles decode both.
 
+## DOS packets: public console geometry (unreleased)
+
+The development build answers `ACTION_CONSOLE_GETGEOMETRY` (`0x434f4e47`),
+following the proposed AROS `dos/consoleinfo.h` contract in
+[PR1763](https://github.com/aros-development-team/AROS/pull/1763), checked at
+`4fd9618699101fa6425146d7d0c0eb7767fe23cf`. The upstream PR is still open.
+This is independent of Limpet's private control protocol below.
+
+Pass the handle's `fh_Arg1` in Arg1, a writable output pointer in Arg2, its byte
+capacity in Arg3, and version 1 in Arg4. Success returns `DOSTRUE`, Res2 zero,
+and copies six 32-bit words: size (24), version (1), columns, rows, width and
+height. Pixel dimensions cover complete character cells, excluding window
+borders, margins and partial cells. The result contains no handler-owned pointers.
+
+Both the Shell/mounted handler and the renderer-backed PTY endpoint answer the
+query. A short buffer, null pointer or unsupported version returns
+`ERROR_BAD_NUMBER` without changing the buffer. A stale/invalid handle returns
+`ERROR_INVALID_LOCK`; an endpoint without a renderer returns
+`ERROR_ACTION_NOT_KNOWN`. A larger buffer is accepted; bytes after the snapshot
+are untouched. This query neither consumes input nor subscribes to resize events.
+Applications must tolerate `ERROR_ACTION_NOT_KNOWN` from older Limpet builds and
+other console handlers.
+
 ## DOS packets: the control protocol
 
 ### Envelope

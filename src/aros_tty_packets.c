@@ -1,3 +1,4 @@
+#include "console_geometry.h"
 #include "aros_tty_packets.h"
 #include "xterm_presentation.h"
 #include "tty_control_server.h"
@@ -217,16 +218,28 @@ static void dispatch(ArosTtyPackets *s,TtyEnd end,struct DosPacket *p)
     TtyStatus status;size_t i;TtyRequest *r;
     if(p->dp_Type==ACTION_READ || p->dp_Type==ACTION_WRITE || p->dp_Type==ACTION_END ||
        p->dp_Type==XTY_ACTION_TRY_READ || p->dp_Type==XTY_ACTION_TRY_WRITE ||
-       p->dp_Type==XTY_ACTION_CONTROL || p->dp_Type==XTY_ACTION_CANCEL) {
+       p->dp_Type==XTY_ACTION_CONTROL || p->dp_Type==XTY_ACTION_CANCEL ||
+       p->dp_Type==ACTION_CONSOLE_GETGEOMETRY) {
         for(i=0;i<TTY_SERVICE_HANDLES;++i)
             if(s->exports[i] && s->exports[i]==(TtyHandle)p->dp_Arg1 &&
                s->export_ends[i]==end) break;
         if(i==TTY_SERVICE_HANDLES) {
-            ReplyPkt(p,(p->dp_Type==ACTION_END || p->dp_Type==XTY_ACTION_CONTROL || p->dp_Type==XTY_ACTION_CANCEL)?DOSFALSE:-1,
+            ReplyPkt(p,(p->dp_Type==ACTION_END || p->dp_Type==XTY_ACTION_CONTROL || p->dp_Type==XTY_ACTION_CANCEL ||
+                        p->dp_Type==ACTION_CONSOLE_GETGEOMETRY)?DOSFALSE:-1,
                      ERROR_INVALID_LOCK);return;
         }
     }
     switch(p->dp_Type) {
+    case ACTION_CONSOLE_GETGEOMETRY: {
+        const TtyGeometry *g=&s->service.pair.geometry;
+        if(s->stopping) ReplyPkt(p,DOSFALSE,ERROR_INVALID_LOCK);
+        else if(!s->presentation_enabled) ReplyPkt(p,DOSFALSE,ERROR_ACTION_NOT_KNOWN);
+        else if(!console_geometry_reply((void *)p->dp_Arg2,(SIPTR)p->dp_Arg3,
+                    p->dp_Arg4,g->columns,g->rows,g->xpixel,g->ypixel))
+            ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
+        else ReplyPkt(p,DOSTRUE,0);
+        return;
+    }
     case XTY_ACTION_CANCEL:
         if(!p->dp_Arg2 || p->dp_Arg3 || p->dp_Arg4!=XTY_PACKET_MAGIC || p->dp_Arg5) {
             ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);return;

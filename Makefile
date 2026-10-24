@@ -15,7 +15,7 @@ INPUT_SRC = src/terminal_input.c src/echo_session.c
 EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c src/output_search.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
 SESSION_SRC = src/aros_session.c src/perf_diag.c src/redraw_settle.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
-SESSION_HEADERS = src/aros_session.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
+SESSION_HEADERS = src/aros_session.h src/console_geometry.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
 CLUSTER_SRC = src/font_cache.c src/cluster_font.c
@@ -1038,7 +1038,7 @@ build/test_posix_partial_write: tests/test_posix_partial_write.c src/aros_tty_cl
 	$(AROS_GCC) $(CFLAGS) tests/test_posix_partial_write.c src/aros_tty_packets.c src/tty_service.c src/tty_pair.c src/tty_control.c src/aros_tty_client.c $(LDFLAGS) -o $@
 build/test_aros_tty_break_locks: tests/test_aros_tty_break_locks.c src/aros_tty_packets.c src/aros_tty_packets.h src/tty_service.c src/tty_pair.c src/tty_control.c Makefile build/native-config.json
 	$(AROS_GCC) $(CFLAGS) tests/test_aros_tty_break_locks.c src/aros_tty_packets.c src/tty_service.c src/tty_pair.c src/tty_control.c $(LDFLAGS) -o $@
-build/test_aros_tty_packets: tests/test_aros_tty_packets.c src/aros_tty_packets.c src/aros_tty_packets.h src/tty_service.c src/tty_service.h src/tty_pair.c src/tty_pair.h Makefile src/tty_control.c src/tty_control.h src/tty_control_server.h src/aros_tty_client.c src/aros_tty_client.h
+build/test_aros_tty_packets: tests/test_aros_tty_packets.c src/aros_tty_packets.c src/aros_tty_packets.h src/console_geometry.h src/tty_service.c src/tty_service.h src/tty_pair.c src/tty_pair.h Makefile src/tty_control.c src/tty_control.h src/tty_control_server.h src/aros_tty_client.c src/aros_tty_client.h
 	@mkdir -p build
 	$(AROS_GCC) $(CFLAGS) tests/test_aros_tty_packets.c src/aros_tty_packets.c src/tty_service.c src/tty_pair.c $(LDFLAGS) -o $@ src/tty_control.c src/aros_tty_client.c
 
@@ -1316,3 +1316,22 @@ abiv11-icon-font-probe:
 abiv11-file-link-probe:
 	mkdir -p build/abiv11/probes
 	$(ABIV11_GCC) $(ABIV11_CFLAGS) -o build/abiv11/probes/test_file_link_aros tests/test_file_link_aros.c src/hyperlink.c src/screen_model.c $(UNICODE_SRC) $(ABIV11_LDFLAGS) -lm
+
+
+.PHONY: test-console-geometry
+test: test-console-geometry
+test-console-geometry: build/test_console_geometry
+	./build/test_console_geometry
+build/test_console_geometry: tests/test_console_geometry.c src/console_geometry.h Makefile
+	mkdir -p build
+	$(HOST_CC) -std=c99 -O2 -Wall -Wextra -Werror tests/test_console_geometry.c -o $@
+
+
+build/console-geometry-probe: tests/console_geometry_probe.c src/console_geometry.h src/tty_control.h build/native-config.json
+	$(AROS_GCC) $(CFLAGS) $< $(LDFLAGS) -o $@
+.PHONY: abiv11-console-geometry-probe
+abiv11-console-geometry-probe:
+	@test -n "$(ABIV11_GCC)" || { echo "Set ABIV11_GCC to the x86_64 ABIv11 compiler"; exit 1; }
+	@test -d "$(ABIV11_SDK)/include" || { echo "Set ABIV11_SDK to the ABIv11 Developer SDK"; exit 1; }
+	mkdir -p build/abiv11
+	$(ABIV11_GCC) $(ABIV11_CFLAGS) tests/console_geometry_probe.c $(ABIV11_LDFLAGS) -o build/abiv11/console-geometry-probe

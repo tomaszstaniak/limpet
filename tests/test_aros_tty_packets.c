@@ -1,5 +1,6 @@
 #include "../src/aros_tty_packets.h"
 #include "../src/tty_control.h"
+#include "../src/console_geometry.h"
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <dos/dostags.h>
@@ -281,6 +282,47 @@ static void read_timer_cancel(void)
     c.vmin=1;c.vtime=0;CHECK(tty_pair_configure(&endpoint.service.pair,&c)==TTY_OK);
     puts("TTY READ TIMER CANCEL PASS: successor expires without incidental poll");fflush(stdout);
 }
+static void console_geometry_packets(void)
+{
+    struct ConsoleGeometry geometry,before;
+    TtyGeometry saved=endpoint.service.pair.geometry;
+    TtyGeometry grid={TTY_PAIR_VERSION,37,101,909,703};
+    unsigned id;
+    memset(&geometry,0xa5,sizeof geometry);before=geometry;
+    packets[0]->dp_Arg4=CONSOLE_GEOMETRY_VERSION;packets[0]->dp_Arg5=0;
+    submit(0,ACTION_CONSOLE_GETGEOMETRY,2,&geometry,sizeof geometry);
+    receive(0,DOSFALSE,ERROR_ACTION_NOT_KNOWN);
+    CHECK(!memcmp(&geometry,&before,sizeof geometry));
+    endpoint.presentation_enabled=1;
+    CHECK(tty_pair_set_geometry(&endpoint.service.pair,&grid)==TTY_OK);
+    for(id=1;id<=2;++id) {
+        submit(0,ACTION_CONSOLE_GETGEOMETRY,id,&geometry,sizeof geometry);
+        receive(0,DOSTRUE,0);
+        CHECK(geometry.cg_Size==24 && geometry.cg_Version==1);
+        CHECK(geometry.cg_Columns==101 && geometry.cg_Rows==37);
+        CHECK(geometry.cg_Width==909 && geometry.cg_Height==703);
+    }
+    before=geometry;
+    submit(0,ACTION_CONSOLE_GETGEOMETRY,0,&geometry,sizeof geometry);
+    receive(0,DOSFALSE,ERROR_INVALID_LOCK);
+    CHECK(!memcmp(&geometry,&before,sizeof geometry));
+    submit(0,ACTION_CONSOLE_GETGEOMETRY,2,&geometry,sizeof geometry-1);
+    receive(0,DOSFALSE,ERROR_BAD_NUMBER);
+    CHECK(!memcmp(&geometry,&before,sizeof geometry));
+    packets[0]->dp_Arg4=2;
+    submit(0,ACTION_CONSOLE_GETGEOMETRY,2,&geometry,sizeof geometry);
+    receive(0,DOSFALSE,ERROR_BAD_NUMBER);
+    CHECK(!memcmp(&geometry,&before,sizeof geometry));
+    packets[0]->dp_Arg4=1;endpoint.stopping=1;
+    submit(0,ACTION_CONSOLE_GETGEOMETRY,2,&geometry,sizeof geometry);
+    receive(0,DOSFALSE,ERROR_INVALID_LOCK);
+    CHECK(!memcmp(&geometry,&before,sizeof geometry));
+    endpoint.stopping=0;endpoint.presentation_enabled=0;
+    packets[0]->dp_Arg4=0;
+    CHECK(tty_pair_set_geometry(&endpoint.service.pair,&saved)==TTY_OK);
+    puts("TTY CONSOLE GEOMETRY PASS: copied snapshot, both ends, renderer, lifetime, arguments");
+    fflush(stdout);
+}
 int main(void)
 {
     unsigned i,tick;unsigned char b[16],line[TTY_LINE_CAPACITY+1];
@@ -292,6 +334,7 @@ int main(void)
     CHECK(!aros_tty_packets_init(&endpoint,master,slave));
     CHECK(aros_tty_packets_dispose(&endpoint)==-1);
 
+    console_geometry_packets();
     cancel_packets();output_flow_packets();read_timer_cancel();drain_packets();drain_pressure_lifetime();zero_length_behind_blocked();
 
     submit(0,ACTION_READ,slave->fh_Arg1,b,3);

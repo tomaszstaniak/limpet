@@ -2187,6 +2187,8 @@ int main(int argc,char **argv)
         diag_forward();
         process_session.columns=screen.columns;
         process_session.rows=screen.rows;
+        process_session.pixel_width=screen.columns*xfont_width();
+        process_session.pixel_height=screen.rows*xfont_height();
         process_session.presentation_enabled=1;
         process_session.presentation_features=font_presentation_features;
         process_session.amiga_pens=screen.amiga_pens;
@@ -2462,6 +2464,8 @@ int main(int argc,char **argv)
                 screen_resize(&screen, rows, cols);
                 if(pty_mode) {
                     process_session.columns=cols;process_session.rows=rows;
+                    process_session.pixel_width=cols*xfont_width();
+                    process_session.pixel_height=rows*xfont_height();
                     aros_session_poll(&process_session);
                 }
                 resize_queue();
@@ -2567,6 +2571,8 @@ int main(int argc,char **argv)
                     start_failed=aros_session_dispose(&process_session);
                     if(!start_failed) {
                         process_session.columns=screen.columns;process_session.rows=screen.rows;
+                        process_session.pixel_width=screen.columns*xfont_width();
+                        process_session.pixel_height=screen.rows*xfont_height();
                         start_failed=shell_session?aros_session_start_shell_profile(&process_session,shell_profile):
                             aros_session_start(&process_session,process_command);
                     }
