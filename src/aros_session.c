@@ -42,31 +42,38 @@ static void worker(void)
     if(s->startup_input) Close(s->startup_input);
 }
 
-static void cancel_timer(ArosSession *s)
+/* A waiter's timer: abort it if it runs, collect it either way. */
+static void wait_stop(ArosSession *s,unsigned i)
 {
-    if(!s->timer_active) return;
-    if(!CheckIO((struct IORequest *)s->timer)) AbortIO((struct IORequest *)s->timer);
-    WaitIO((struct IORequest *)s->timer);
-    s->timer_active=0;
+    if(s->waits[i].active) {
+        if(!CheckIO((struct IORequest *)s->waits[i].timer)) AbortIO((struct IORequest *)s->waits[i].timer);
+        WaitIO((struct IORequest *)s->waits[i].timer);
+        s->waits[i].active=0;
+    }
 }
 
-static int start_timer(ArosSession *s,LONG usec)
+/* Park a WaitForChar packet with its own timeout; -1 without memory. */
+static int wait_start(ArosSession *s,struct DosPacket *p,LONG usec)
 {
-    if(!s->timer) {
-        s->timer_port=CreateMsgPort();
-        if(!s->timer_port) return -1;
-        s->timer=(struct timerequest *)CreateIORequest(s->timer_port,sizeof *s->timer);
-        if(!s->timer) { DeleteMsgPort(s->timer_port); s->timer_port=NULL; return -1; }
-        if(OpenDevice((CONST_STRPTR)TIMERNAME,UNIT_MICROHZ,(struct IORequest *)s->timer,0)) {
-            DeleteIORequest((struct IORequest *)s->timer); s->timer=NULL;
-            DeleteMsgPort(s->timer_port); s->timer_port=NULL; return -1;
+    unsigned i;
+    if(!s->timer_port && !(s->timer_port=CreateMsgPort())) return -1;
+    for(i=0;i<XSESSION_WAITERS && s->waits[i].packet;++i) {}
+    if(i==XSESSION_WAITERS) return -1;
+    if(!s->waits[i].timer) {
+        struct timerequest *t=(struct timerequest *)CreateIORequest(s->timer_port,sizeof *t);
+        if(!t) return -1;
+        if(OpenDevice((CONST_STRPTR)TIMERNAME,UNIT_MICROHZ,(struct IORequest *)t,0)) {
+            DeleteIORequest((struct IORequest *)t); return -1;
         }
+        s->waits[i].timer=t;
     }
-    s->timer->tr_node.io_Command=TR_ADDREQUEST;
-    s->timer->tr_time.tv_secs=usec/1000000;
-    s->timer->tr_time.tv_micro=usec%1000000;
-    s->timer_active=1;
-    SendIO((struct IORequest *)s->timer);
+    s->waits[i].timer->tr_node.io_Command=TR_ADDREQUEST;
+    s->waits[i].timer->tr_time.tv_secs=usec/1000000;
+    s->waits[i].timer->tr_time.tv_micro=usec%1000000;
+    SendIO((struct IORequest *)s->waits[i].timer);
+    s->waits[i].active=1;
+    s->waits[i].packet=p;
+    ++s->wait_count;
     return 0;
 }
 
@@ -79,6 +86,18 @@ static int start_timer(ArosSession *s,LONG usec)
 #ifdef XTERM_PERF_DIAG
 static uint64_t perf_write_started;
 #endif
+
+/* The next read in line becomes the one served. */
+static void read_next(ArosSession *s)
+{
+    unsigned i;
+    s->pending_read=NULL;
+    if(!s->read_waiting) return;
+    s->pending_read=s->read_wait[0];
+    for(i=1;i<s->read_waiting;++i) s->read_wait[i-1]=s->read_wait[i];
+    --s->read_waiting;
+}
+
 static void service(ArosSession *s)
 {
     struct DosPacket *p=s->pending_read;
@@ -87,40 +106,43 @@ static void service(ArosSession *s)
         session_queue_write(&s->input,s->line.line,s->line.length);
         s->line.length=0;
     }
-    if(s->pending_wait) {
-        int expired=s->timer_active && CheckIO((struct IORequest *)s->timer)!=NULL;
-        int ready=session_queue_wait(&s->input,s->eof || s->eof_once,expired);
-        if(ready>=0) {
-            struct DosPacket *waiter=s->pending_wait;
-            s->pending_wait=NULL;
-            cancel_timer(s);
-            ReplyPkt(waiter,ready?DOSTRUE:DOSFALSE,0);
+    if(s->wait_count) {
+        unsigned i;
+        for(i=0;i<XSESSION_WAITERS;++i) if(s->waits[i].packet) {
+            int expired=s->waits[i].active && CheckIO((struct IORequest *)s->waits[i].timer)!=NULL;
+            /* As CON:, a partly typed line counts as a key there. */
+            int typed=s->console && !s->line.raw && s->line.length;
+            int ready=typed?1:session_queue_wait(&s->input,s->eof || s->eof_once || s->stopping,expired);
+            if(ready>=0) {
+                struct DosPacket *waiter=s->waits[i].packet;
+                wait_stop(s,i);
+                s->waits[i].packet=NULL; --s->wait_count;
+                ReplyPkt(waiter,ready?DOSTRUE:DOSFALSE,0);
+            }
         }
     }
-    if(p && (s->input.length || s->eof)) {
-        size_t n=session_queue_read(&s->input,(unsigned char *)p->dp_Arg2,(size_t)p->dp_Arg3);
-        s->pending_read=NULL;
-        ReplyPkt(p,n,0);
-    } else if(p && s->eof_once) {
-        /* Typed text went first (above); this read is the end of input. */
-        s->eof_once=0; s->pending_read=NULL;
-        ReplyPkt(p,0,0);
+    /* Readers in order: each takes what is there; at the end of input
+       (F5, close) every one gets 0, a Ctrl-\ ends only the first. */
+    while((p=s->pending_read)) {
+        if(s->input.length || s->eof) {
+            size_t n=session_queue_read(&s->input,(unsigned char *)p->dp_Arg2,(size_t)p->dp_Arg3);
+            read_next(s);
+            ReplyPkt(p,n,0);
+        } else if(s->eof_once) {
+            /* Typed text went first (above); this read is the end of input. */
+            s->eof_once=0; read_next(s);
+            ReplyPkt(p,0,0);
+        } else break;
     }
     while((p=s->pending_write)) {
         if(s->stopping) {
             s->pending_write=NULL; s->write_offset=0;
             ReplyPkt(p,-1,XSESSION_CLOSED_ERROR);
         } else {
-            if(s->console && !s->line.raw) {
-                const unsigned char *bytes=(const unsigned char *)p->dp_Arg2;
-                while(s->write_offset<(size_t)p->dp_Arg3) {
-                    unsigned char c=bytes[s->write_offset];
-                    size_t needed=c=='\n'?2:1;
-                    if(XSESSION_CAPACITY-s->output.length<needed) break;
-                    if(c=='\n') session_queue_write(&s->output,(const unsigned char *)"\r",1);
-                    session_queue_write(&s->output,&c,1); ++s->write_offset;
-                }
-            } else s->write_offset+=session_queue_write(&s->output,
+            /* Bytes as written: the line feed mode of the screen (on for a
+               console, as console.device starts; CSI 20 l clears it) adds
+               the carriage return, not this queue. */
+            s->write_offset+=session_queue_write(&s->output,
                     (const unsigned char *)p->dp_Arg2+s->write_offset,
                     (size_t)p->dp_Arg3-s->write_offset);
             if(s->write_offset!=(size_t)p->dp_Arg3) break;
@@ -231,7 +253,7 @@ int aros_session_active(const ArosSession *s)
 {
     return s->task_id || (s->external && s->port &&
         ((!s->opened && !s->stopping) || s->handles || s->lock_mask ||
-         s->pending_read || s->pending_write || s->pending_wait ||
+         s->pending_read || s->pending_write || s->wait_count ||
          s->port->mp_MsgList.lh_Head->ln_Succ));
 }
 int aros_session_start_shell_profile(ArosSession *s,const char *profile)
@@ -262,7 +284,7 @@ int aros_session_start_shell_profile(ArosSession *s,const char *profile)
 
 ULONG aros_session_signals(const ArosSession *s)
 { return (s->port?(1UL<<s->port->mp_SigBit):0) |
-    (s->timer_active?(1UL<<s->timer_port->mp_SigBit):0); }
+    (s->wait_count?(1UL<<s->timer_port->mp_SigBit):0); }
 
 void aros_session_poll(ArosSession *s)
 {
@@ -341,13 +363,24 @@ void aros_session_poll(ArosSession *s)
                 ReplyPkt(p,DOSFALSE,ERROR_INVALID_LOCK);
             else if(!p->dp_Arg2 || p->dp_Arg3 || p->dp_Arg4!=XTY_PACKET_MAGIC || p->dp_Arg5)
                 ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
-            else if(s->pending_read && (SIPTR)s->pending_read==p->dp_Arg2 &&
-                    s->pending_read->dp_Arg1==p->dp_Arg1 && s->pending_read->dp_Port==p->dp_Port) {
-                struct DosPacket *read=s->pending_read;
-                s->pending_read=NULL;
-                ReplyPkt(read,-1,ERROR_BREAK);
-                ReplyPkt(p,DOSTRUE,0);
-            } else ReplyPkt(p,DOSFALSE,ERROR_OBJECT_NOT_FOUND);
+            else {
+                /* The read being served, or one still in line. */
+                struct DosPacket *read=NULL;
+                unsigned i;
+                if(s->pending_read && (SIPTR)s->pending_read==p->dp_Arg2 &&
+                   s->pending_read->dp_Arg1==p->dp_Arg1 && s->pending_read->dp_Port==p->dp_Port) {
+                    read=s->pending_read; read_next(s);
+                } else for(i=0;i<s->read_waiting;++i) {
+                    struct DosPacket *q=s->read_wait[i];
+                    if((SIPTR)q==p->dp_Arg2 && q->dp_Arg1==p->dp_Arg1 && q->dp_Port==p->dp_Port) {
+                        read=q;
+                        for(;i+1<s->read_waiting;++i) s->read_wait[i]=s->read_wait[i+1];
+                        --s->read_waiting; break;
+                    }
+                }
+                if(read) { ReplyPkt(read,-1,ERROR_BREAK); ReplyPkt(p,DOSTRUE,0); }
+                else ReplyPkt(p,DOSFALSE,ERROR_OBJECT_NOT_FOUND);
+            }
             break;
         case ACTION_FINDINPUT:
         case ACTION_FINDOUTPUT:
@@ -445,7 +478,7 @@ void aros_session_poll(ArosSession *s)
             else if(!status || p->dp_Arg3!=sizeof *status ||
                     status->version!=XTERM_STATUS_VERSION || status->reserved)
                 ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
-            else if(s->pending_read || s->pending_wait)
+            else if(s->pending_read || s->wait_count)
                 ReplyPkt(p,DOSFALSE,ERROR_OBJECT_IN_USE);
             else {
                 status->available=(uint32_t)s->input.length;
@@ -457,15 +490,17 @@ void aros_session_poll(ArosSession *s)
         }
         case ACTION_WAIT_CHAR:
             /* DOS sends the timeout in Arg1, not a filehandle identifier.
-             * This private endpoint has one input stream and one waiter. */
+             * Any number of clients may wait, each with its own timeout,
+             * also while reads are out (CON: keeps one and loses others). */
             if(p->dp_Arg1<0) ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
-            else if(s->pending_wait || s->pending_read)
-                ReplyPkt(p,DOSFALSE,ERROR_OBJECT_IN_USE);
-            else if(s->input.length || s->eof || s->eof_once) ReplyPkt(p,DOSTRUE,0);
+            /* At the end of input the answer is true, so the next Read()
+               returns 0: a program that reads only after a true answer
+               would otherwise poll a closed window for good. */
+            else if(s->input.length || s->eof || s->eof_once || s->stopping ||
+                    (s->console && !s->line.raw && s->line.length)) ReplyPkt(p,DOSTRUE,0);
             else if(!p->dp_Arg1) ReplyPkt(p,DOSFALSE,0);
-            else if(start_timer(s,(LONG)p->dp_Arg1))
-                ReplyPkt(p,DOSFALSE,ERROR_NO_FREE_STORE);
-            else s->pending_wait=p;
+            else if(wait_start(s,p,(LONG)p->dp_Arg1))
+                ReplyPkt(p,DOSFALSE,s->wait_count==XSESSION_WAITERS?ERROR_OBJECT_IN_USE:ERROR_NO_FREE_STORE);
             break;
         case ACTION_READ:
             /* A console reads from any of its handles, as CON: does: a
@@ -475,10 +510,14 @@ void aros_session_poll(ArosSession *s)
                !(s->handles&(1UL<<(id-1))) || p->dp_Arg3<0 ||
                (p->dp_Arg3 && !p->dp_Arg2)) ReplyPkt(p,-1,ERROR_BAD_NUMBER);
             else if(!p->dp_Arg3) ReplyPkt(p,0,0);
-            else if(s->pending_read || s->pending_wait) ReplyPkt(p,-1,ERROR_OBJECT_IN_USE);
+            else if(s->pending_read && s->read_waiting==XSESSION_READERS)
+                ReplyPkt(p,-1,ERROR_OBJECT_IN_USE);
             else {
+                /* As CON:, the last program to ask for input gets the breaks. */
                 if(s->console) aros_break_bind(&s->breaker,p->dp_Port->mp_SigTask);
-                s->pending_read=p; service(s);
+                if(s->pending_read) s->read_wait[s->read_waiting++]=p;
+                else s->pending_read=p;
+                service(s);
             }
             break;
         case ACTION_WRITE:
@@ -631,15 +670,18 @@ void aros_session_stop(ArosSession *s)
 int aros_session_dispose(ArosSession *s)
 {
     if(aros_session_active(s) || s->task_id || s->handles || s->startup_input || s->startup_file ||
-       s->lock_mask || s->pending_read || s->pending_write || s->pending_wait) return -1;
+       s->lock_mask || s->pending_read || s->pending_write || s->wait_count) return -1;
     if(s->port && s->port->mp_MsgList.lh_Head->ln_Succ) return -1;
-    cancel_timer(s);
     aros_break_close(&s->breaker);
-    if(s->timer) {
-        CloseDevice((struct IORequest *)s->timer);
-        DeleteIORequest((struct IORequest *)s->timer);
-        DeleteMsgPort(s->timer_port);
+    {
+        unsigned i;
+        for(i=0;i<XSESSION_WAITERS;++i) if(s->waits[i].timer) {
+            wait_stop(s,i);
+            CloseDevice((struct IORequest *)s->waits[i].timer);
+            DeleteIORequest((struct IORequest *)s->waits[i].timer);
+        }
     }
+    if(s->timer_port) DeleteMsgPort(s->timer_port);
 #ifdef XTERM_PROCESS_PORT_CLIENTS
     if(s->port && !s->borrowed_port) DeleteMsgPort(s->port);
 #else

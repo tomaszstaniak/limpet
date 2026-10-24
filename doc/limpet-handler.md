@@ -94,7 +94,8 @@ records](verification-0.5.0.md#limpet-handler-experimental) and
 | `Read` on any handle of the console | supported (fixed in this stage) | `aros_session.c` READ | `cooked.read` on a `MODE_NEWFILE` handle |
 | `SetMode` raw and cooked; no echo in raw | supported | `ACTION_SCREEN_MODE` | `set_mode.*`, `raw.read`, `raw.no_echo_left` |
 | `WaitForChar` with timeout and poll | supported | `ACTION_WAIT_CHAR` | `wait_char.poll`, `wait_char.timeout` |
-| Several readers or waiters at once | partly: one; another gets `ERROR_OBJECT_IN_USE` at once (CON: queues them) | `aros_session.c` READ, WAIT_CHAR | from the code; not run |
+| Several readers at once | supported: reads wait in line (up to 16 behind the one served) and take input in order, as in CON:; a cancel finds a read anywhere in the line; end of input and closing answer all | `aros_session.c` READ, `read_next` | `readers.fifo` (CON: and LIMPET:) |
+| Several `WaitForChar` at once, also beside a read | supported, each with its own timeout; a key or a partly typed line answers all. Better than CON: here: ABIv11's CON: keeps one waiting packet and loses the others, and a wait beside another process's read hung the guest once | `aros_session.c` WAIT_CHAR, `wait_start` | `wait.with_read`, `wait.two` |
 | `Write` from several processes at once | supported; up to 16 wait in order | `aros_session.c` WRITE | `writers` (3x300 writes; passed before the change too) |
 | Ctrl-C to the reader | supported; the program reading gets it, a background job that only writes does not (CON: gives it to the last to read or write) | `aros_break.c` | `break`; `Wait 20` + Ctrl-C |
 | Ctrl-D, Ctrl-E, Ctrl-F | supported: cooked mode signals the reader (the same one Ctrl-C goes to; before anyone reads, the program that opened the console, as in CON:), the line is kept; raw mode gives the byte and no signal | `aros_session_break_signal` | `break_d`, `break_e`, `break_f`, `raw.ctrl_d`; Ctrl-D stopped an `Execute` script in both consoles |
@@ -108,7 +109,7 @@ records](verification-0.5.0.md#limpet-handler-experimental) and
 | `ACTION_DISK_INFO`: `id_InUse` as a console.device request (posixc `TIOCGWINSZ`) | partly: an `IOStdReq` whose unit is a `ConUnit` with the grid's size and the window, read-only (fixed in this stage; was 0, and `TIOCGWINSZ` crashed) | `aros_session.c` | `disk_info.unit`; `tty-winsize` |
 | I/O sent to that console.device request | not supported: it is no device; a program doing it fails | | none |
 | Amiga console reports: window bounds (`CSI [0] SPACE q`), cursor (`CSI 6 n`), with the 8-bit or the 7-bit CSI | supported, one-based as AmigaOS and mainline AROS answer: `0x9B 1;1;rows;columns SPACE r`, cursor in the query's introducer; the new size after a resize. ABIv11's CON: answers both one lower | `screen_model.c` | `test_amiga_reports`; `report.*`, `report.*.after_resize` |
-| Line feed in raw mode | differs: CON: turns LF into CR LF (it sets `CSI 20h`), LIMPET: moves down only | | seen in the key probe (stepped lines) |
+| Line feed mode (`CSI 20 h` / `CSI 20 l`) | supported as console.device has it: on from the start in every console window, cooked and raw, so a line feed also returns the carriage; `CSI 20 l` turns it off, `CSI 20 h` on. VT and PTY sessions start with it off | `screen_model.c` | `lf.control`; `test_amiga_reports` |
 | Amiga raw input events (`CSI n {`) | not supported (ABIv11 CON: does not report them either) | | none |
 | Output: Amiga console sequences | partly: Limpet's VT subset with SGR 30-37/40-47 as pens; not checked one by one against console.device's set | `screen_model.c` | Shell prompt, `List`, `Search` |
 | Memory per window | about 32.5 MiB (fonts read per window) | `font_cache.c` | measured 2026-09-25 on ABIv11 2026.09 |
@@ -136,22 +137,17 @@ compatibility with the Amiga console interface.
 1. **Reports are one-based, ABIv11's CON: is one lower.** LIMPET: follows
    AmigaOS and mainline; a program tuned to ABIv11's CON: sees one row and
    column more than it expects there. This is an intentional compatibility difference.
-2. **Raw-mode line feed.** CON: sets LF mode (`CSI 20h`), so a raw-mode
-   program's `\n` starts a new line at the left; LIMPET: does not. Programs
-   that write bare `\n` in raw mode print stepped lines.
-3. **One reader at a time.** A second process reading or waiting on the
-   same console gets an error at once instead of waiting its turn.
-4. **`AUTO` opens the window at once**, so a program started from
+2. **`AUTO` opens the window at once**, so a program started from
    Workbench with an `AUTO` console shows an empty window it never uses.
-5. **`WINDOW` is refused.** Programs that hand the console their own window
+3. **`WINDOW` is refused.** Programs that hand the console their own window
    get an error.
-6. **No console.device behind `ACTION_DISK_INFO`.** Only reading the
+4. **No console.device behind `ACTION_DISK_INFO`.** Only reading the
    `ConUnit` works.
-7. **32.5 MiB and a font load per window**, and a start of 15-25 s under
+5. **32.5 MiB and a font load per window**, and a start of 15-25 s under
    QEMU TCG (window state not controlled). Many small `CON:` windows (each
    `Run`-started tool with its own window) would cost much more than
    with `CON:`.
-8. **Not run on mainline**, where DOS keeps the handler's own port and
+6. **Not run on mainline**, where DOS keeps the handler's own port and
    `CliInit` puts requesters on the console's window.
 
 ## Proposed optional CON: replacement
@@ -174,7 +170,7 @@ This design is not implemented.
 - **Recovery.** `ECON:` and the boot console are
   never touched. `LimpetCON OFF` works from any Shell, and a reboot
   always restores `CON:`, because nothing is written to disk.
-- **Prerequisites:** gaps 2 to 5 closed, gap 7 reduced (one font
+- **Prerequisites:** gaps 2 and 3 closed, gap 5 reduced (one font
   load shared by all windows), and the contract probe passing the same on
   both consoles, plus a round of programs started from Workbench with
   console windows.

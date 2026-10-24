@@ -241,8 +241,8 @@ int main(void)
 
     start(); open_input(0);
     submit(ACTION_WAIT_CHAR,5000000,0,0);
-    aros_session_poll(&session); CHECK(session.pending_wait && session.timer_active);
-    aros_session_stop(&session); CHECK(receive()==DOSFALSE && !session.timer_active);
+    aros_session_poll(&session); CHECK(session.wait_count==1 && session.waits[0].active);
+    aros_session_stop(&session); CHECK(receive()==DOSTRUE && !session.wait_count && !session.waits[0].active);
     close_input(0); CHECK(!aros_session_dispose(&session));
     {
         static unsigned char burst[XSESSION_CAPACITY+32];

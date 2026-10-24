@@ -275,6 +275,8 @@ static const XTermScreen *display_screen(void)
 static void editor_sync(void)
 {
     console_input_stage(&process_session.line,command_editor.text,command_editor.length);
+    /* A program waiting for a key (WaitForChar) sees a typed line, as in CON:. */
+    if(process_session.wait_count) aros_session_poll(&process_session);
     selection.active=selection.dragging=0;
     screen_scroll_view(&screen,-(int)screen.view_offset);
 }

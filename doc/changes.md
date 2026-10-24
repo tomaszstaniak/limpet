@@ -98,8 +98,15 @@ For users:
   window sees the end of its input; at the Shell's prompt the Shell ends.
   F5 still ends the window's input for good.
 
+- In a Limpet window a line feed returns to the left edge, as in the system
+  console, also for programs that read keys themselves. A program that
+  wants a line feed to move down only sends `CSI 20 l`.
+
 For programs:
 
+- Several programs can read from one window at once; they get its input
+  in turn. Several can wait for a key (`WaitForChar`) at once, each with
+  its own timeout.
 - The Amiga console's window-size and cursor queries are answered
   (`CSI 0 SPACE q`, `CSI 6 n`), with the 8-bit or the 7-bit CSI, one-based
   as AmigaOS does.

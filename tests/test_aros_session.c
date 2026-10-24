@@ -52,8 +52,8 @@ static void assert_disposed(void)
 {
     unsigned i;
     assert(!s.task_id && !s.handles && !s.lock_mask);
-    assert(!s.pending_read && !s.pending_write && !s.pending_wait);
-    assert(!s.port && !s.timer_port && !s.timer && !s.timer_active);
+    assert(!s.pending_read && !s.pending_write && !s.wait_count && !s.read_waiting);
+    assert(!s.port && !s.timer_port && !s.waits[0].timer && !s.waits[0].active);
     assert(!s.startup_input && !s.startup_file && !s.opened && !s.signal_target);
     assert(!s.breaker.registered && !s.breaker.target && !s.breaker.resource);
     assert(!s.breaker.hook.h_Entry && !s.breaker.hook.h_Data);
@@ -69,10 +69,10 @@ static void reset(void)
 static void wait_pending(void)
 {
     unsigned ticks;
-    for(ticks=0;ticks<100 && !s.pending_wait;++ticks) {
+    for(ticks=0;ticks<100 && !s.wait_count;++ticks) {
         aros_session_poll(&s); Delay(1);
     }
-    assert(s.pending_wait && s.timer_active);
+    assert(s.wait_count && s.waits[0].active);
     assert(aros_session_signals(&s)&(1UL<<s.timer_port->mp_SigBit));
 }
 static void run_suite(int require_break)
@@ -156,7 +156,7 @@ static void run_suite(int require_break)
       assert(until("WAIT PASS",1));
       printf("Wait result=%ld unsupported=%ld handles=%lu timer=%d\n%s\n",
           (long)s.result,(long)s.unsupported_action,(unsigned long)s.handles,
-          s.timer_active,collected);
+          (int)s.wait_count,collected);
       fflush(stdout);
       { LONG result=s.result,unsupported=s.unsupported_action;
         reset();
@@ -166,7 +166,7 @@ static void run_suite(int require_break)
       assert(until("WAIT INPUT",0));
       wait_pending();
       aros_session_stop(&s);
-      assert(!s.pending_wait && !s.timer_active);
+      assert(!s.wait_count && !s.waits[0].active);
       assert(until(NULL,1));
       reset();
     }
@@ -268,8 +268,8 @@ int main(int argc,char **argv)
             "pending_write=%d pending_wait=%d hook=%d hook_target=%d port=%d timer=%d "
             "startup_handles=%d references=%u\n",current_iteration,options.repeat,
             (unsigned long)s.handles,s.lock_mask,s.pending_read!=NULL,s.pending_write!=NULL,
-            s.pending_wait!=NULL,s.breaker.registered,s.breaker.target!=NULL,s.port!=NULL,
-            s.timer!=NULL,(s.startup_input!=0)+(s.startup_file!=0),
+            s.wait_count!=0,s.breaker.registered,s.breaker.target!=NULL,s.port!=NULL,
+            s.timer_port!=NULL,(s.startup_input!=0)+(s.startup_file!=0),
             s.references[0]+s.references[1]+s.references[2]);
         printf("SESSION ITERATION %u/%u PASS end_ticks=%lld whole_suite_ticks=%lld ticks_per_second=%d\n",
             current_iteration,options.repeat,(long long)end,(long long)(end-start),TICKS_PER_SECOND);

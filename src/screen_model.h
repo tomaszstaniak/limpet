@@ -46,6 +46,11 @@ typedef struct XTermScreen {
     unsigned alternate_active, buffer_generation, cursor_visible;
     /* AROS console sessions: SGR 30-37/40-47 select screen pens, as in CON: */
     unsigned amiga_pens;
+    /* Line feed mode (ANSI mode 20, console.device M_LNM): set, a line feed
+     * also returns the carriage. 0 follows the session: on with amiga_pens,
+     * as console.device starts (RKM: the default is set), off in VT. CSI 20 h
+     * makes it 1 (set), CSI 20 l 2 (reset); screen_init returns to 0. */
+    unsigned newline_mode;
     unsigned saved_row, saved_column, saved_wrap;
     unsigned saved_scroll_top, saved_scroll_bottom;
     unsigned saved_history_count, saved_history_head, saved_view_offset;

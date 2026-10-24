@@ -559,6 +559,10 @@ static void execute_csi(XTermScreen *s, unsigned char command)
         }
         return;
     }
+    if ((command == 'h' || command == 'l') && s->param_count == 1 && s->params[0] == 20) {
+        s->newline_mode = command == 'h' ? 1 : 2;
+        return;
+    }
     switch (command) {
     case 'S': scroll_region_rows(s, n, 0); break;
     case 'T': scroll_region_rows(s, n, 1); break;
@@ -890,6 +894,7 @@ static int control(XTermScreen *s, unsigned char ch)
     else if (ch == '\n') {
         s->cells[(size_t)(s->cursor_row + 1) * s->columns - 1].wrap = 0;
         s->wrap_pending = 0; line_feed(s);
+        if (s->newline_mode == 1 || (!s->newline_mode && s->amiga_pens)) s->cursor_column = 0;
     }
     else if (ch == '\b') {
         s->wrap_pending = 0;

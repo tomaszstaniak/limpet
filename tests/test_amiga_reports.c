@@ -57,12 +57,27 @@ int main(void)
     assert(s.cursor_row==1 && screen_cell(&s,1,0)=='e' && screen_cell(&s,0,0)=='a');
     /* 0x9B inside a sequence starts it again. */
     out("\033[\x9b" "6n",5); assert(REPLY("\x9b" "2;4R"));
+    /* Line feed mode: on in an AROS console session, as console.device
+       starts; CSI 20 l clears it, CSI 20 h sets it again. */
+    init(5,20,1);
+    out("abc\ndef",7); assert(s.cursor_row==1 && screen_cell(&s,1,0)=='d');
+    out("\x9b" "20l",4); out("\nxy",3);
+    assert(s.cursor_row==2 && screen_cell(&s,2,3)=='x' && screen_cell(&s,2,0)==' ');
+    out("\033[20h\nz",7); assert(s.cursor_row==3 && screen_cell(&s,3,0)=='z');
+    /* A reset screen follows the session again. */
+    out("\x9b" "20l",4);
+    assert(!screen_init(&s,cells,40*100,5,20)); s.amiga_pens=1;
+    out("a\nb",3); assert(screen_cell(&s,1,0)=='b');
+    /* VT sessions: off by default, as in xterm; CSI 20 h turns it on. */
+    init(5,20,0);
+    out("abc\ndef",7); assert(screen_cell(&s,1,3)=='d');
+    out("\033[20h\nz",7); assert(screen_cell(&s,2,0)=='z');
     /* VT sessions (no amiga_pens): 0x9B is no CSI, SPACE q is no query. */
     init(24,80,0);
     out("\033[0 q",5); assert(got_length==0);
     out("\x9b" "6n",3); assert(got_length==0);
     assert(screen_cell(&s,0,0)==0xfffd);
     out("\033[6n",4); assert(REPLY("\033[1;4R"));
-    puts("amiga reports PASS: bounds (8-bit, with and without 0), 7-bit SPACE q is cursor style, after resize, split query, cursor in the query's introducer, UTF-8 continuation, VT unchanged");
+    puts("amiga reports PASS: line feed mode (console on, VT off, CSI 20 h/l, reset), bounds (8-bit, with and without 0), 7-bit SPACE q is cursor style, after resize, split query, cursor in the query's introducer, UTF-8 continuation, VT unchanged");
     return 0;
 }
