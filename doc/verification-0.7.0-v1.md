@@ -57,6 +57,10 @@ without UnZip, and the date of the tested mainline system), and the
 archives above were made again with corrected texts. Their file lists
 compared by SHA-256 differ only in `README.txt` and `README-Handler.txt`;
 the programs, fonts, themes and licences are the bytes that were run.
+The published x86_64 archive itself was then started once more on v1-1
+(`RESULTS:limpet-v1c/`): unpacked, `Version`, Unicode text, a Shell in a
+`LIMPET:` window, `Remove-Handler`, only system processes left. The
+published Pi archives were not run again.
 The archives carry the same fonts, themes and licences as the ABIv11 one
 (HarfBuzz, utf8proc, Unicode data, DejaVu Sans Mono Nerd Font, Unifont, Noto
 Emoji) and a ReadMe for the system. Probes built with the same flags:
