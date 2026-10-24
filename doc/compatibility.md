@@ -2,14 +2,22 @@
 
 ## Systems
 
-The current terminal release, **0.7.0**, and the prebuilt SDK **0.5.0**
-target **AROS ABIv11 x86_64**. The 0.7.0 archive was checked on AROS One 1.3;
-see the [verification record](verification-0.7.0.md) for build and runtime details.
+The current terminal release, **0.7.0**, has three builds:
 
-Mainline x86_64 has an older development preview, but no current public
-release. Other architectures and other Amiga-family systems have no published
-Limpet build. ABIv11 and mainline require separate binaries and matching SDKs.
-An ABI match alone does not establish compatibility with a particular system.
+| Build | System | Checked on |
+| --- | --- | --- |
+| `abiv11` | AROS ABIv11 x86_64 (AROS One and similar) | AROS One 1.3 |
+| `v1-x86_64` | mainline AROS (ABIv1) x86_64 | mainline built from `74a2d80b` (2026-09-04), under QEMU |
+| `v1-aarch64` (test build) | AROS for the Raspberry Pi (AArch64, ABIv1) | the 2026-08-22 Pi system under QEMU's Pi 3 model; not yet on a Raspberry Pi |
+
+Build and runtime details: [ABIv11](verification-0.7.0.md),
+[ABIv1 builds](verification-0.7.0-v1.md). The prebuilt SDK **0.5.0** targets
+ABIv11 x86_64.
+
+Macaros (hosted AArch64) needs a build of its own and has none. Other
+architectures and other Amiga-family systems have no published Limpet build.
+Each system needs its own binaries built with its SDK. An ABI match alone
+does not establish compatibility with a particular system.
 
 ## Terminal versions
 

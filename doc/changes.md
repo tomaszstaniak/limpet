@@ -5,6 +5,9 @@ Changes of the terminal. The SDK has its own list in
 
 ## 0.7.0 (2026-10-24)
 
+Also built for mainline AROS x86_64 and, as a test build, for AROS on the
+Raspberry Pi (AArch64), from the same sources.
+
 Fixed:
 
 - Full-screen programs scrolled slowly, and after a held cursor key they

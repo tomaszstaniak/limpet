@@ -26,6 +26,7 @@
 !/tools/release/make-packages.sh
 !/tools/release/README-abiv11.txt
 !/tools/release/README-pty-preview.txt
+!/tools/release/README-v1-*.txt
 /tools/doom-bench/
 /tools/doom_kitty.c
 /tools/build_posixc_experiment.py
@@ -44,3 +45,5 @@ __pycache__/
 !/examples/ssh/
 !/examples/Shell-Startup
 /tests/test_doom_bench_driver.py
+
+!/mk/

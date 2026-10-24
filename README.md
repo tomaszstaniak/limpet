@@ -21,7 +21,11 @@ Image: NASA, ESA, CSA, STScI.
 ## Download
 
 - [Limpet 0.7.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.7.0)
-  for AROS ABIv11, x86_64.
+  for AROS ABIv11, x86_64 (AROS One and similar), and for mainline AROS,
+  x86_64 (`Limpet-0.7.0-v1-x86_64.zip`).
+- A test build of 0.7.0 for AROS on the Raspberry Pi (AArch64,
+  `Limpet-0.7.0-v1-aarch64.zip`) in the same release. It was run under
+  QEMU's Pi model, not yet on a Raspberry Pi.
 - [SDK 0.5.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.5.0)
   for application developers.
 - The separate `LIMPET:` console handler is an experimental download in the
@@ -79,13 +83,20 @@ With [apkg](https://github.com/tomaszstaniak/arospkg):
 
     apkg install limpet
 
-Or by hand: download the newest `Limpet-<version>-abiv11.zip` from the
+on AROS One and other ABIv11 systems. Or by hand: download the newest
+`Limpet-<version>-abiv11.zip` from the
 [releases](https://github.com/tomaszstaniak/limpet/releases), then
 
     UnZip Limpet-<version>-abiv11.zip -d SYS:Utilities
 
 and double-click the Limpet icon, or run `SYS:Utilities/Limpet/Limpet`.
 The archive's `README.txt` lists keys, options and known limitations.
+
+On mainline AROS x86_64 use `Limpet-<version>-v1-x86_64.zip`, and on AROS
+for the Raspberry Pi the test build `Limpet-<version>-v1-aarch64.zip`. These
+systems come without UnZip: unpack the archive on another computer, or with
+an UnZip you installed, and copy the `Limpet` drawer and `Limpet.info` into
+`SYS:Utilities`.
 
 ## For programmers
 

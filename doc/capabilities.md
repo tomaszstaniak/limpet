@@ -1,7 +1,8 @@
 # Limpet capabilities
 
 This page describes **Limpet 0.7.0** and **SDK 0.5.0** for AROS ABIv11,
-x86_64. It covers terminal features, application interfaces and the separate
+x86_64; the 0.7.0 builds for mainline x86_64 and the Raspberry Pi have the
+same features ([systems](compatibility.md#systems)). It covers terminal features, application interfaces and the separate
 experimental `LIMPET:` console handler.
 
 Nothing has been added since 0.7.0; see [Unreleased changes](#unreleased-changes).

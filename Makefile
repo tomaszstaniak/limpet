@@ -24,6 +24,16 @@ KITTY_SRC = src/kitty_graphics.c
 HYPERLINK_GUI_SRC = src/aros_hyperlink.c src/link_gesture.c
 
 PYTHON ?= python3
+
+# Per-target release builds (mk/target.mk): make target TARGET=v1-x86_64
+ifneq ($(filter-out v1-x86_64 v1-aarch64,$(filter v1-%,$(TARGET))),)
+$(error TARGET=$(TARGET): known targets are v1-x86_64 and v1-aarch64)
+endif
+ifneq ($(filter v1-x86_64 v1-aarch64,$(TARGET)),)
+.DEFAULT_GOAL := target
+include mk/target-$(TARGET).mk
+include mk/target.mk
+endif
 HOST_TEST = build/test_screen_model
 AROS_TEST = build/test_screen_model_aros
 REPLAY_HEADER = build/replay_fixtures.h
