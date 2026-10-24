@@ -3,7 +3,7 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## Unreleased
+## 0.7.0 (2026-10-24)
 
 Fixed:
 
@@ -48,6 +48,22 @@ Added:
   which text styles it draws, whether it opens OSC 8 links, and whether its
   font has the eza icons in one cell; eza uses this to decide on styles,
   `--hyperlink` and `--icons`.
+
+Changes for programs:
+
+- The window size in characters and pixels can be read with the console
+  geometry packet `ACTION_CONSOLE_GETGEOMETRY` (`0x434f4e47`) proposed for
+  AROS; see [protocols](protocols.md#dos-packets-public-console-geometry).
+  Limpet windows and `LIMPET:` answer it. Other consoles, and older Limpet
+  versions, refuse it with `ERROR_ACTION_NOT_KNOWN`.
+- Several reads and `WaitForChar` calls can be out at once (up to 16 reads
+  behind the one being served, 16 waiters). At the end of input every one
+  of them is answered: reads with 0, waiters with true. A read still in
+  line can be taken back with `XTY_ACTION_CANCEL`.
+- In a Limpet window a bare line feed returns to the left edge (line feed
+  mode, as `CON:`); `CSI 20 l` turns that off and `CSI 20 h` on again.
+
+The experimental [LIMPET:](limpet-handler.md) handler has the same changes.
 
 ## 0.6.1 (2026-10-19)
 

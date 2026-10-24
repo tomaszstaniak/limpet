@@ -23,20 +23,37 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
-New in this test version
-------------------------
+New in 0.7.0
+------------
 
+- Faster scrolling in full-screen programs: Limpet redraws once a program's
+  output pauses instead of after every small write, so editors such as
+  Helix scroll smoothly and stop when a held key is released. Long output
+  such as Type of a large file also finishes several times sooner.
+- Fixed: while a full-screen program scrolled, the window could show half
+  of the old screen and half of the new one.
+- Synchronized output (CSI ? 2026 h/l) for programs that mark their screen
+  updates.
 - Links to local files: Ctrl+click on an OSC 8 link file:///Volume:path
   opens the file as a Workbench double-click would. HTTP and HTTPS links
   still open through OpenURL.
 - The drawer includes DejaVu Sans Mono Nerd Font (Fonts/), the default font
   when Limpet.conf sets none. It has the file-type icons of eza --icons,
   one cell wide. A font set in Limpet.conf is used as before.
-- Programs can ask which text styles Limpet draws, whether it opens OSC 8
-  links and whether its font has the eza icons (Limpet SDK presentation
-  query). eza uses this for its colours, --hyperlink and --icons.
-- Faster scrolling in full-screen programs and synchronized output
-  (CSI ? 2026 h/l), as in 0.6.2-test1.
+- Programs can ask which text styles Limpet draws, whether it opens links
+  and whether its font has the eza icons (Limpet SDK 0.5.0). eza uses this
+  for its colours, --hyperlink and --icons.
+- Several programs can read from one window, and wait for a key in it, at
+  the same time; they get its input in turn.
+- A bare line feed returns to the left edge, as in the system console, so
+  programs that read keys themselves no longer print stepped lines.
+- Programs can read the window size in characters and pixels with the
+  console geometry packet proposed for AROS.
+
+Upgrading: apkg upgrade limpet replaces the drawer and keeps a theme in
+Themes/ that you changed. By hand, copy changed themes out of the drawer
+before you unpack the new archive over it. Limpet.conf in ENV:Limpet and
+ENVARC:Limpet is not touched either way.
 
 
 New in 0.6.1
