@@ -2,9 +2,11 @@
 # 10.5 toolchain and Developer SDK (docs/platform/toolchains.md in
 # AROS-dev). Set T_CC to .../x86_64-aros-gcc and T_SDK to .../Development,
 # or ABIV11_GCC and ABIV11_SDK as for the abiv11-* rules.
-T_CC ?= $(ABIV11_GCC)
+# ABIV11_GCC/ABIV11_SDK, when given, win over a T_CC/T_SDK left in the
+# environment for another target; make-packages.sh also checks the ABI.
+T_CC := $(if $(ABIV11_GCC),$(ABIV11_GCC),$(T_CC))
 T_CXX ?= $(patsubst %gcc,%g++,$(T_CC))
-T_SDK ?= $(ABIV11_SDK)
+T_SDK := $(if $(ABIV11_SDK),$(ABIV11_SDK),$(T_SDK))
 T_ARCH_FLAGS =
 T_ARCH_LDFLAGS =
 # ABIv11 has no task-removal notification (task.resource AddTaskNotifyHook):

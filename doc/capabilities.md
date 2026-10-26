@@ -220,7 +220,9 @@ This fix does not provide a complete POSIX termios or PTY implementation.
 
 Whether `TIOCGWINSZ` works depends on the system's C library, not only on
 Limpet. It does on ABIv11 and on mainline systems built before
-2026-09-09. Mainline's C library since then (`ca3b61dff6`) answers ENOTTY
+2026-09-09, when called from the program's main task: those C libraries
+answer for the calling task's own console, so from another task (a
+pthread) the call fails. Mainline's C library since then (`ca3b61dff6`) answers ENOTTY
 for every console until it learns the console geometry packet (proposed as
 AROS pull request #1763). Limpet already answers that packet,
 `ACTION_CONSOLE_GETGEOMETRY`; the presentation query works on every

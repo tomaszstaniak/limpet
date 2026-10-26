@@ -28,7 +28,7 @@ PYTHON ?= python3
 # Release builds, one per target (mk/target.mk), named
 # <system>-<arch>-<abi>-<platform>: make target TARGET=aros-x86_64-abiv1-pc
 TARGETS = aros-x86_64-abiv11-pc aros-x86_64-abiv1-pc aros-aarch64-abiv1-raspi
-ifneq ($(TARGET),)
+ifneq ($(filter command line,$(origin TARGET)),)
 ifeq ($(filter $(TARGET),$(TARGETS)),)
 $(error TARGET=$(TARGET): known targets are $(TARGETS))
 endif

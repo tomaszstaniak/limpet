@@ -38,15 +38,24 @@ common() {  # $1 = drawer
 }
 package_target() {  # $1 = target
     local t=$1 b=$root/build/$1 want
+    local libset
     case $t in
         aros-x86_64-*) want=x86-64;;
         aros-aarch64-*) want=aarch64;;
         *) print -u2 "unknown target $t"; exit 1;;
     esac
+    # The ELF header does not tell the ABIs apart; the C library bases do.
+    case $t in
+        *-abiv11-*) libset=__aros_libset_CrtBase;;
+        *-abiv1-*) libset=__aros_libset_StdCBase;;
+    esac
     [[ -f $root/tools/release/README-$t.txt ]] || { print -u2 "unknown target $t"; exit 1; }
     for f in $b/Limpet $b/limpet-console $b/limpet-handler $b/limpet-handler-remove; do
         file -b $f | grep -q "ELF 64-bit.*$want" ||
             { print -u2 "$f is not an ELF for $t: $(file -b $f)"; exit 1; }
+    done
+    for f in $b/Limpet $b/limpet-console; do
+        nm $f | grep -q " $libset\$" || { print -u2 "$f has no $libset: not built for $t"; exit 1; }
     done
     check_version $b/Limpet
     local d=$out/stage-$t/Limpet; common $d
@@ -70,8 +79,11 @@ package_target() {  # $1 = target
     (cd $out/stage-$t && find Limpet -type f | sort | xargs shasum -a 256 > ../contents-$t.sha256)
     (cd $out/stage-handler-$t && find Limpet -type f | sort | xargs shasum -a 256 > ../contents-handler-$t.sha256)
 }
+(( ${#${(u)@}} == $# )) || { print -u2 "a target is named twice"; exit 1; }
 for t in $@; do
     if [[ $t == pty ]]; then
+        file -b $root/build/aros-xterm-pty | grep -q "ELF 64-bit.*x86-64" || { print -u2 "build/aros-xterm-pty is not an x86_64 ELF"; exit 1; }
+        nm $root/build/aros-xterm-pty | grep -q " __aros_libset_StdCBase\$" || { print -u2 "build/aros-xterm-pty is not a mainline build"; exit 1; }
         check_version $root/build/aros-xterm-pty
         # mainline PTY preview
         d=$out/stage-pty/LimpetPTY; common $d

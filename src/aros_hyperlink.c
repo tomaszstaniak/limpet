@@ -23,8 +23,13 @@ static void worker(void)
                to nobody (handler.c "report error somehow?"), so a missing
                file is caught here. NP_WindowPtr -1: no requester. */
             BPTR lock=Lock((CONST_STRPTR)path,ACCESS_READ);
-            if(!lock) { j->result=-3; return; }
-            UnLock(lock);
+            if(lock) UnLock(lock);
+            else {
+                LONG error=IoErr();
+                /* A file that exists but is in use is still Workbench's to try. */
+                if(error==ERROR_OBJECT_NOT_FOUND || error==ERROR_DIR_NOT_FOUND ||
+                   error==ERROR_DEVICE_NOT_MOUNTED) { j->result=-3; return; }
+            }
             WorkbenchBase=OpenLibrary((CONST_STRPTR)"workbench.library",0);
             j->result=-1;
             if(WorkbenchBase) {

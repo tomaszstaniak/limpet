@@ -56,6 +56,11 @@ static int click(WORD x,WORD y,UWORD qual)
         return 20;
     }
     s=LockPubScreen(NULL);
+    if(!s) {
+        CloseDevice((struct IORequest *)io);
+        DeleteIORequest((struct IORequest *)io); DeleteMsgPort(port);
+        return 20;
+    }
     if(qual&IEQUALIFIER_CONTROL) key(io,0x63,0,qual);
     if(qual&IEQUALIFIER_LSHIFT) key(io,0x60,0,qual);
     memset(&pp,0,sizeof pp); pp.iepp_Screen=s; pp.iepp_Position.X=x; pp.iepp_Position.Y=y;
@@ -81,7 +86,7 @@ int main(int argc,char **argv)
 {
     struct Screen *s;
     struct Window *w;
-    WORD left,top,a,b;
+    WORD left=0,top=0,width=0,height=0,a,b;
     int resize,rc=0;
     ULONG lock;
     if(argc<5 || (strcmp(argv[1],"size") && strcmp(argv[1],"click"))) {
@@ -93,10 +98,12 @@ int main(int argc,char **argv)
     if(argc>(resize?5:6)) Delay(strtol(argv[resize?5:6],NULL,0));
     s=LockPubScreen(NULL);
     if(!s) { PutStr((CONST_STRPTR)"win-inject: no public screen\n"); return 20; }
+    /* Nothing that may wait (a console write) while IBase is locked. */
     lock=LockIBase(0);
     w=find(s,argv[2]);
-    if(w) { left=w->LeftEdge; top=w->TopEdge; printf("before %d,%d %dx%d\n",w->LeftEdge,w->TopEdge,w->Width,w->Height); }
+    if(w) { left=w->LeftEdge; top=w->TopEdge; width=w->Width; height=w->Height; }
     UnlockIBase(lock);
+    if(w) printf("before %d,%d %dx%d\n",left,top,width,height);
     if(!w) { printf("win-inject: no window with \"%s\"\n",argv[2]); UnlockPubScreen(NULL,s); return 10; }
     /* The window may close between the lookup and these calls; a test
        tool accepts that, as a user clicking it would. */
@@ -104,8 +111,10 @@ int main(int argc,char **argv)
     else rc=click(left+a,top+b,argc>5?(UWORD)strtoul(argv[5],NULL,0):0);
     Delay(25);
     lock=LockIBase(0);
-    if(find(s,argv[2])==w) printf("after %d,%d %dx%d\n",w->LeftEdge,w->TopEdge,w->Width,w->Height);
+    if(find(s,argv[2])==w) { left=w->LeftEdge; top=w->TopEdge; width=w->Width; height=w->Height; }
+    else w=NULL;
     UnlockIBase(lock);
+    if(w) printf("after %d,%d %dx%d\n",left,top,width,height);
     UnlockPubScreen(NULL,s);
     return rc;
 }
