@@ -14,7 +14,8 @@ Build and runtime details: [ABIv11](verification-0.7.0.md),
 [ABIv1 builds](verification-0.7.0-v1.md). The prebuilt SDK **0.5.0** targets
 ABIv11 x86_64.
 
-Macaros (hosted AArch64) needs a build of its own and has none. Other
+The Pi build is meant for the native Pi system; it has not been checked on
+Macaros (hosted AArch64), which has no Limpet build of its own. Other
 architectures and other Amiga-family systems have no published Limpet build.
 Each system needs its own binaries built with its SDK. An ABI match alone
 does not establish compatibility with a particular system.

@@ -146,11 +146,19 @@ listed above.
 | Ctrl-C | breaks `Wait 30` |
 
 Not tested on the Pi: window resize (no pointer), links, a physical
-Raspberry Pi, network. The Pi archives are therefore offered as a test
-build, not through apkg.
+Raspberry Pi. The Pi archives are therefore offered as a test build. A
+physical Pi needs no network for a basic test: the archive can be copied to
+its SD card. They are not in the apkg catalogue, because its entries have
+no platform field and an `aarch64`/`v1` entry would also be offered to
+Macaros.
 
-Macaros (hosted AArch64 on macOS) cannot load binaries built against the
-native Pi SDK; it needs its own build, which is not part of this record.
+The Pi build is meant for the native Pi system. It has not been run or
+analysed on Macaros (hosted AArch64 on macOS); nothing here says whether it
+would load there.
+
+*Corrected 2026-10-26:* this section said the Pi archives could not be
+tested on hardware for lack of network and that Macaros cannot load them;
+neither was established.
 
 ## Earlier key failures were the test driver
 

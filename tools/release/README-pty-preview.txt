@@ -33,7 +33,14 @@ What needs what
 Install, run, uninstall
 -----------------------
 
-    UnZip Limpet-PTY-@VERSION@-mainline.zip -d SYS:Utilities
+Mainline AROS does not come with UnZip: unpack the archive on another
+computer and copy the LimpetPTY drawer into SYS:Utilities, or, with an
+UnZip you installed:
+
+    UnZip Limpet-PTY-@VERSION@-aros-x86_64-abiv1-pc.zip -d SYS:Utilities
+
+Then:
+
     SYS:Utilities/LimpetPTY/LimpetPTY      (or double-click its icon)
     ...
     EndCLI, then close the window

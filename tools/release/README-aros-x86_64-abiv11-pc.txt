@@ -214,7 +214,7 @@ The drawer is self-contained. Nothing is copied into the system.
 (apkg puts it in its packages drawer and removes it with apkg remove), or
 by hand:
 
-    UnZip Limpet-@VERSION@-abiv11.zip -d SYS:Utilities
+    UnZip Limpet-@VERSION@-aros-x86_64-abiv11-pc.zip -d SYS:Utilities
 
 This creates SYS:Utilities/Limpet. Any other location works too; keep
 the drawer together, because fonts are looked up in PROGDIR:Fonts.

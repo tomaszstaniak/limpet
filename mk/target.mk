@@ -1,11 +1,14 @@
-# Release build for one ABI and CPU: make target TARGET=<name>
+# Release build for one target: make target TARGET=<name>
 # (mk/target-<name>.mk sets the compiler, SDK and flags). Everything goes to
 # build/<name>/, HarfBuzz included, so a build for one target never links an
-# object made for another. The ABIv11 release keeps its own abiv11-* rules.
+# object made for another. The abiv11-* rules in the Makefile are the
+# development and probe builds; releases come from here.
 TD := build/$(TARGET)
 T_CFLAGS = $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(T_SDK) -I$(T_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src $(T_ARCH_FLAGS)
 T_PROBE_CFLAGS = $(OPTFLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(T_SDK) -I$(T_SDK)/include $(T_ARCH_FLAGS)
 T_LDFLAGS = --sysroot=$(T_SDK) -L$(T_SDK)/lib $(T_ARCH_LDFLAGS)
+# The worker's sources in link order; a target may give its own order.
+T_WORKER_ALL_SRC ?= $(T_GUI_SRC) src/aros_handler.c $(T_WORKER_SRC)
 T_GUI_SRC = src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC)
 
 .PHONY: target target-check
@@ -19,7 +22,7 @@ target: target-check
 	$(T_CXX) $(HB_FLAGS) $(T_CXX_FLAGS) --sysroot=$(T_SDK) $(T_ARCH_FLAGS) -c $(HB_SRC) -o $(TD)/harfbuzz.o
 	$(T_CXX) $(HB_FLAGS) $(T_CXX_FLAGS) -DHB_NO_GETENV --sysroot=$(T_SDK) $(T_ARCH_FLAGS) -c $(HB_SRC) -o $(TD)/harfbuzz-handler.o
 	$(T_CC) $(T_CFLAGS) $(T_FRONT_FLAGS) -o $(TD)/Limpet $(T_GUI_SRC) $(TD)/harfbuzz.o $(T_LDFLAGS) $(T_LIBS)
-	$(T_CC) $(T_CFLAGS) -DXTERM_DOS_HANDLER $(T_WORKER_FLAGS) -o $(TD)/limpet-console $(T_GUI_SRC) src/aros_handler.c $(T_WORKER_SRC) $(TD)/harfbuzz-handler.o $(T_LDFLAGS) $(T_LIBS)
+	$(T_CC) $(T_CFLAGS) -DXTERM_DOS_HANDLER $(T_WORKER_FLAGS) -o $(TD)/limpet-console $(T_WORKER_ALL_SRC) $(TD)/harfbuzz-handler.o $(T_LDFLAGS) $(T_LIBS)
 	$(T_CC) $(T_PROBE_CFLAGS) $(UNICODE_FLAGS) -nostartfiles -DXHANDLER_WORKER='"limpet-console"' tools/xterm_handler.c $(T_LDFLAGS) -o $(TD)/limpet-handler
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/limpet-handler-remove tools/xterm-console/xterm_remove.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/con-contract tests/con_contract.c $(T_LDFLAGS)

@@ -25,11 +25,13 @@ HYPERLINK_GUI_SRC = src/aros_hyperlink.c src/link_gesture.c
 
 PYTHON ?= python3
 
-# Per-target release builds (mk/target.mk): make target TARGET=v1-x86_64
-ifneq ($(filter-out v1-x86_64 v1-aarch64,$(filter v1-%,$(TARGET))),)
-$(error TARGET=$(TARGET): known targets are v1-x86_64 and v1-aarch64)
+# Release builds, one per target (mk/target.mk), named
+# <system>-<arch>-<abi>-<platform>: make target TARGET=aros-x86_64-abiv1-pc
+TARGETS = aros-x86_64-abiv11-pc aros-x86_64-abiv1-pc aros-aarch64-abiv1-raspi
+ifneq ($(TARGET),)
+ifeq ($(filter $(TARGET),$(TARGETS)),)
+$(error TARGET=$(TARGET): known targets are $(TARGETS))
 endif
-ifneq ($(filter v1-x86_64 v1-aarch64,$(TARGET)),)
 .DEFAULT_GOAL := target
 include mk/target-$(TARGET).mk
 include mk/target.mk

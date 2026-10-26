@@ -79,24 +79,25 @@ with the same bytes sent to both.
 
 ## Install
 
-With [apkg](https://github.com/tomaszstaniak/arospkg):
+Each system has its own archive on the
+[releases](https://github.com/tomaszstaniak/limpet/releases) page:
 
-    apkg install limpet
+| System | Archive (0.7.0) | apkg |
+| --- | --- | --- |
+| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.7.0-abiv11.zip` | `apkg install limpet` |
+| mainline AROS (ABIv1), x86_64 | `Limpet-0.7.0-v1-x86_64.zip` | listed in the catalogue; the [apkg build for mainline](https://github.com/tomaszstaniak/arospkg) is experimental |
+| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.7.0-v1-aarch64.zip` | not listed |
 
-on AROS One and other ABIv11 systems. Or by hand: download the newest
-`Limpet-<version>-abiv11.zip` from the
-[releases](https://github.com/tomaszstaniak/limpet/releases), then
+By hand on AROS One:
 
     UnZip Limpet-<version>-abiv11.zip -d SYS:Utilities
 
-and double-click the Limpet icon, or run `SYS:Utilities/Limpet/Limpet`.
-The archive's `README.txt` lists keys, options and known limitations.
+Mainline AROS and the Pi system do not come with UnZip. Unpack the archive
+on another computer (or with an UnZip you installed) and copy the `Limpet`
+drawer and `Limpet.info` into `SYS:Utilities`; for the Pi, onto its SD card.
 
-On mainline AROS x86_64 use `Limpet-<version>-v1-x86_64.zip`, and on AROS
-for the Raspberry Pi the test build `Limpet-<version>-v1-aarch64.zip`. These
-systems come without UnZip: unpack the archive on another computer, or with
-an UnZip you installed, and copy the `Limpet` drawer and `Limpet.info` into
-`SYS:Utilities`.
+Then double-click the Limpet icon, or run `SYS:Utilities/Limpet/Limpet`.
+The archive's `README.txt` lists keys, options and known limitations.
 
 ## For programmers
 

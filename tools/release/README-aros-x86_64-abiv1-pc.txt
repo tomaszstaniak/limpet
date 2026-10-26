@@ -1,5 +1,5 @@
-Limpet @VERSION@ for AROS on Raspberry Pi (ABIv1, AArch64) -- test build
-=========================================================================
+Limpet @VERSION@ for mainline AROS (ABIv1, x86_64)
+=================================================
 
 Limpet is a terminal for the AROS Shell, written for AROS (it is not a port
 of X11 xterm). Drawn with Intuition and FreeType:
@@ -10,11 +10,10 @@ of X11 xterm). Drawn with Intuition and FreeType:
 - the alternate screen used by full-screen programs;
 - inline images through a documented subset of the Kitty graphics protocol.
 
-Built for AROS on the Raspberry Pi (ABIv1, AArch64) with the Developer SDK
-of the raspi-aarch64 system of 2026-08-22. This is a test build: it was run
-under QEMU's Raspberry Pi 3 model, not yet on a real Raspberry Pi. Reports
-from a real Pi are welcome. It is a build for the Pi itself: hosted
-AArch64 AROS (Macaros) and x86_64 AROS need builds of their own.
+Built for mainline AROS (ABIv1, x86_64) with the mainline GCC 10.5
+toolchain; this version was tested on a mainline build of 2026-09-04.
+Mainline binaries do not run on ABIv11 systems such as AROS One, and ABIv11
+binaries do not run here.
 
 Limpet does not replace the system console (CON:): programs that open
 CON: themselves still get the system console window. An experimental
@@ -36,8 +35,8 @@ doc/changes.md in the source (https://github.com/tomaszstaniak/limpet).
 Requirements
 ------------
 
-- AROS for the Raspberry Pi (ABIv1, AArch64). Run so far on the system of
-  2026-08-22, under QEMU only.
+- Mainline AROS (ABIv1), x86_64. This version was tested on a mainline
+  build of 2026-09-04, under QEMU.
 - The system font FONTS:TrueType/OpenSans-Regular.ttf, and
   FONTS:TrueType/VeraMono.ttf when the bundled font is removed or another
   font is set (both installed with the system).
@@ -49,9 +48,11 @@ Install
 
 The drawer is self-contained. Nothing is copied into the system.
 
-Unpack Limpet-@VERSION@-v1-aarch64.zip on another computer (the Pi system
-has no UnZip) and copy the Limpet drawer and Limpet.info to the Pi's SD
-card, for example into Utilities.
+Mainline AROS does not come with UnZip. Unpack the archive on another
+computer and copy the Limpet drawer and Limpet.info into SYS:Utilities.
+If you have installed an UnZip, this does the same:
+
+    UnZip Limpet-@VERSION@-aros-x86_64-abiv1-pc.zip -d SYS:Utilities
 
 This creates SYS:Utilities/Limpet. Any other location works too; keep
 the drawer together, because fonts are looked up in PROGDIR:Fonts.
@@ -168,11 +169,10 @@ Known limitations
 -----------------
 
 - Ctrl-C goes to the Shell and the command it runs, not to jobs started
-  with Run. The terminal sends the break only while the Shell is known to
-  exist. On a multi-processor system, a break pressed at the exact moment
-  the Shell is running on another processor is skipped; press Ctrl-C
-  again. Programs that never check for a break cannot be stopped this way,
-  as in the system console.
+  with Run. The terminal follows the Shell through the system's task
+  notification (task.resource) and sends no break once it has ended.
+  Programs that never check for a break cannot be stopped this way, as in
+  the system console.
 - The window title names the command the Shell runs. Jobs started with
   Run and processes a command starts are not shown. Characters outside
   Latin-1 in a program's title show as '?'.

@@ -181,26 +181,31 @@ This design is not implemented.
 
 ## Building
 
-    make abiv11-frontend abiv11-handler abiv11-xterm-console \
-        ABIV11_GCC=.../x86_64-aros-gcc ABIV11_SDK=.../Development
+One build per target, named `<system>-<arch>-<abi>-<platform>`:
 
-`build/abiv11/` then holds `aros-xterm` (Limpet), `aros-xterm-worker`
-(packed as `limpet-console`), `limpet-handler`, `xterm-remove` (packed as
-`limpet-handler-remove`), `con-contract`, `tty-winsize` and
-`winsize-check`; the scripts and the mountlist are in
-`tools/xterm-console/`. `tools/release/make-packages.sh` makes both
-archives.
+| Target | System |
+| --- | --- |
+| `aros-x86_64-abiv11-pc` | AROS One and other ABIv11 systems |
+| `aros-x86_64-abiv1-pc` | mainline AROS, x86_64 |
+| `aros-aarch64-abiv1-raspi` | AROS on the Raspberry Pi |
 
-For mainline x86_64 and the Raspberry Pi system:
-
-    make target TARGET=v1-x86_64 LIMPET_VERSION=0.7.0 LIMPET_DATE=24.10.2026 \
+    make target TARGET=aros-x86_64-abiv1-pc LIMPET_VERSION=0.7.1 LIMPET_DATE=... \
         T_CC=.../x86_64-aros-gcc T_SDK=.../AROS/Developer
-    tools/release/make-packages.sh 0.7.0 OUT v1-x86_64
+    tools/release/make-packages.sh 0.7.1 OUT aros-x86_64-abiv1-pc
 
-For the Pi, `TARGET=v1-aarch64` with `T_ROOT` (the Clang wrapper toolchain
-with its `sdk/`) and `T_CXX_INCLUDE` (libc++ headers);
-`mk/target-<target>.mk` says what each expects. Everything lands in
-`build/<target>/`, probes in `build/<target>/probes/`.
+`mk/target-<target>.mk` says what each target expects: for ABIv11 `T_CC`
+and `T_SDK` (or `ABIV11_GCC` and `ABIV11_SDK`), for the Pi `T_ROOT` (the
+Clang wrapper toolchain with its `sdk/`) and `T_CXX_INCLUDE` (libc++
+headers). Everything lands in `build/<target>/`: `Limpet`,
+`limpet-console`, `limpet-handler`, `limpet-handler-remove`, and the probes
+in `build/<target>/probes/`. The scripts and the mountlist are in
+`tools/xterm-console/`. Each target's two archives are
+`Limpet-<version>-<target>.zip` and
+`Limpet-handler-experimental-<version>-<target>.zip`.
+
+Releases up to 0.7.0 used the `abiv11-*` rules and the targets `v1-x86_64`
+and `v1-aarch64`. Built from the 0.7.0 sources, the new targets give the
+released binaries of all three systems byte for byte.
 
 ## Sources read
 
