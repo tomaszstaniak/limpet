@@ -3,6 +3,28 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.7.1 (2026-10-27)
+
+For AROS ABIv11 x86_64, mainline AROS x86_64 and, as a test build, AROS on
+the Raspberry Pi.
+
+Fixed:
+
+- Ctrl+click on a link to a local file (`file:///`) reported the result
+  with OpenURL's messages, although such links go to Workbench. The title
+  now says "File handed to Workbench", "Workbench could not open the file",
+  or "File not found". A missing file is checked before the hand-over,
+  because Workbench reports a program it could not start to nobody.
+
+Changed:
+
+- Archives are named after their target, `<system>-<arch>-<abi>-<platform>`:
+  `Limpet-0.7.1-aros-x86_64-abiv11-pc.zip`,
+  `Limpet-0.7.1-aros-x86_64-abiv1-pc.zip` and
+  `Limpet-0.7.1-aros-aarch64-abiv1-raspi.zip`, with the handler archives
+  named the same way. Earlier releases keep their names.
+- The three systems are built with one `make target TARGET=<target>`.
+
 ## 0.7.0 (2026-10-24)
 
 Also built for mainline AROS x86_64 and, as a test build, for AROS on the

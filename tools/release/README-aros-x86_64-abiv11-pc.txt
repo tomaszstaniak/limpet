@@ -23,6 +23,18 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in 0.7.1
+------------
+
+- Ctrl+click on a link to a local file now says what happened in the
+  window title: "File handed to Workbench", "File not found" (checked
+  before the hand-over, because Workbench reports a failed start to
+  nobody), or "Workbench could not open the file". Before, these links
+  reported OpenURL's messages.
+- Archives are now named after the system they are for, for example
+  Limpet-@VERSION@-aros-x86_64-abiv11-pc.zip.
+
+
 New in 0.7.0
 ------------
 
@@ -289,7 +301,8 @@ Keys
     Shift+PgUp / PgDn, wheel  scroll back through the output
     RAmiga+F / Ctrl+Shift+F   find text in the output (Up/Down: older and
                               newer, Enter: stay there, Esc: back)
-    Ctrl+click on a link      open it (needs OpenURL); Ctrl+Shift+click
+    Ctrl+click on a link      open it (web links need OpenURL, files open
+                              with their default tool); Ctrl+Shift+click
                               copies it
     drag icons onto the window  put their paths on the command line
 

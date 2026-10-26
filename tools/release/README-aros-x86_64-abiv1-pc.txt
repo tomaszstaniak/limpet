@@ -27,9 +27,11 @@ Project: https://github.com/tomaszstaniak/limpet
 About this build
 ----------------
 
-This is the first Limpet build for this system. It has the same features
-as Limpet @VERSION@ for ABIv11; the changes of each version are listed in
-doc/changes.md in the source (https://github.com/tomaszstaniak/limpet).
+This build has the same features as Limpet @VERSION@ for ABIv11; the
+changes of each version are listed in doc/changes.md in the source
+(https://github.com/tomaszstaniak/limpet). New in 0.7.1: Ctrl+click on a
+link to a local file says in the window title whether the file was handed
+to Workbench, was not found, or could not be opened.
 
 
 Requirements
@@ -129,7 +131,8 @@ Keys
     Shift+PgUp / PgDn, wheel  scroll back through the output
     RAmiga+F / Ctrl+Shift+F   find text in the output (Up/Down: older and
                               newer, Enter: stay there, Esc: back)
-    Ctrl+click on a link      open it (needs OpenURL); Ctrl+Shift+click
+    Ctrl+click on a link      open it (web links need OpenURL, files open
+                              with their default tool); Ctrl+Shift+click
                               copies it
     drag icons onto the window  put their paths on the command line
 
