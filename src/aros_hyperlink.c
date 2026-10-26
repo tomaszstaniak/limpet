@@ -18,7 +18,14 @@ static void worker(void)
     {
         char path[XHYPERLINK_LIMIT];
         if(hyperlink_file_path(j->url,path,sizeof path)) {
-            struct Library *WorkbenchBase=OpenLibrary((CONST_STRPTR)"workbench.library",0);
+            struct Library *WorkbenchBase;
+            /* workbench.library queues the start and reports a failed one
+               to nobody (handler.c "report error somehow?"), so a missing
+               file is caught here. NP_WindowPtr -1: no requester. */
+            BPTR lock=Lock((CONST_STRPTR)path,ACCESS_READ);
+            if(!lock) { j->result=-3; return; }
+            UnLock(lock);
+            WorkbenchBase=OpenLibrary((CONST_STRPTR)"workbench.library",0);
             j->result=-1;
             if(WorkbenchBase) {
                 struct TagItem local_tags[]={{TAG_DONE,0}};
@@ -40,6 +47,7 @@ int aros_hyperlink_start(ArosHyperlinkJob *j,const char *url)
     struct Process *child;
     if(j->task_id || !hyperlink_open_safe(url)) return -1;
     memcpy(j->url,url,strlen(url)+1);
+    j->file=!strncmp(url,"file:",5);
     j->result=-2;
     child=CreateNewProcTags(NP_Entry,(IPTR)worker,NP_UserData,(IPTR)j,
         NP_Name,(IPTR)"AROS XTerm open link",NP_StackSize,65536,

@@ -30,6 +30,10 @@ target: target-check
 	$(T_CC) $(T_PROBE_CFLAGS) -Wno-error -o $(TD)/probes/tty-winsize tests/tty_winsize_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/console-geometry-probe tests/console_geometry_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/key-inject tests/key_inject.c $(T_LDFLAGS)
+	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/link-logger tests/link_logger.c $(T_LDFLAGS)
+	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/win-inject tests/win_inject.c $(T_LDFLAGS)
+	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/openurl-set-browser tests/openurl_set_browser.c $(T_LDFLAGS)
+	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/openurl-probe tools/openurl_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_CFLAGS) $(T_FRONT_FLAGS) -o $(TD)/probes/test_aros_endpoint tests/test_aros_endpoint.c $(SESSION_SRC) $(T_LDFLAGS)
 	$(if $(T_STRIP),$(T_STRIP) --strip-debug $(TD)/Limpet $(TD)/limpet-console $(TD)/limpet-handler $(TD)/limpet-handler-remove)
 	@echo "$(TARGET): built in $(TD)"

@@ -218,6 +218,14 @@ Since **0.5.0**, POSIX programs can also obtain the current dimensions with
 could crash in `crt.library`; applications using it should require 0.5.0.
 This fix does not provide a complete POSIX termios or PTY implementation.
 
+Whether `TIOCGWINSZ` works depends on the system's C library, not only on
+Limpet. It does on ABIv11 and on mainline systems built before
+2026-09-09. Mainline's C library since then (`ca3b61dff6`) answers ENOTTY
+for every console until it learns the console geometry packet (proposed as
+AROS pull request #1763). Limpet already answers that packet,
+`ACTION_CONSOLE_GETGEOMETRY`; the presentation query works on every
+system.
+
 There is no resize signal. Raw-mode applications can enable
 [resize reports](#resize-reports); otherwise query dimensions before laying
 out text. Each query requires a round trip to the terminal process.

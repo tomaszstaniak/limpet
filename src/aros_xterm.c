@@ -2285,9 +2285,15 @@ int main(int argc,char **argv)
         }
 #endif
         if(aros_hyperlink_poll(&link_job)) {
-            clip_status=link_job.result==0?"Link handed to OpenURL":
-                link_job.result==-1?"openurl.library unavailable; Ctrl+Shift-click copies":
-                "OpenURL failed; check browser preferences";
+            if(link_job.file)
+                clip_status=link_job.result==0?"File handed to Workbench":
+                    link_job.result==-3?"File not found; Ctrl+Shift-click copies":
+                    link_job.result==-1?"workbench.library unavailable; Ctrl+Shift-click copies":
+                    "Workbench could not open the file";
+            else
+                clip_status=link_job.result==0?"Link handed to OpenURL":
+                    link_job.result==-1?"openurl.library unavailable; Ctrl+Shift-click copies":
+                    "OpenURL failed; check browser preferences";
             link_hovered=0; dirty=1;
         }
         while ((message = (struct IntuiMessage *)GetMsg(window->UserPort))) {
