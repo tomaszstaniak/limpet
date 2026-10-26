@@ -5,17 +5,19 @@
 `Open("LIMPET:0/0/640/200/Title", ...)`. It is **experimental** and does not replace
 `CON:`. Programs must request `LIMPET:` explicitly.
 
-Released separately from Limpet, as `Limpet-handler-experimental-<version>-<system>.zip`
-(`abiv11`, `v1-x86_64`, `v1-aarch64`);
+Released separately from Limpet, as `Limpet-handler-experimental-<version>-<target>.zip`
+(`aros-x86_64-abiv11-pc`, `aros-x86_64-abiv1-pc`, `aros-aarch64-abiv1-raspi`;
+up to 0.7.0 `abiv11`, `v1-x86_64`, `v1-aarch64`);
 the Limpet archive and apkg do not install it. The tests of 2026-10-15
 ran under the handler's earlier working name, XTERM:.
 
 Scope of this stage: AROS ABIv11 x86_64, tested on AROS One 1.3 under
-QEMU. The 0.7.0 handler also runs on mainline x86_64 and on the Raspberry
-Pi system, both under QEMU ([record](verification-0.7.0-v1.md)). Not run on
-ABIv11 2026.09 or real hardware.
+QEMU. The handler also runs on mainline x86_64 and on the Raspberry Pi
+system, both under QEMU ([0.7.0](verification-0.7.0-v1.md),
+[0.7.1](verification-0.7.1.md)). Not run on ABIv11 2026.09 or real
+hardware.
 
-The table describes the handler of the 0.7.0 archive. For a short list of
+The table describes the handler of the 0.7.1 archive. For a short list of
 its limits, see the [capability reference](capabilities.md#limpet-console-handler).
 
 ## Install and remove

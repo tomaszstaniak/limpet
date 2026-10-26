@@ -2,16 +2,20 @@
 
 ## Systems
 
-The current terminal release, **0.7.0**, has three builds:
+The current terminal release, **0.7.1**, has three builds:
 
-| Build | System | Checked on |
+| Target | System | Checked on |
 | --- | --- | --- |
-| `abiv11` | AROS ABIv11 x86_64 (AROS One and similar) | AROS One 1.3 |
-| `v1-x86_64` | mainline AROS (ABIv1) x86_64 | mainline built from `74a2d80b` (2026-09-04), under QEMU |
-| `v1-aarch64` (test build) | AROS for the Raspberry Pi (AArch64, ABIv1) | the 2026-08-22 Pi system under QEMU's Pi 3 model; not yet on a Raspberry Pi |
+| `aros-x86_64-abiv11-pc` | AROS ABIv11 x86_64 (AROS One and similar) | AROS One 1.3, under QEMU |
+| `aros-x86_64-abiv1-pc` | mainline AROS (ABIv1) x86_64, built 2026-08-29 or later | mainline built from `74a2d80b` (2026-09-04), under QEMU |
+| `aros-aarch64-abiv1-raspi` (test build) | AROS for the Raspberry Pi (AArch64, ABIv1) | the 2026-08-22 Pi system under QEMU's Pi 3 model; not yet on a Raspberry Pi |
 
-Build and runtime details: [ABIv11](verification-0.7.0.md),
-[ABIv1 builds](verification-0.7.0-v1.md). The prebuilt SDK **0.5.0** targets
+Up to 0.7.0 these were named `abiv11`, `v1-x86_64` and `v1-aarch64`.
+On mainline built before 2026-08-29 Limpet runs, but Ctrl-C does not reach
+the program: those systems lack the task notification it uses there.
+
+Build and runtime details: [0.7.1](verification-0.7.1.md),
+[0.7.0 ABIv11](verification-0.7.0.md), [0.7.0 ABIv1 builds](verification-0.7.0-v1.md). The prebuilt SDK **0.5.0** targets
 ABIv11 x86_64.
 
 The Pi build is meant for the native Pi system; it has not been checked on
@@ -24,7 +28,7 @@ does not establish compatibility with a particular system.
 
 | Terminal | Presentation query | Stream features in this documentation |
 | --- | --- | --- |
-| Limpet 0.7.0 | answers, with input modes (including Shift+Enter), title feature, style, OSC 8 and icon bits | see the per-feature versions in the [catalogue](capabilities.md) |
+| Limpet 0.7.0, 0.7.1 | answers, with input modes (including Shift+Enter), title feature, style, OSC 8 and icon bits | see the per-feature versions in the [catalogue](capabilities.md) |
 | Limpet 0.6.0, 0.6.1 | answers, with input modes (including Shift+Enter) and title feature | as listed, except entries marked "Since 0.7.0" |
 | Limpet 0.3.0–0.5.0 | answers, with input modes and title feature | as listed, except entries marked "Since 0.6.0" |
 | Limpet 0.2.0, 0.2.1 | answers, with input modes | as listed, except entries marked "Since 0.3.0" |
@@ -48,7 +52,7 @@ following is claimed:
 
 The exact subsets are in the [protocol reference](protocols.md).
 
-## Limits in 0.7.0
+## Limits in 0.7.1
 
 | Item | Limit |
 | --- | --- |

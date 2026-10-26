@@ -4,11 +4,11 @@ Limpet and the SDK have separate version numbers and separate tags.
 
 | | Version | Archive | Git tag |
 | --- | --- | --- | --- |
-| Limpet (the terminal) | 0.7.0 | `Limpet-0.7.0-abiv11.zip` | `v0.7.0` |
+| Limpet (the terminal) | 0.7.1 | `Limpet-0.7.1-aros-x86_64-abiv11-pc.zip` (and one per system) | `v0.7.1` |
 | Limpet SDK | 0.5.0 | `limpet-sdk-0.5.0.zip` | `sdk-v0.5.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
-Limpet 0.1.0 to 0.6.1 (tags `v0.1.0` to `v0.6.1`) are the earlier
+Limpet 0.1.0 to 0.7.0 (tags `v0.1.0` to `v0.7.0`) are the earlier
 terminal releases, and SDK 0.2.0 to 0.4.0 (tags `sdk-v0.2.0`
 to `sdk-v0.4.0`) the earlier SDK releases. 0.2.1 changes only the bundled
 HarfBuzz; the protocol and the SDK are the same as for 0.2.0. 0.3.0 adds

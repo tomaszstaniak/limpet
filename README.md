@@ -20,16 +20,15 @@ Image: NASA, ESA, CSA, STScI.
 
 ## Download
 
-- [Limpet 0.7.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.7.0)
+- [Limpet 0.7.1](https://github.com/tomaszstaniak/limpet/releases/tag/v0.7.1)
   for AROS ABIv11, x86_64 (AROS One and similar), and for mainline AROS,
-  x86_64 (`Limpet-0.7.0-v1-x86_64.zip`).
-- A test build of 0.7.0 for AROS on the Raspberry Pi (AArch64,
-  `Limpet-0.7.0-v1-aarch64.zip`) in the same release. It was run under
-  QEMU's Pi model, not yet on a Raspberry Pi.
+  x86_64.
+- A test build of 0.7.1 for AROS on the Raspberry Pi (AArch64) in the same
+  release. It was run under QEMU's Pi model, not yet on a Raspberry Pi.
 - [SDK 0.5.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.5.0)
   for application developers.
 - The separate `LIMPET:` console handler is an experimental download in the
-  0.7.0 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
+  0.7.1 release. It does not replace `CON:`. See [installation and limits](doc/limpet-handler.md).
 
 Earlier releases are listed on [GitHub](https://github.com/tomaszstaniak/limpet/releases).
 See the [terminal changelog](doc/changes.md) and [SDK changelog](sdk/CHANGES.md)
@@ -82,15 +81,18 @@ with the same bytes sent to both.
 Each system has its own archive on the
 [releases](https://github.com/tomaszstaniak/limpet/releases) page:
 
-| System | Archive (0.7.0) | apkg |
+| System | Archive (0.7.1) | apkg |
 | --- | --- | --- |
-| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.7.0-abiv11.zip` | `apkg install limpet` |
-| mainline AROS (ABIv1), x86_64 | `Limpet-0.7.0-v1-x86_64.zip` | listed in the catalogue; the [apkg build for mainline](https://github.com/tomaszstaniak/arospkg) is experimental |
-| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.7.0-v1-aarch64.zip` | not listed |
+| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.7.1-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
+| mainline AROS (ABIv1), x86_64 | `Limpet-0.7.1-aros-x86_64-abiv1-pc.zip` | listed in the catalogue; the [apkg build for mainline](https://github.com/tomaszstaniak/arospkg) is experimental |
+| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.7.1-aros-aarch64-abiv1-raspi.zip` | not listed |
+
+Releases up to 0.7.0 named the same archives `-abiv11`, `-v1-x86_64` and
+`-v1-aarch64`.
 
 By hand on AROS One:
 
-    UnZip Limpet-<version>-abiv11.zip -d SYS:Utilities
+    UnZip Limpet-0.7.1-aros-x86_64-abiv11-pc.zip -d SYS:Utilities
 
 Mainline AROS and the Pi system do not come with UnZip. Unpack the archive
 on another computer (or with an UnZip you installed) and copy the `Limpet`

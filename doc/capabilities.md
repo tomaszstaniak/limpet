@@ -1,11 +1,11 @@
 # Limpet capabilities
 
-This page describes **Limpet 0.7.0** and **SDK 0.5.0** for AROS ABIv11,
-x86_64; the 0.7.0 builds for mainline x86_64 and the Raspberry Pi have the
+This page describes **Limpet 0.7.1** and **SDK 0.5.0** for AROS ABIv11,
+x86_64; the 0.7.1 builds for mainline x86_64 and the Raspberry Pi have the
 same features ([systems](compatibility.md#systems)). It covers terminal features, application interfaces and the separate
 experimental `LIMPET:` console handler.
 
-Nothing has been added since 0.7.0; see [Unreleased changes](#unreleased-changes).
+Nothing has been added since 0.7.1; see [Unreleased changes](#unreleased-changes).
 For installation and platform requirements, see [compatibility](compatibility.md).
 
 ## Feature detection
@@ -333,6 +333,10 @@ Workbench, as a double-click would, with the file's default tool. Remote
 hosts, relative paths and Unix paths are not accepted. Targets are at most
 2047 bytes. Other schemes are shown as text and do nothing on click. 64
 explicit targets are remembered per window; older ones become plain text.
+The window title says what happened: "Link handed to OpenURL" (OpenURL
+starts the browser on its own, so a browser that then fails is not seen),
+"File handed to Workbench", "File not found" or "Workbench could not open
+the file" (file messages since 0.7.1).
 
 **Plain URLs:** `http://` and `https://` addresses in ordinary output are
 detected without any program change, also across soft line wraps.
@@ -753,14 +757,15 @@ The broader PTY cancellation API remains experimental.
 
 ## LIMPET: console handler
 
-The separate **0.7.0 experimental handler** lets a program open a Limpet
+The separate **0.7.1 experimental handler** lets a program open a Limpet
 console through DOS:
 
 ```text
 NewShell WINDOW LIMPET:
 ```
 
-It is distributed as `Limpet-handler-experimental-0.7.0-abiv11.zip`, not
+It is distributed as `Limpet-handler-experimental-0.7.1-aros-x86_64-abiv11-pc.zip`
+(and one archive per system), not
 installed by the main archive or apkg. Installation lasts until reboot and
 does not replace `CON:`. Programs opening `CON:` still get the system console.
 
@@ -768,7 +773,7 @@ The handler supports console names with geometry and title, cooked
 and raw input, Shell scripts, redirection and multiple writers, and, since
 0.6.0, the Amiga console's reports, Ctrl-D/E/F and Ctrl-\, and, since
 0.7.0, several readers and waiters at once, line feed mode and the console
-geometry packet. Important limits in **the 0.7.0 handler**:
+geometry packet. Important limits in **the 0.7.1 handler**:
 
 - `AUTO` opens the window immediately; `WINDOW` is rejected;
 - the console information exposes dimensions, but is not a working
@@ -800,7 +805,7 @@ part of the ABIv11 release and has not been built for ABIv11.
 
 ## Unreleased changes
 
-None after 0.7.0.
+None after 0.7.1.
 
 ## References
 
