@@ -58,10 +58,12 @@ package_target() {  # $1 = target
         file -b $f | grep -q "ELF 64-bit.*$want" ||
             { print -u2 "$f is not an ELF for $t: $(file -b $f)"; exit 1; }
     done
+    # grep reads all of nm's output: with pipefail, grep -q stopping at the
+    # first match lets nm die of SIGPIPE on a large binary, a false failure.
     for f in $b/Limpet $b/limpet-console; do
-        nm $f | grep -q " $libset\$" || { print -u2 "$f has no $libset: not built for $t"; exit 1; }
+        nm $f | grep " $libset\$" >/dev/null || { print -u2 "$f has no $libset: not built for $t"; exit 1; }
     done
-    nm $b/limpet-handler-remove | grep -q " $helperset\$" ||
+    nm $b/limpet-handler-remove | grep " $helperset\$" >/dev/null ||
         { print -u2 "$b/limpet-handler-remove has no $helperset: not built for $t"; exit 1; }
     # Every binary must be the one make target built for this target: this
     # also covers limpet-handler, which links no C library at all.
