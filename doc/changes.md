@@ -14,6 +14,9 @@ New for programs:
 - A program can ask which terminal it runs in and its version (operation
   14, `limpet_query_identity`), to show it, for example, in a system
   information listing.
+- Automatic wrap can be turned off (`CSI ? 7 l`, DEC mode 7). Programs
+  such as fastfetch use it to keep a long line to one row; before, its
+  tail started a new row.
 
 ## 0.7.1 (2026-10-27)
 

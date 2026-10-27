@@ -64,6 +64,9 @@ typedef struct XTermScreen {
      * so a fragmented old query cannot answer a new reader. */
     unsigned csi_reply_enabled,escape_reply_enabled;
     unsigned mouse_tracking, mouse_sgr, mouse_generation;
+    /* DEC 7 reset: a glyph at the right margin replaces the last column
+     * instead of starting a new row (fastfetch keeps long lines to one row). */
+    unsigned no_autowrap;
     unsigned bracketed_paste;   /* DEC 2004: the client wants pastes framed */
     unsigned resize_report;     /* DEC 2048: the client wants size changes in band */
     /* DEC 2026 (synchronized output): set while the client says a frame is

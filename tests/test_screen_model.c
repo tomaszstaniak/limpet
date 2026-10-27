@@ -314,9 +314,26 @@ static void resize_keeps_cursor_row(void)
     line(0, "pppp"); line(1, "qqqq");
 }
 
+/* DEC 7: with autowrap off the tail of a long line stays on its row, the
+ * last column taking each further glyph; turning it on wraps again. */
+static void autowrap_mode(void)
+{
+    init(3, 4);
+    write_text("\033[?7labcdef");
+    row(0, "abcf");
+    row(1, "    ");
+    assert(s.cursor_row == 0 && s.cursor_column == 3 && !s.wrap_pending);
+    write_text("\r\n\xe4\xb8\xad\xe4\xb8\xad\xe4\xb8\xad");
+    assert(screen_cell(&s, 1, 2) == 0x4e2d && s.cursor_row == 1);
+    valid_pairs();
+    write_text("\033[?7h\r\nwxyzq");
+    row(1, "wxyz");
+    row(2, "q   ");
+}
 int main(void)
 {
     underline_style();
+    autowrap_mode();
     scrolling_region();
     explicit_region_scroll();
     reverse_index();

@@ -539,6 +539,10 @@ static void execute_csi(XTermScreen *s, unsigned char command)
             for(i=0;i<s->param_count;++i) {
                 if(s->params[i]==1049) alternate_mode(s,command=='h');
                 else if(s->params[i]==25) s->cursor_visible=command=='h';
+                else if(s->params[i]==7) {
+                    s->no_autowrap=command=='l';
+                    if(s->no_autowrap) s->wrap_pending=0;
+                }
                 else if(s->params[i]==1000 || s->params[i]==1002) {
                     unsigned tracking=command=='h'?s->params[i]:0;
                     if(tracking!=s->mouse_tracking) ++s->mouse_generation;
@@ -737,7 +741,9 @@ static void place_cluster(XTermScreen *s, XTermCell cell)
         s->cells[(size_t)(s->cursor_row + 1) * s->columns - 1].wrap = 1;
         s->cursor_column = 0; line_feed(s); s->wrap_pending = 0;
     }
-    if (width > s->columns - s->cursor_column) {
+    if (width > s->columns - s->cursor_column && s->no_autowrap)
+        s->cursor_column = s->columns - width;
+    else if (width > s->columns - s->cursor_column) {
         cursor = (size_t)s->cursor_row * s->columns + s->cursor_column;
         erase_range(s, cursor, cursor + 1);
         s->cells[(size_t)(s->cursor_row + 1) * s->columns - 1].wrap = 2;
@@ -753,6 +759,7 @@ static void place_cluster(XTermScreen *s, XTermCell cell)
         s->cells[cursor + 1] = cell;
     }
     if (s->cursor_column + width < s->columns) s->cursor_column += width;
+    else if (s->no_autowrap) s->cursor_column = s->columns - 1;
     else { s->cursor_column = s->columns - 1; s->wrap_pending = 1; }
 }
 
