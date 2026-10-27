@@ -13,7 +13,10 @@ platform boundaries against current mainline.
   `OpenWorkbenchObjectA()`. workbench.library queues a start and reports a
   start that fails to nobody (`workbench/libs/workbench/handler.c`, "report
   error somehow?", still on mainline master `42674abe`), so without the
-  check a missing file gave no answer at all.
+  check a missing file gave no answer at all. Only a missing object
+  (`ERROR_OBJECT_NOT_FOUND`, `ERROR_DIR_NOT_FOUND`,
+  `ERROR_DEVICE_NOT_MOUNTED`) counts as not found; a file that cannot be
+  locked for another reason (in use) still goes to Workbench.
 - `src/aros_xterm.c`: the window title reports file links as "File handed
   to Workbench", "File not found; Ctrl+Shift-click copies", "Workbench
   could not open the file" and "workbench.library unavailable". Before,
@@ -35,9 +38,11 @@ run (it is a separate frontend, not part of this release).
     tools/release/make-packages.sh 0.7.1 OUT aros-x86_64-abiv11-pc aros-x86_64-abiv1-pc aros-aarch64-abiv1-raspi
 
 Each target builds in an empty `build/<target>/`, HarfBuzz included; no
-object is shared between targets. Source commit of the candidate:
-`dist/0.7.1-candidate1/SOURCE-COMMIT`; binary hashes:
-`dist/0.7.1-candidate1/binaries.sha256`.
+object is shared between targets. Released archives: `dist/0.7.1/`
+(`SOURCE-COMMIT` `7a6d37e`, `binaries.sha256`). `make-packages.sh` refuses a
+program or worker that lacks the C library base of its target's ABI
+(`__aros_libset_CrtBase` for ABIv11, `__aros_libset_StdCBase` for ABIv1):
+the ELF header alone does not tell ABIv11 from ABIv1.
 
 **The new build reproduces 0.7.0.** Built from the 0.7.0 sources
 (`LIMPET_VERSION=0.7.0 LIMPET_DATE=24.10.2026`), the three targets gave
@@ -49,16 +54,21 @@ The ABIv11 worker needed its old link order for that
 made by the new `make-packages.sh` from those binaries matched the
 released 0.7.0 contents file for file, except the corrected ReadMe files.
 
-Archives of the candidate:
+Released archives (candidate 2):
 
 | Archive | Bytes | SHA-256 |
 | --- | --- | --- |
-| `Limpet-0.7.1-aros-x86_64-abiv11-pc.zip` | 5,305,602 | `652e3fd8df4640fbe94f3ea72644c315af3fa49cdc9c6de908106585964baf3c` |
-| `Limpet-handler-experimental-0.7.1-aros-x86_64-abiv11-pc.zip` | 1,050,320 | `463ba65a1b48c24b6aaa8049401c5ea5967ea76cb11ce1741492cd4f779d5301` |
-| `Limpet-0.7.1-aros-x86_64-abiv1-pc.zip` | 5,219,873 | `77df5c255424aae214ac6b6fd22b5fb160847cd07f8a931ff44d52d7f2af97ae` |
-| `Limpet-handler-experimental-0.7.1-aros-x86_64-abiv1-pc.zip` | 968,083 | `a60989e02c49dd786cd7537f37d60f97a6924dddee1868eb47eb4ee92bf1ad3b` |
-| `Limpet-0.7.1-aros-aarch64-abiv1-raspi.zip` | 5,150,299 | `1ad79d53cbdd71ffa93689a8cf177b2b054358104fc0a51b1d70bd24707e1958` |
-| `Limpet-handler-experimental-0.7.1-aros-aarch64-abiv1-raspi.zip` | 897,996 | `5be2bcbe01003e4c18c30b0f0f309fc1fdaf715e995e7600f21120bd916c8fc4` |
+| `Limpet-0.7.1-aros-x86_64-abiv11-pc.zip` | 5,305,576 | `4996765adb4d860bcaea3d8d9197a67934f62f53adf918abf6c228ca3761fe28` |
+| `Limpet-handler-experimental-0.7.1-aros-x86_64-abiv11-pc.zip` | 1,050,292 | `55960bacdd1e53e2daacf4467bc115c496a6a93c23305e8217b97cb637aced2f` |
+| `Limpet-0.7.1-aros-x86_64-abiv1-pc.zip` | 5,219,880 | `1a36c4f057170fa1384da48b3cebfbedbd9a0a69e31140d6c5e4f0f9a4105a3b` |
+| `Limpet-handler-experimental-0.7.1-aros-x86_64-abiv1-pc.zip` | 967,450 | `b723379fbd40dcba2ce45cad0290359fbe5ddaba169fa2f768310d1a640442f5` |
+| `Limpet-0.7.1-aros-aarch64-abiv1-raspi.zip` | 5,150,502 | `258cd6bc6bcbfd75ba3f83a42d5823bc48fa69a2b8980a2151f78d8ad331b78c` |
+| `Limpet-handler-experimental-0.7.1-aros-aarch64-abiv1-raspi.zip` | 897,852 | `cecef58d1e428be545a6e9323dbe8f57acb6cd0babd06b467e30cc200105e555` |
+
+Candidate 1 (`dist/0.7.1-candidate1`, source `98144cf`) is kept: most runs
+below were made with it. An independent review then asked for the
+not-found check above, which changed the program, and for packaging and
+test-tool fixes; candidate 2 is candidate 1 plus those.
 
 Host: `make test` passes (43 Python tests, fixtures, replay corpus).
 
@@ -95,7 +105,7 @@ its size gadget, but the drag itself is not exercised on the Pi.
 
 ## Runtime
 
-All runs from the candidate archives, unpacked to `RAM:` (x86_64 with the
+Candidate 1 (table) and candidate 2 (after the table). All runs from the candidate archives, unpacked to `RAM:` (x86_64 with the
 pool machine's UnZip; on the Pi the unpacked drawer was copied to the
 stopped machine's SD card), QEMU TCG, uniprocessor exec on every system.
 
@@ -112,7 +122,7 @@ stopped machine's SD card), QEMU TCG, uniprocessor exec on every system.
 | Window resize | (unchanged code; 0.7.0 record) | `win-inject` 684x478 to 520x330; geometry packet: all checks pass | 640x478 to 440x300; grid 74x24 to 49x13, 392x221 px, public and private agree |
 | `LIMPET:` handler | install, `NewShell WINDOW LIMPET:`, worker 0.7.1, Ctrl-C ends `Wait 30`, links in the handler window, `EndShell`, Remove-Handler, `Status` with no Limpet process but the frontend | same | same, without clicking links in the handler window |
 
-Development runs before the candidate (`0.7.1-test1`, same program code):
+Development runs before the candidates (`0.7.1-test1`, the program code of candidate 1):
 on mainline, the HTTPS link with OpenURL pointed at a program that does not
 exist, and with `openurl.library` removed. The first reported "Link handed
 to OpenURL": OpenURL starts the browser asynchronously and returns success,
@@ -122,6 +132,21 @@ renamed for that click and renamed back (same size and date). Ctrl+Shift+
 click copied the exact URL on mainline and on the Pi (pasted with Amiga+V).
 On the Pi the 0.7.1 code also ran the five links, the resize and the copy
 (`test1`, runs `pi1`).
+
+**Candidate 2**, one boot per system, from the archives in `dist/0.7.1`:
+`Version` 0.7.1 of program and worker; on ABIv11 (`v11-1`) and mainline
+(`v1-1`) the four links as above with the same messages and one logger line
+per start, plus a fifth link to a file held open by `Run >file Wait`
+("File handed to Workbench"; Workbench then tried to run the empty file,
+which has no icon: "file is not executable"), the `LIMPET:` handler with
+Ctrl-C, "File not found" in the handler window, `EndShell`, removal and a
+clean `Status`. On the Pi the resize to 440x300 (49x13, probe passes), the
+icon file, the missing file and the file held open, the handler with
+Ctrl-C, removal, `Status` with nothing of Limpet's but the frontend. On RAM:
+a file open for writing still accepted the shared `Lock`, so the in-use
+branch of the new check (`ERROR_OBJECT_IN_USE`) was not reached; it was
+read, not run. For the two x86_64 candidate-2 runs the result files are
+kept, the screenshots are not.
 
 One count on ABIv11 first showed two log lines too many. The test driver
 had sent the four clicks twice (a shell error stopped one command of the
@@ -174,5 +199,5 @@ prepared. Open upstream items that bear on Limpet: #1763 (geometry), #1874
 merged).
 
 Evidence (local, not in git): `docs/evidence/limpet-071-20261027/`
-(`links-x86_64/`, `pi/`, `candidate1-abiv11/`, `candidate1-abiv1-x86_64/`,
-`candidate1-pi/`: payload hashes, collected results, screenshots).
+(`links-x86_64/`, `pi/`, `candidate1-*/`, `candidate2-*/`: payload hashes,
+collected results, screenshots).
