@@ -205,6 +205,28 @@ All take a `const LimpetPresentation *` (NULL allowed, treated as
 | `int limpet_text_utf8(p)` | 1 if written bytes are decoded as UTF-8 (0.6.0). 0 means write ASCII: unknown, as from `CON:` and Limpet before 0.8.0, or confirmed Latin-1 |
 | `int limpet_text_wide(p)` | 1 if UTF-8 and wide characters take two cells (0.6.0) |
 | `int limpet_text_combining(p)` | 1 if UTF-8 and combining clusters join one cell (0.6.0) |
+| `int limpet_has_kitty_graphics(p)` | 1 if the Kitty graphics subset is confirmed (`XTY_FEATURE_KITTY_GRAPHICS`, 0.6.0; Limpet 0.8.0). 0 from older Limpet means unknown: it draws the subset, which only the `a=q` query can confirm |
+
+## Console geometry (0.6.0)
+
+The public DOS packet `ACTION_CONSOLE_GETGEOMETRY` (`0x434f4e47`, version 1,
+proposed for AROS in PR #1763; Limpet answers it from 0.7.0): rows, columns
+and the pixels their complete cells cover.
+
+```c
+typedef struct {
+    uint32_t columns, rows; /* at least 1 */
+    uint32_t width, height; /* pixels; 0 if unknown */
+} LimpetGeometry;
+
+LimpetStatus limpet_query_geometry(BPTR output, LimpetGeometry *out, LONG *ioerr);
+```
+
+No packet for a file or pipe (`LIMPET_NOT_INTERACTIVE`). A console that does
+not know the packet (`CON:` without PR #1763, Limpet before 0.7.0) gives
+`LIMPET_UNSUPPORTED`. A reply of the wrong size or version, or with zero
+columns or rows, is `LIMPET_INVALID_REPLY`. `*out` is zeroed unless
+`LIMPET_OK`. One cell is `width / columns` by `height / rows` pixels.
 
 ## Terminal identity (0.6.0)
 

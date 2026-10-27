@@ -17,6 +17,13 @@ Added:
   of the terminal, for display. `limpet_query_identity`,
   `limpet_identity_request`, `limpet_identity_decode`, `LimpetIdentity`.
   `CON:` and Limpet before 0.8.0 answer `LIMPET_UNSUPPORTED`.
+- `XTY_FEATURE_KITTY_GRAPHICS` in the presentation features and
+  `limpet_has_kitty_graphics`: the terminal confirms the Kitty graphics
+  subset, so a program need not read the `a=q` reply in raw mode. Limpet
+  0.8.0 sets it; older Limpet draws the subset without the bit.
+- `limpet_query_geometry` and `LimpetGeometry`: the public console geometry
+  packet (`ACTION_CONSOLE_GETGEOMETRY`), with the pixel size of the text
+  grid. Limpet answers it from 0.7.0; `CON:` gives `LIMPET_UNSUPPORTED`.
 
 Changed:
 

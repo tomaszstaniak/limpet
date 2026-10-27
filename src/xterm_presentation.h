@@ -22,7 +22,8 @@ static inline int xterm_presentation_reply(void *block,size_t bytes,
                   XTY_PRESENT_KNOWN_FEATURES;
     out.values[7]=XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT|XTY_INPUT_WHEEL_REPORT|XTY_INPUT_MODIFIED_ENTER;
     out.values[6]=interpretation;
-    out.values[8]=XTY_FEATURE_TITLE|XTY_FEATURE_OSC8;
+    /* Every renderer that answers draws the Kitty subset (kitty_graphics.c). */
+    out.values[8]=XTY_FEATURE_TITLE|XTY_FEATURE_OSC8|XTY_FEATURE_KITTY_GRAPHICS;
     out.values[1]=XTY_COLOR_RGB;out.values[2]=XTY_STYLE_BOLD_RESET|XTY_STYLE_UNDERLINE_RESET|XTY_STYLE_INVERSE_RESET;
     out.values[3]=XTY_LINE_CR|XTY_LINE_ERASE_EOL;
     /* The renderer decodes UTF-8, draws wide characters in two cells and

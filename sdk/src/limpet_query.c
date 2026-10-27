@@ -94,6 +94,50 @@ LimpetStatus limpet_query_identity(BPTR output, LimpetIdentity *out, LONG *ioerr
     return status;
 }
 
+/* dos/consoleinfo.h (PR #1763) is not in every SDK; the wire layout is
+   fixed, so it is spelled out here. */
+#define LIMPET_ACTION_CONSOLE_GETGEOMETRY 0x434f4e47L
+#define LIMPET_CONSOLE_GEOMETRY_VERSION 1u
+
+LimpetStatus limpet_query_geometry(BPTR output, LimpetGeometry *out, LONG *ioerr)
+{
+    struct { uint32_t size, version, columns, rows, width, height; } reply;
+    struct FileHandle *fh;
+    SIPTR result, error;
+
+    if (ioerr) *ioerr = 0;
+    if (!out) return LIMPET_BAD_ARGUMENT;
+    memset(out, 0, sizeof *out);
+    if (!output) { if (ioerr) *ioerr = ERROR_INVALID_LOCK; return LIMPET_BAD_ARGUMENT; }
+    if (!IsInteractive(output)) return LIMPET_NOT_INTERACTIVE;
+    fh = BADDR(output);
+    if (!fh->fh_Type) { if (ioerr) *ioerr = ERROR_INVALID_LOCK; return LIMPET_FAILED; }
+    memset(&reply, 0, sizeof reply);
+    /* Arg1 the handle's fh_Arg1, Arg2 the block, Arg3 its capacity,
+       Arg4 the version asked for. */
+    result = DoPkt(fh->fh_Type, LIMPET_ACTION_CONSOLE_GETGEOMETRY, fh->fh_Arg1,
+                   (SIPTR)&reply, sizeof reply, LIMPET_CONSOLE_GEOMETRY_VERSION, 0);
+    error = IoErr();
+    if (result != DOSTRUE) {
+        /* Only a refusal of the action itself means "not supported";
+           a handler that refuses without a code is taken the same way. */
+        if (result == DOSFALSE && (error == ERROR_ACTION_NOT_KNOWN || !error)) {
+            if (ioerr) *ioerr = ERROR_ACTION_NOT_KNOWN;
+            return LIMPET_UNSUPPORTED;
+        }
+        if (ioerr) *ioerr = result == DOSFALSE && error > 0 && error <= INT32_MAX ? (LONG)error : ERROR_BAD_NUMBER;
+        return result == DOSFALSE ? LIMPET_FAILED : LIMPET_INVALID_REPLY;
+    }
+    if (error || reply.size != sizeof reply || reply.version != LIMPET_CONSOLE_GEOMETRY_VERSION ||
+        !reply.columns || !reply.rows) {
+        if (ioerr) *ioerr = ERROR_BAD_NUMBER;
+        return LIMPET_INVALID_REPLY;
+    }
+    out->columns = reply.columns; out->rows = reply.rows;
+    out->width = reply.width; out->height = reply.height;
+    return LIMPET_OK;
+}
+
 int limpet_write_dos(void *context, const char *bytes, size_t length)
 {
     BPTR handle = (BPTR)context;

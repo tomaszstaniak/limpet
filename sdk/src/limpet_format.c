@@ -173,6 +173,12 @@ int limpet_text_combining(const LimpetPresentation *p)
     return limpet_text_utf8(p) && (p->text & XTY_TEXT_COMBINING);
 }
 
+int limpet_has_kitty_graphics(const LimpetPresentation *p)
+{
+    return p && (p->known & XTY_PRESENT_KNOWN_FEATURES) &&
+           (p->features & XTY_FEATURE_KITTY_GRAPHICS);
+}
+
 void limpet_identity_request(XtyControl *request)
 {
     if (!request) return;

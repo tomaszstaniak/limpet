@@ -6,6 +6,7 @@
 #include <dos/dosextens.h>
 #include <proto/dos.h>
 #include "../../src/xterm_presentation.h"
+#include "../../src/console_geometry.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,12 +25,42 @@ LONG IoErr(void) { return last_error; }
 LONG SetIoErr(LONG code) { LONG old = last_error; last_error = code; return old; }
 LONG IsInteractive(BPTR handle) { (void)handle; return interactive ? DOSTRUE : DOSFALSE; }
 
+/* The geometry packet's handler: Limpet's own reply code (console_geometry.h)
+   or a scripted misbehaviour. */
+enum { GEO_LIMPET, GEO_UNKNOWN, GEO_SILENT, GEO_FAILED, GEO_SHORT, GEO_VERSION, GEO_ZERO, GEO_ODD_RESULT };
+static int geometry_mode;
+static unsigned pixel_width = 640, pixel_height = 384;
+static SIPTR geometry_packet(void *block, SIPTR capacity, SIPTR version)
+{
+    switch (geometry_mode) {
+    case GEO_LIMPET:
+        if (!console_geometry_reply(block, capacity, (uintptr_t)version, columns, rows, pixel_width, pixel_height)) {
+            last_error = ERROR_BAD_NUMBER; return DOSFALSE;
+        }
+        last_error = 0; return DOSTRUE;
+    case GEO_UNKNOWN: memset(block, 0x55, 24); last_error = ERROR_ACTION_NOT_KNOWN; return DOSFALSE;
+    case GEO_SILENT: last_error = 0; return DOSFALSE;
+    case GEO_FAILED: last_error = ERROR_OBJECT_IN_USE; return DOSFALSE;
+    case GEO_SHORT:
+        console_geometry_reply(block, capacity, (uintptr_t)version, columns, rows, 0, 0);
+        ((uint32_t *)block)[0] = 20; last_error = 0; return DOSTRUE;
+    case GEO_VERSION:
+        console_geometry_reply(block, capacity, (uintptr_t)version, columns, rows, 0, 0);
+        ((uint32_t *)block)[1] = 2; last_error = 0; return DOSTRUE;
+    case GEO_ZERO:
+        console_geometry_reply(block, capacity, (uintptr_t)version, 0, rows, 0, 0);
+        last_error = 0; return DOSTRUE;
+    default: last_error = 0; return 0xffffffffLL;
+    }
+}
+
 SIPTR DoPkt(void *port, LONG action, SIPTR a1, SIPTR a2, SIPTR a3, SIPTR a4, SIPTR a5)
 {
     XtyControl *block = (XtyControl *)a2;
     (void)port; (void)a1;
     ++packets;
     last_action = action; last_arg3 = a3; last_arg4 = a4; last_arg5 = a5;
+    if (action == ACTION_CONSOLE_GETGEOMETRY) return geometry_packet((void *)a2, a3, a4);
     switch (mode) {
     case LIMPET_REPLY:
         if (block->operation == XTY_GET_IDENTITY) {
@@ -277,7 +308,7 @@ static void test_decode(void)
     /* This terminal confirms window titles; a reply from Limpet 0.2.x has
        no feature bit, so the title is not confirmed even if values[8]
        were not zero. */
-    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && p.features == (XTY_FEATURE_TITLE|XTY_FEATURE_OSC8));
+    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && p.features == (XTY_FEATURE_TITLE|XTY_FEATURE_OSC8|XTY_FEATURE_KITTY_GRAPHICS));
     assert(limpet_can_set_title(&p));
     {
         XtyControl old = c;
@@ -523,18 +554,69 @@ static void test_kitty(void)
     assert(limpet_kitty_parse_reply("", 0, 31, msg, sizeof msg) == -1);
 }
 
+static void test_geometry(void)
+{
+    LimpetGeometry g;
+    LONG error;
+    LimpetPresentation p;
+    XtyControl c;
+
+    geometry_mode = GEO_LIMPET; packets = 0;
+    assert(limpet_query_geometry(CONSOLE, &g, &error) == LIMPET_OK && error == 0 && packets == 1);
+    assert(last_action == ACTION_CONSOLE_GETGEOMETRY && last_arg3 == 24 && last_arg4 == 1 && last_arg5 == 0);
+    assert(g.columns == columns && g.rows == rows && g.width == 640 && g.height == 384);
+    pixel_width = pixel_height = 0;   /* pixels unknown: still a valid grid */
+    assert(limpet_query_geometry(CONSOLE, &g, NULL) == LIMPET_OK && g.columns == columns && !g.width && !g.height);
+    pixel_width = 640; pixel_height = 384;
+    /* CON: today: the action is unknown, nothing is filled in. */
+    geometry_mode = GEO_UNKNOWN;
+    assert(limpet_query_geometry(CONSOLE, &g, &error) == LIMPET_UNSUPPORTED && error == ERROR_ACTION_NOT_KNOWN);
+    assert(!g.columns && !g.rows && !g.width && !g.height);
+    geometry_mode = GEO_SILENT;
+    assert(limpet_query_geometry(CONSOLE, &g, &error) == LIMPET_UNSUPPORTED && error == ERROR_ACTION_NOT_KNOWN);
+    geometry_mode = GEO_FAILED;
+    assert(limpet_query_geometry(CONSOLE, &g, &error) == LIMPET_FAILED && error == ERROR_OBJECT_IN_USE && !g.columns);
+    geometry_mode = GEO_SHORT;
+    assert(limpet_query_geometry(CONSOLE, &g, &error) == LIMPET_INVALID_REPLY && error == ERROR_BAD_NUMBER && !g.columns);
+    geometry_mode = GEO_VERSION;
+    assert(limpet_query_geometry(CONSOLE, &g, NULL) == LIMPET_INVALID_REPLY && !g.columns);
+    geometry_mode = GEO_ZERO;
+    assert(limpet_query_geometry(CONSOLE, &g, NULL) == LIMPET_INVALID_REPLY && !g.rows);
+    geometry_mode = GEO_ODD_RESULT;
+    assert(limpet_query_geometry(CONSOLE, &g, NULL) == LIMPET_INVALID_REPLY);
+    geometry_mode = GEO_LIMPET;
+    interactive = 0; packets = 0;
+    assert(limpet_query_geometry(CONSOLE, &g, NULL) == LIMPET_NOT_INTERACTIVE && packets == 0);
+    interactive = 1;
+    assert(limpet_query_geometry(CONSOLE, NULL, NULL) == LIMPET_BAD_ARGUMENT);
+    assert(limpet_query_geometry(0, &g, &error) == LIMPET_BAD_ARGUMENT && error == ERROR_INVALID_LOCK);
+
+    /* The Kitty feature bit: confirmed by this terminal's reply, unknown
+       without the features bit (Limpet 0.2.x) or without the bit itself
+       (0.3.0 to 0.7.x). */
+    memset(&c, 0, sizeof c); c.version = 1; c.operation = XTY_GET_PRESENTATION;
+    assert(xterm_presentation_reply(&c, sizeof c, 24, 80, 0));
+    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && limpet_has_kitty_graphics(&p));
+    c.values[8] &= ~XTY_FEATURE_KITTY_GRAPHICS;
+    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && !limpet_has_kitty_graphics(&p));
+    c.values[8] |= XTY_FEATURE_KITTY_GRAPHICS; c.values[0] &= ~XTY_PRESENT_KNOWN_FEATURES;
+    assert(limpet_presentation_decode(&c, &p) == LIMPET_OK && !limpet_has_kitty_graphics(&p));
+    assert(!limpet_has_kitty_graphics(NULL));
+}
+
 int main(void)
 {
     test_decode();
     test_query();
     test_identity();
+    test_geometry();
     test_sgr();
     test_write_dos();
     test_osc8();
     test_title();
     test_kitty();
     assert(!strcmp(LIMPET_SDK_VERSION_STRING, "0.6.0") && LIMPET_SDK_VERSION_MINOR == 6);
-    puts("LIMPET SDK PASS: query against the terminal's reply code, text bits, identity, refusals, malformed and future replies, "
+    puts("LIMPET SDK PASS: query against the terminal's reply code, text bits, identity, console geometry, Kitty feature bit, refusals, malformed and future replies, "
          "SGR, OSC 8, window title, Kitty framing and limits");
     return 0;
 }

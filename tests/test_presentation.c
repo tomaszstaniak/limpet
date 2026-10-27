@@ -14,8 +14,10 @@ int main(void)
     assert(c.values[6]==0);
     /* Input features (bit 32): what a raw-mode client may turn on. */
     assert(c.values[7]==(XTY_INPUT_BRACKETED_PASTE|XTY_INPUT_RESIZE_REPORT|XTY_INPUT_WHEEL_REPORT|XTY_INPUT_MODIFIED_ENTER));
-    /* Features (bit 64, 0.3.0): OSC 0/2 window titles. */
-    assert(c.values[8]==(XTY_FEATURE_TITLE|2u));
+    /* Features (bit 64, 0.3.0): OSC 0/2 window titles, OSC 8 links, and
+       (0.8.0) the Kitty graphics subset. */
+    assert(XTY_FEATURE_KITTY_GRAPHICS==16u);
+    assert(c.values[8]==(XTY_FEATURE_TITLE|2u|XTY_FEATURE_KITTY_GRAPHICS));
     /* Text (bit 128, 0.8.0): UTF-8 decoded, wide cells, combining clusters. */
     assert(c.values[9]==(XTY_TEXT_UTF8|XTY_TEXT_WIDE|XTY_TEXT_COMBINING));
     for(i=10;i<12;++i) assert(!c.values[i]);
@@ -57,6 +59,6 @@ int main(void)
         assert(!xterm_version_parts("12.3",part) && !xterm_version_parts("x",part));
         c=request();assert(!xterm_identity_reply(&c,sizeof c,"Limpet","1.0.0"));
     }
-    puts("PRESENTATION PASS: wire layout, geometry, pen interpretation, title feature, text bits, identity, unknown fields, rejection preserves request");
+    puts("PRESENTATION PASS: wire layout, geometry, pen interpretation, title and Kitty features, text bits, identity, unknown fields, rejection preserves request");
     return 0;
 }

@@ -35,7 +35,7 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Style and icon bits](#presentation-query) | presentation query: styles Limpet draws, OSC 8, eza icons in one cell; bundled Nerd Font | 0.7.0 |
 | Several readers and waiters | up to 16 reads and 16 waiters at once; line feed mode (`CSI 20 h` / `l`) | 0.7.0 |
 | Console geometry packet | `ACTION_CONSOLE_GETGEOMETRY`, see [protocols](protocols.md#dos-packets-public-console-geometry) | 0.7.0 |
-| [Inline images](#inline-images) | Kitty graphics subset | 0.1.0 |
+| [Inline images](#inline-images) | Kitty graphics subset; presentation feature bit 0.8.0 | 0.1.0 |
 | [Mouse reporting](#mouse-reporting) | modes 1000, 1002, 1006 | 0.1.0 |
 | [Bracketed paste](#bracketed-paste) | mode 2004; presentation input bit | 0.2.0 |
 | [Resize reports](#resize-reports) | mode 2048; presentation input bit | 0.2.0 |
@@ -425,12 +425,20 @@ image by repeatedly transmitting replacement pixels under the same image id.
 **Limits:** 1024x1024 pixels and 4 MiB per image, 16 images, 16 MiB in
 total.
 
-**Detection:** Two steps:
+**Detection:** The presentation query must succeed. Never send image data
+otherwise: `CON:` prints it as text. Then:
 
-1. The presentation query must succeed. Never send image data otherwise:
-   `CON:` prints it as text.
-2. Send `a=q` in raw mode and read the reply with a time limit:
-   `limpet_kitty_query()` and `limpet_kitty_parse_reply()`.
+- Limpet 0.8.0 and later confirm the subset in the reply:
+  `XTY_FEATURE_KITTY_GRAPHICS` (`limpet_has_kitty_graphics()`). No input is
+  read, so typed-ahead keys stay where they are.
+- Earlier versions draw it without saying so. Send `a=q` in raw mode and
+  read the reply with a time limit: `limpet_kitty_query()` and
+  `limpet_kitty_parse_reply()`.
+
+**Size in cells:** the console geometry packet gives the pixels of the
+text grid (`limpet_query_geometry()`, Limpet 0.7.0 and later); divide by
+columns and rows for one cell. Limpet does not scale images, so send them
+at the size they should cover.
 
 **Placement and cleanup:**
 

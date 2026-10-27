@@ -69,6 +69,12 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
    whole sequence), empty text drops the program's title. The title lasts
    while the command that was in the foreground when it arrived runs;
    characters outside Latin-1 show as '?'. CON: prints OSC as text.
+   FEATURE_KITTY_GRAPHICS (Limpet 0.8.0): images through the Kitty graphics
+   subset of doc/kitty-graphics.md (APC G, a=T/t/p/d/q, f=24 RGB and f=32
+   RGBA, t=d direct base64, chunked m=1..m=0, at most 1024x1024 pixels and
+   4 MiB per image). No PNG, files, compression or scaling keys. Earlier
+   Limpet draws the same subset without saying so; a client that needs to
+   know there can only use the protocol's own a=q query in raw mode.
    TEXT in [9], valid only with KNOWN_TEXT in [0] (Limpet 0.8.0; earlier
    replies leave both clear): how written text is shown. TEXT_UTF8: bytes
    are decoded as UTF-8 (an ill-formed sequence shows as U+FFFD), not as
@@ -112,6 +118,7 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
    Both bits are required: coverage alone says nothing about cell alignment. */
 #define XTY_FEATURE_NERD_ICONS_EZA 4u
 #define XTY_FEATURE_ICON_WIDTH_ONE 8u
+#define XTY_FEATURE_KITTY_GRAPHICS 16u
 #define XTY_COLOR_PENS 1u
 #define XTY_COLOR_NONE 0u
 #define XTY_COLOR_ANSI16 1u

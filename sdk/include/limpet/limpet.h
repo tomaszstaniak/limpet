@@ -165,6 +165,29 @@ int limpet_text_utf8(const LimpetPresentation *p);
 int limpet_text_wide(const LimpetPresentation *p);
 int limpet_text_combining(const LimpetPresentation *p);
 
+/* 1 when the terminal confirmed that it draws the Kitty graphics subset
+   below (XTY_FEATURE_KITTY_GRAPHICS, Limpet 0.8.0). 0 is unknown for an
+   older Limpet, which draws it too; only its a=q query can tell there. */
+int limpet_has_kitty_graphics(const LimpetPresentation *p);
+
+/* ---- Console geometry (SDK 0.6.0) ----
+
+   The public DOS packet ACTION_CONSOLE_GETGEOMETRY (0x434f4e47, version 1,
+   proposed for AROS in PR #1763; Limpet answers it from 0.7.0): the text
+   grid and the pixels its complete cells cover, so a program can size an
+   image in cells. A copied snapshot; no handler pointer is read. */
+typedef struct {
+    uint32_t columns, rows; /* both at least 1 */
+    uint32_t width, height; /* pixels of the complete cells; 0 if unknown */
+} LimpetGeometry;
+
+/* LIMPET_OK, LIMPET_NOT_INTERACTIVE (no packet sent), LIMPET_UNSUPPORTED
+   (the console does not know the packet: CON: before PR #1763, Limpet
+   before 0.7.0), LIMPET_INVALID_REPLY (wrong size or version, a zero
+   column or row count), LIMPET_FAILED or LIMPET_BAD_ARGUMENT. *out is
+   zeroed unless LIMPET_OK. BLOCKS until the handler replies. */
+LimpetStatus limpet_query_geometry(BPTR output, LimpetGeometry *out, LONG *ioerr);
+
 /* ---- Terminal identity (operation 14, SDK 0.6.0) ----
 
    For showing which terminal a program runs in ("Limpet 0.8.0"). Decide

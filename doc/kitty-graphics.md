@@ -3,6 +3,9 @@
 Limpet draws inline images sent through the terminal stream, using a
 subset of the Kitty graphics protocol.
 
+Programs find it through the presentation query: Limpet 0.8.0 sets
+`XTY_FEATURE_KITTY_GRAPHICS` ([presentation.md](presentation.md)).
+
 Source: [`src/kitty_graphics.h`](../src/kitty_graphics.h). APC
 `ESC _ G <control> ; <payload> ESC \`.
 
