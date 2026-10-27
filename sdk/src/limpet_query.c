@@ -61,7 +61,7 @@ LimpetStatus limpet_query_presentation(BPTR output, LimpetPresentation *out,
     if (!IsInteractive(output)) return LIMPET_NOT_INTERACTIVE;
     limpet_presentation_request(&request);
     if (limpet_control(output, &request) != DOSTRUE) {
-        error = IoErr();
+        error = (LONG)IoErr();
         if (ioerr) *ioerr = error;
         return error == ERROR_ACTION_NOT_KNOWN ? LIMPET_UNSUPPORTED :
                error == ERROR_BAD_NUMBER ? LIMPET_INVALID_REPLY : LIMPET_FAILED;
@@ -84,7 +84,7 @@ LimpetStatus limpet_query_identity(BPTR output, LimpetIdentity *out, LONG *ioerr
     if (!IsInteractive(output)) return LIMPET_NOT_INTERACTIVE;
     limpet_identity_request(&request);
     if (limpet_control(output, &request) != DOSTRUE) {
-        error = IoErr();
+        error = (LONG)IoErr();
         if (ioerr) *ioerr = error;
         return error == ERROR_ACTION_NOT_KNOWN ? LIMPET_UNSUPPORTED :
                error == ERROR_BAD_NUMBER ? LIMPET_INVALID_REPLY : LIMPET_FAILED;
