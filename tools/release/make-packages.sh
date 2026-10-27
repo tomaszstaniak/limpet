@@ -94,12 +94,12 @@ package_target() {  # $1 = target
 (( ${#${(u)@}} == $# )) || { print -u2 "a target is named twice"; exit 1; }
 for t in $@; do
     if [[ $t == pty ]]; then
-        file -b $root/build/aros-xterm-pty | grep -q "ELF 64-bit.*x86-64" || { print -u2 "build/aros-xterm-pty is not an x86_64 ELF"; exit 1; }
-        nm $root/build/aros-xterm-pty | grep -q " __aros_libset_StdCBase\$" || { print -u2 "build/aros-xterm-pty is not a mainline build"; exit 1; }
-        check_version $root/build/aros-xterm-pty
+        file -b $build/aros-xterm-pty | grep -q "ELF 64-bit.*x86-64" || { print -u2 "build/aros-xterm-pty is not an x86_64 ELF"; exit 1; }
+        nm $build/aros-xterm-pty | grep -q " __aros_libset_StdCBase\$" || { print -u2 "build/aros-xterm-pty is not a mainline build"; exit 1; }
+        check_version $build/aros-xterm-pty
         # mainline PTY preview
         d=$out/stage-pty/LimpetPTY; common $d
-        cp $root/build/aros-xterm-pty $d/LimpetPTY
+        cp $build/aros-xterm-pty $d/LimpetPTY
         cp $root/assets/icon/Limpet.info.png $d/LimpetPTY.info
         sed "s/@VERSION@/$ver/g" $root/tools/release/README-pty-preview.txt > $d/README.txt
         (cd $out/stage-pty && zip -qrX $out/Limpet-PTY-$ver-aros-x86_64-abiv1-pc.zip LimpetPTY)

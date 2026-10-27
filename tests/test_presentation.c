@@ -36,15 +36,25 @@ int main(void)
         XtyControl id;unsigned part[3];
         memset(&id,0,sizeof id);id.version=1;id.operation=XTY_GET_IDENTITY;
         assert(XTY_GET_IDENTITY==14);
-        assert(xterm_identity_reply(&id,sizeof id,"Limpet","0.8.0-test1"));
+        assert(xterm_identity_reply(&id,sizeof id,"Limpet","0.8.0"));
         assert(id.reserved[0]==XTY_PACKET_MAGIC && id.values[0]==3 &&
                id.values[1]==0 && id.values[2]==8 && id.values[3]==0);
+        /* A test build or a default "0.0.0-dev" gives the name, no version. */
+        {
+            static const char *const unreleased[]={"0.8.0-test1","0.0.0-dev","x","1.2","1.2.3.4","123456.0.0",""};
+            unsigned k;
+            for(k=0;k<sizeof unreleased/sizeof unreleased[0];++k) {
+                XtyControl t2;memset(&t2,0,sizeof t2);t2.version=1;t2.operation=XTY_GET_IDENTITY;
+                assert(xterm_identity_reply(&t2,sizeof t2,"Limpet",unreleased[k]));
+                assert(t2.values[0]==XTY_IDENTITY_KNOWN_NAME && !t2.values[1] && !t2.values[2] && !t2.values[3]);
+            }
+        }
         assert(!memcmp(&id.values[4],"Limpet\0\0",8));
         for(i=6;i<XTY_IDENTITY_NAME_BYTES;++i) assert(!((unsigned char *)&id.values[4])[i]);
         before=id;assert(!xterm_identity_reply(&id,sizeof id,"Limpet","1"));
         assert(!memcmp(&id,&before,sizeof id)); /* a reply is not a request */
-        xterm_version_parts("12.3",part);assert(part[0]==12 && part[1]==3 && !part[2]);
-        xterm_version_parts("x",part);assert(!part[0] && !part[1] && !part[2]);
+        assert(xterm_version_parts("12.3.99999",part) && part[0]==12 && part[1]==3 && part[2]==99999);
+        assert(!xterm_version_parts("12.3",part) && !xterm_version_parts("x",part));
         c=request();assert(!xterm_identity_reply(&c,sizeof c,"Limpet","1.0.0"));
     }
     puts("PRESENTATION PASS: wire layout, geometry, pen interpretation, title feature, text bits, identity, unknown fields, rejection preserves request");

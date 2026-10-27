@@ -737,6 +737,9 @@ static void place_cluster(XTermScreen *s, XTermCell cell)
 {
     unsigned width = cell.width;
     size_t cursor;
+    /* A wrap pending from before autowrap went off (restored with the
+       primary screen, or set by a Kitty cursor move) must not fire now. */
+    if (s->no_autowrap) s->wrap_pending = 0;
     if (s->wrap_pending) {
         s->cells[(size_t)(s->cursor_row + 1) * s->columns - 1].wrap = 1;
         s->cursor_column = 0; line_feed(s); s->wrap_pending = 0;

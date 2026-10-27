@@ -16,7 +16,8 @@ New for programs:
   information listing.
 - Automatic wrap can be turned off (`CSI ? 7 l`, DEC mode 7). Programs
   such as fastfetch use it to keep a long line to one row; before, its
-  tail started a new row.
+  tail started a new row. The command line always wraps, and wrap is on
+  again for the next command.
 
 ## 0.7.1 (2026-10-27)
 

@@ -812,10 +812,15 @@ For the next release (Limpet 0.8.0, SDK 0.6.0):
 - The presentation query reports how text is shown: UTF-8 decoding, wide
   characters in two cells, combining clusters in one
   (`XTY_PRESENT_KNOWN_TEXT`, `limpet_text_utf8` and the others). A program
-  can tell a terminal that shows Unicode from `CON:` or a terminal that
-  does not say, and write ASCII to those.
+  can tell a terminal that shows Unicode from one that says it does not.
+  `CON:` answers nothing and draws bytes from a Latin-1 font; a terminal
+  that answers without the text bit (Limpet before 0.8.0) does not say,
+  which is not the same as "no UTF-8".
 - Terminal identity (operation 14, `limpet_query_identity`): the
-  terminal's name and version, for display only.
+  terminal's name and, for a release build, its version; for display only.
+- Automatic wrap can be turned off (`CSI ? 7 l`). It comes back with
+  `CSI ? 7 h`, and also when the next command line is entered, so a program
+  that ends without restoring it does not leave the Shell on one row.
 
 See [presentation](presentation.md) and the [SDK API](sdk/api.md).
 

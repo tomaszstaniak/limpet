@@ -290,6 +290,10 @@ static int editor_submit(void)
     /* The model and staged line have identical bounds; admission above has
      * already reserved the complete command. Echo once, at the output cursor. */
     screen.cluster_active=0; screen.cluster_state=0;
+    /* A committed line goes to the Shell: a program that turned automatic
+       wrap off (CSI ? 7 l) and ended without turning it on again, after a
+       Ctrl-C or a crash, must not leave every later command on one row. */
+    screen.no_autowrap=0;
     if(n>1) screen_write(&screen,(const unsigned char *)committed,n-1);
     write_text("\r\n");
     selection.active=selection.dragging=0;

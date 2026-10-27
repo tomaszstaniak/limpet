@@ -22,6 +22,8 @@ int line_view_build(XTermScreen *view,const XTermScreen *base,const XLineEditor 
     }
     if(e->length) points[count++]=e->length;
     *view=*base;
+    /* The command line always wraps, whatever mode the last program left. */
+    view->no_autowrap=0;
     memcpy(cells,base->cells,base->capacity*sizeof *cells);
     view->cells=cells; view->capacity=cap;
     view->history=NULL; view->history_capacity=0;

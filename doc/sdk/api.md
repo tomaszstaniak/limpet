@@ -230,7 +230,9 @@ for a file or pipe (`LIMPET_NOT_INTERACTIVE`), `LIMPET_UNSUPPORTED` from
 `name` is NUL-terminated printable ASCII, 1 to 31 bytes, empty unless the
 name bit is set; a reply with any other name is `LIMPET_INVALID_REPLY`.
 Without the version bit, `major`, `minor` and `patch` are 0 and mean
-nothing.
+nothing. Limpet sets the version bit for a release build only (three
+numbers, as `0.8.0`); a test build such as `0.8.0-test1` gives its name
+without a version.
 
 ### Input modes (0.2.0)
 

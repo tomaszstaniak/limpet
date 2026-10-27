@@ -36,14 +36,19 @@ static inline int xterm_presentation_reply(void *block,size_t bytes,
     memcpy(block,&out,sizeof out);return 1;
 }
 /* "0.8.0", "0.8.0-test1": the leading numbers; 0 for a missing part. */
-static inline void xterm_version_parts(const char *v,unsigned part[3])
+/* "0.8.0" into its three numbers. 1 only for a release version: three
+   numbers of at most five digits and nothing after them, so a test build
+   ("0.8.0-test1") or the default "0.0.0-dev" is not reported as a release. */
+static inline int xterm_version_parts(const char *v,unsigned part[3])
 {
-    unsigned i;
+    unsigned i,digits;
     for(i=0;i<3;++i) {
-        part[i]=0;
-        while(v && *v>='0' && *v<='9') part[i]=part[i]*10+(unsigned)(*v++-'0');
-        if(v && *v=='.') ++v; else v=NULL;
+        part[i]=0;digits=0;
+        while(*v>='0' && *v<='9' && digits<5) { part[i]=part[i]*10+(unsigned)(*v++-'0');++digits; }
+        if(!digits) return 0;
+        if(i<2) { if(*v!='.') return 0; ++v; }
     }
+    return *v==0;
 }
 #ifndef LIMPET_VERSION
 #define LIMPET_VERSION "0.0.0-dev"
@@ -65,8 +70,7 @@ static inline int xterm_identity_reply(void *block,size_t bytes,const char *name
     out.reserved[0]=XTY_PACKET_MAGIC;
     out.values[0]=XTY_IDENTITY_KNOWN_NAME;
     memcpy(&out.values[4],name,n);
-    if(version) {
-        xterm_version_parts(version,part);
+    if(version && xterm_version_parts(version,part)) {
         out.values[0]|=XTY_IDENTITY_KNOWN_VERSION;
         out.values[1]=part[0];out.values[2]=part[1];out.values[3]=part[2];
     }

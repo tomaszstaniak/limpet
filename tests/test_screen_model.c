@@ -329,6 +329,19 @@ static void autowrap_mode(void)
     write_text("\033[?7h\r\nwxyzq");
     row(1, "wxyz");
     row(2, "q   ");
+
+    /* A wrap pending on the primary screen does not fire after the
+       alternate screen turned autowrap off and was left again. */
+    {
+        static XTermCell alt[128];
+        init(3, 4);
+        assert(screen_attach_alternate(&s, alt, 128) == 0);
+        write_text("abcd");
+        assert(s.wrap_pending);
+        write_text("\033[?1049h\033[?7l\033[?1049lX");
+        row(0, "abcX");
+        row(1, "    ");
+    }
 }
 int main(void)
 {

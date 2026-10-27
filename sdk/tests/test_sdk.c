@@ -17,7 +17,7 @@ enum { LIMPET_REPLY, CON_REPLY, SILENT_REFUSAL, ECHO_BLOCK, BAD_RESULT,
 static int mode, packets, interactive = 1;
 static unsigned rows = 24, columns = 80, pens = XTY_COLOR_PENS;
 static LONG last_error;
-static const char *identity_name = "Limpet", *identity_version = "0.8.0-test1";
+static const char *identity_name = "Limpet", *identity_version = "0.8.0";
 static SIPTR last_action, last_arg3, last_arg4, last_arg5;
 
 LONG IoErr(void) { return last_error; }
@@ -216,7 +216,11 @@ static void test_identity(void)
     identity_version = NULL;
     assert(limpet_query_identity(CONSOLE, &id, NULL) == LIMPET_OK);
     assert(id.known == XTY_IDENTITY_KNOWN_NAME && !id.major && !id.minor && !id.patch);
+    /* A test build reports its name only: it is not release 0.8.0. */
     identity_version = "0.8.0-test1";
+    assert(limpet_query_identity(CONSOLE, &id, NULL) == LIMPET_OK);
+    assert(id.known == XTY_IDENTITY_KNOWN_NAME && !id.major && !id.minor && !id.patch);
+    identity_version = "0.8.0";
     /* CON: and older Limpet: unsupported, everything zeroed. */
     mode = CON_REPLY; memset(&id, 0xaa, sizeof id);
     assert(limpet_query_identity(CONSOLE, &id, &error) == LIMPET_UNSUPPORTED &&
@@ -282,6 +286,21 @@ static void test_decode(void)
         assert(limpet_presentation_decode(&old, &p) == LIMPET_OK && !p.features);
         assert(!limpet_can_set_title(&p) && p.columns == 100 && p.input);
     }
+    /* A reply from Limpet 0.7 has no text bit: UTF-8 is unknown, not
+       absent, and text stays 0 whatever values[9] says. */
+    {
+        XtyControl old = c;
+        old.values[0] &= ~XTY_PRESENT_KNOWN_TEXT;
+        old.values[9] = XTY_TEXT_UTF8 | XTY_TEXT_WIDE | XTY_TEXT_COMBINING;
+        assert(limpet_presentation_decode(&old, &p) == LIMPET_OK && !p.text);
+        assert(!limpet_text_utf8(&p) && !limpet_text_wide(&p) && !limpet_text_combining(&p));
+    }
+    /* Wide and combining mean nothing without UTF-8. */
+    memset(&p, 0, sizeof p);
+    p.known = XTY_PRESENT_KNOWN_TEXT; p.text = XTY_TEXT_WIDE | XTY_TEXT_COMBINING;
+    assert(!limpet_text_utf8(&p) && !limpet_text_wide(&p) && !limpet_text_combining(&p));
+    limpet_presentation_request(&c);
+    assert(xterm_presentation_reply(&c, sizeof c, 30, 100, 0));
     c.operation = XTY_GET_GEOMETRY;
     assert(limpet_presentation_decode(&c, &p) == LIMPET_INVALID_REPLY && !p.known);
     /* Fields behind a clear known bit are zeroed, whatever the wire says. */

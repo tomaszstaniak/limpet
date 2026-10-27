@@ -44,5 +44,18 @@ int main(void)
     assert(editor.cursor==strlen("❤️"));
     assert(!line_view_build(&view,&base,&editor,view_cells,1,hist,2048));
     puts("line view PASS: prompt, wrap, Unicode selection, shrinking, long lines, resize, isolation");
+    /* A program left autowrap off (CSI ? 7 l): the command line still wraps. */
+    {
+        XLineEditor fresh;
+        memset(&fresh,0,sizeof fresh);
+        assert(!screen_init(&base,base_cells,80,3,8));
+        screen_write(&base,(const unsigned char *)"\033[?7l> ",7);
+        assert(base.no_autowrap);
+        assert(line_editor_insert(&fresh,"abcdefghij",10));
+        assert(line_view_build(&view,&base,&fresh,view_cells,80,hist,2048));
+        assert(screen_view_cell(&view,0,2).ch=='a');
+        assert(screen_view_cell(&view,1,0).ch=='g');
+        assert(base.no_autowrap);
+    }
     return 0;
 }

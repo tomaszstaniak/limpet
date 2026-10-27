@@ -38,7 +38,7 @@ Text is UTF-8. An invalid byte is shown as U+FFFD.
 | `CSI t ; b r` | scrolling region | moves the cursor home |
 | `ESC M` | reverse index | |
 | `CSI ? 25 h` / `l` | show / hide cursor | |
-| `CSI ? 7 h` / `l` | automatic wrap on / off | **Unreleased**; off: a glyph at the right margin replaces the last column; on by default and stays as the program left it |
+| `CSI ? 7 h` / `l` | automatic wrap on / off | **Unreleased**; off: a glyph at the right margin replaces the last column; on by default; on again when the next command line is entered |
 | `CSI ? 1049 h` / `l` | alternate screen on / off | primary screen and cursor restored |
 | `CSI ? 1000 h`, `? 1002 h`, `? 1006 h` | mouse reporting | raw mode only |
 | `CSI ? 2004 h` / `l` | bracketed paste | **0.2.0**; raw mode only |
