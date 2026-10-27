@@ -183,8 +183,10 @@ typedef struct {
 
 /* LIMPET_OK, LIMPET_NOT_INTERACTIVE (no packet sent), LIMPET_UNSUPPORTED
    (the console does not know the packet: CON: before PR #1763, Limpet
-   before 0.7.0), LIMPET_INVALID_REPLY (wrong size or version, a zero
-   column or row count), LIMPET_FAILED or LIMPET_BAD_ARGUMENT. *out is
+   before 0.7.0), LIMPET_INVALID_REPLY (a reply of the wrong size or
+   version, a zero column or row count, or the request refused with
+   ERROR_BAD_NUMBER), LIMPET_FAILED (any other DOS error, in *ioerr) or
+   LIMPET_BAD_ARGUMENT. *out is
    zeroed unless LIMPET_OK. BLOCKS until the handler replies. */
 LimpetStatus limpet_query_geometry(BPTR output, LimpetGeometry *out, LONG *ioerr);
 

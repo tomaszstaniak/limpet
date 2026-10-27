@@ -120,15 +120,24 @@ LimpetStatus limpet_query_geometry(BPTR output, LimpetGeometry *out, LONG *ioerr
     error = IoErr();
     if (result != DOSTRUE) {
         /* Only a refusal of the action itself means "not supported";
-           a handler that refuses without a code is taken the same way. */
+           a handler that refuses without a code is taken the same way.
+           As in limpet_control: a refusal with ERROR_BAD_NUMBER (the
+           request's size or version) or with a code out of range is a
+           protocol mismatch, any other code a DOS failure. */
         if (result == DOSFALSE && (error == ERROR_ACTION_NOT_KNOWN || !error)) {
             if (ioerr) *ioerr = ERROR_ACTION_NOT_KNOWN;
             return LIMPET_UNSUPPORTED;
         }
-        if (ioerr) *ioerr = result == DOSFALSE && error > 0 && error <= INT32_MAX ? (LONG)error : ERROR_BAD_NUMBER;
-        return result == DOSFALSE ? LIMPET_FAILED : LIMPET_INVALID_REPLY;
+        if (result == DOSFALSE && error > 0 && error <= INT32_MAX && error != ERROR_BAD_NUMBER) {
+            if (ioerr) *ioerr = (LONG)error;
+            return LIMPET_FAILED;
+        }
+        if (ioerr) *ioerr = ERROR_BAD_NUMBER;
+        return LIMPET_INVALID_REPLY;
     }
-    if (error || reply.size != sizeof reply || reply.version != LIMPET_CONSOLE_GEOMETRY_VERSION ||
+    /* Success is judged by the copied block alone: res2 is not part of
+       the packet's contract on success. */
+    if (reply.size != sizeof reply || reply.version != LIMPET_CONSOLE_GEOMETRY_VERSION ||
         !reply.columns || !reply.rows) {
         if (ioerr) *ioerr = ERROR_BAD_NUMBER;
         return LIMPET_INVALID_REPLY;

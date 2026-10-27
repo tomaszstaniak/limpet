@@ -225,7 +225,8 @@ LimpetStatus limpet_query_geometry(BPTR output, LimpetGeometry *out, LONG *ioerr
 No packet for a file or pipe (`LIMPET_NOT_INTERACTIVE`). A console that does
 not know the packet (`CON:` without PR #1763, Limpet before 0.7.0) gives
 `LIMPET_UNSUPPORTED`. A reply of the wrong size or version, or with zero
-columns or rows, is `LIMPET_INVALID_REPLY`. `*out` is zeroed unless
+columns or rows, and a refusal with `ERROR_BAD_NUMBER`, are
+`LIMPET_INVALID_REPLY`; any other DOS error is `LIMPET_FAILED`. `*out` is zeroed unless
 `LIMPET_OK`. One cell is `width / columns` by `height / rows` pixels.
 
 ## Terminal identity (0.6.0)

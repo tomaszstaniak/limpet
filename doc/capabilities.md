@@ -437,7 +437,8 @@ otherwise: `CON:` prints it as text. Then:
 
 **Size in cells:** the console geometry packet gives the pixels of the
 text grid (`limpet_query_geometry()`, Limpet 0.7.0 and later); divide by
-columns and rows for one cell. Limpet does not scale images, so send them
+columns and rows for one cell. Width and height can be 0 (unknown): do not
+size an image then. Limpet does not scale images, so send them
 at the size they should cover.
 
 **Placement and cleanup:**

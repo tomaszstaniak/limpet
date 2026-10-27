@@ -27,7 +27,8 @@ LONG IsInteractive(BPTR handle) { (void)handle; return interactive ? DOSTRUE : D
 
 /* The geometry packet's handler: Limpet's own reply code (console_geometry.h)
    or a scripted misbehaviour. */
-enum { GEO_LIMPET, GEO_UNKNOWN, GEO_SILENT, GEO_FAILED, GEO_SHORT, GEO_VERSION, GEO_ZERO, GEO_ODD_RESULT };
+enum { GEO_LIMPET, GEO_UNKNOWN, GEO_SILENT, GEO_FAILED, GEO_SHORT, GEO_VERSION, GEO_ZERO, GEO_ODD_RESULT,
+       GEO_REFUSE_VERSION, GEO_NEGATIVE, GEO_OK_WITH_RES2 };
 static int geometry_mode;
 static unsigned pixel_width = 640, pixel_height = 384;
 static SIPTR geometry_packet(void *block, SIPTR capacity, SIPTR version)
@@ -50,6 +51,13 @@ static SIPTR geometry_packet(void *block, SIPTR capacity, SIPTR version)
     case GEO_ZERO:
         console_geometry_reply(block, capacity, (uintptr_t)version, 0, rows, 0, 0);
         last_error = 0; return DOSTRUE;
+    case GEO_REFUSE_VERSION: /* Limpet's own answer to a version it does not serve */
+        if (console_geometry_reply(block, capacity, (uintptr_t)version + 1, columns, rows, 0, 0)) abort();
+        last_error = ERROR_BAD_NUMBER; return DOSFALSE;
+    case GEO_NEGATIVE: last_error = -5; return DOSFALSE;
+    case GEO_OK_WITH_RES2:
+        console_geometry_reply(block, capacity, (uintptr_t)version, columns, rows, 0, 0);
+        last_error = ERROR_OBJECT_IN_USE; return DOSTRUE;
     default: last_error = 0; return 0xffffffffLL;
     }
 }
@@ -584,6 +592,16 @@ static void test_geometry(void)
     assert(limpet_query_geometry(CONSOLE, &g, NULL) == LIMPET_INVALID_REPLY && !g.rows);
     geometry_mode = GEO_ODD_RESULT;
     assert(limpet_query_geometry(CONSOLE, &g, NULL) == LIMPET_INVALID_REPLY);
+    geometry_mode = GEO_REFUSE_VERSION;
+    assert(limpet_query_geometry(CONSOLE, &g, &error) == LIMPET_INVALID_REPLY && error == ERROR_BAD_NUMBER && !g.columns);
+    geometry_mode = GEO_NEGATIVE;
+    assert(limpet_query_geometry(CONSOLE, &g, &error) == LIMPET_INVALID_REPLY && error == ERROR_BAD_NUMBER);
+    /* A console that leaves res2 set on success: the block decides. */
+    geometry_mode = GEO_OK_WITH_RES2;
+    assert(limpet_query_geometry(CONSOLE, &g, &error) == LIMPET_OK && error == 0 && g.columns == columns);
+    /* NIL: and closed handles have no handler port. */
+    geometry_mode = GEO_LIMPET; packets = 0;
+    assert(limpet_query_geometry((BPTR)&nil, &g, &error) == LIMPET_FAILED && error == ERROR_INVALID_LOCK && packets == 0);
     geometry_mode = GEO_LIMPET;
     interactive = 0; packets = 0;
     assert(limpet_query_geometry(CONSOLE, &g, NULL) == LIMPET_NOT_INTERACTIVE && packets == 0);
