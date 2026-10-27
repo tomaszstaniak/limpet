@@ -65,8 +65,8 @@ Released archives (candidate 2):
 | `Limpet-0.7.1-aros-aarch64-abiv1-raspi.zip` | 5,150,502 | `258cd6bc6bcbfd75ba3f83a42d5823bc48fa69a2b8980a2151f78d8ad331b78c` |
 | `Limpet-handler-experimental-0.7.1-aros-aarch64-abiv1-raspi.zip` | 897,852 | `cecef58d1e428be545a6e9323dbe8f57acb6cd0babd06b467e30cc200105e555` |
 
-Candidate 1 (`dist/0.7.1-candidate1`, source `98144cf`) is kept: most runs
-below were made with it. An independent review then asked for the
+Candidate 1 (source `98144cf`; its sums are kept with the evidence,
+`candidate1-archives/`) was run first: most runs below were made with it. An independent review then asked for the
 not-found check above, which changed the program, and for packaging and
 test-tool fixes; candidate 2 is candidate 1 plus those.
 
