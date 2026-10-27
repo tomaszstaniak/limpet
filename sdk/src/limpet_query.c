@@ -71,6 +71,29 @@ LimpetStatus limpet_query_presentation(BPTR output, LimpetPresentation *out,
     return status;
 }
 
+LimpetStatus limpet_query_identity(BPTR output, LimpetIdentity *out, LONG *ioerr)
+{
+    XtyControl request;
+    LONG error;
+    LimpetStatus status;
+
+    if (ioerr) *ioerr = 0;
+    if (!out) return LIMPET_BAD_ARGUMENT;
+    memset(out, 0, sizeof *out);
+    if (!output) { if (ioerr) *ioerr = ERROR_INVALID_LOCK; return LIMPET_BAD_ARGUMENT; }
+    if (!IsInteractive(output)) return LIMPET_NOT_INTERACTIVE;
+    limpet_identity_request(&request);
+    if (limpet_control(output, &request) != DOSTRUE) {
+        error = IoErr();
+        if (ioerr) *ioerr = error;
+        return error == ERROR_ACTION_NOT_KNOWN ? LIMPET_UNSUPPORTED :
+               error == ERROR_BAD_NUMBER ? LIMPET_INVALID_REPLY : LIMPET_FAILED;
+    }
+    status = limpet_identity_decode(&request, out);
+    if (status != LIMPET_OK && ioerr) *ioerr = ERROR_BAD_NUMBER;
+    return status;
+}
+
 int limpet_write_dos(void *context, const char *bytes, size_t length)
 {
     BPTR handle = (BPTR)context;

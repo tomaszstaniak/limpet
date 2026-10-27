@@ -88,6 +88,7 @@ typedef struct {
     uint32_t interpretation;
     uint32_t input;          /* 0.2.0 */
     uint32_t features;       /* 0.3.0 */
+    uint32_t text;           /* 0.6.0 */
 } LimpetPresentation;
 ```
 
@@ -100,6 +101,7 @@ typedef struct {
 | `interpretation` | `XTY_PRESENT_KNOWN_INTERPRETATION` (16) | bit `XTY_COLOR_PENS` (1) |
 | `input` (0.2.0) | `XTY_PRESENT_KNOWN_INPUT` (32) | bits `XTY_INPUT_BRACKETED_PASTE` (1), `XTY_INPUT_RESIZE_REPORT` (2), `XTY_INPUT_WHEEL_REPORT` (4), `XTY_INPUT_MODIFIED_ENTER` (8, SDK 0.4.0; Limpet 0.6.0): modes a raw-mode program may turn on |
 | `features` (0.3.0) | `XTY_PRESENT_KNOWN_FEATURES` (64) | bit `XTY_FEATURE_TITLE` (1): OSC 0/2 set the window title (Limpet 0.3.0) |
+| `text` (0.6.0) | `XTY_PRESENT_KNOWN_TEXT` (128) | bits `XTY_TEXT_UTF8` (1): bytes are decoded as UTF-8; `XTY_TEXT_WIDE` (2): East Asian wide characters and emoji take two cells; `XTY_TEXT_COMBINING` (4): combining marks, variation selectors and ZWJ sequences join the previous cell (Limpet 0.8.0) |
 
 A clear bit in `known` marks an unknown field; a set bit with a zero value
 marks an unsupported feature. The decoder clears unknown fields.
@@ -200,6 +202,35 @@ All take a `const LimpetPresentation *` (NULL allowed, treated as
 | `uint32_t limpet_columns(p)` | columns, or 0 if unknown |
 | `uint32_t limpet_rows(p)` | rows, or 0 if unknown |
 | `int limpet_can_set_title(p)` | 1 if OSC 0/2 window titles are confirmed (0.3.0; Limpet 0.2.x answers without confirming) |
+| `int limpet_text_utf8(p)` | 1 if written bytes are decoded as UTF-8 (0.6.0). 0 means write ASCII: unknown, as from `CON:` and Limpet before 0.8.0, or confirmed Latin-1 |
+| `int limpet_text_wide(p)` | 1 if UTF-8 and wide characters take two cells (0.6.0) |
+| `int limpet_text_combining(p)` | 1 if UTF-8 and combining clusters join one cell (0.6.0) |
+
+## Terminal identity (0.6.0)
+
+Which terminal draws the output, for display ("Limpet 0.8.0"). Operation
+14 on the same packet as the presentation query. Decide what to write from
+the presentation reply, never from the name.
+
+```c
+typedef struct {
+    uint32_t known;          /* XTY_IDENTITY_KNOWN_NAME 1, _VERSION 2 */
+    uint32_t major, minor, patch;
+    char name[XTY_IDENTITY_NAME_BYTES];
+} LimpetIdentity;
+
+LimpetStatus limpet_query_identity(BPTR output, LimpetIdentity *out, LONG *ioerr);
+void limpet_identity_request(XtyControl *request);
+LimpetStatus limpet_identity_decode(const XtyControl *reply, LimpetIdentity *out);
+```
+
+`limpet_query_identity` behaves like `limpet_query_presentation`: no packet
+for a file or pipe (`LIMPET_NOT_INTERACTIVE`), `LIMPET_UNSUPPORTED` from
+`CON:` and from Limpet before 0.8.0, and `*out` zeroed unless `LIMPET_OK`.
+`name` is NUL-terminated printable ASCII, 1 to 31 bytes, empty unless the
+name bit is set; a reply with any other name is `LIMPET_INVALID_REPLY`.
+Without the version bit, `major`, `minor` and `patch` are 0 and mean
+nothing.
 
 ### Input modes (0.2.0)
 

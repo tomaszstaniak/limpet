@@ -12,6 +12,8 @@ set -euo pipefail
 ver=$1 out=${2:A}; shift 2
 (( $# )) || { print -u2 "name at least one target"; exit 1; }
 root=${0:A:h:h:h}
+# The build directories; a test may point this at a copy.
+build=${LIMPET_PACKAGE_BUILD:-$root/build}
 [[ -e $out ]] && { print -u2 "$out exists"; exit 1; }
 # The version is the build's, not this script's: refuse a mismatch.
 check_version() {  # $1 = binary
@@ -37,17 +39,19 @@ common() {  # $1 = drawer
     cp $root/LICENSE.txt $1/LICENSE.txt
 }
 package_target() {  # $1 = target
-    local t=$1 b=$root/build/$1 want
-    local libset
+    local t=$1 b=$build/$1 want
     case $t in
         aros-x86_64-*) want=x86-64;;
         aros-aarch64-*) want=aarch64;;
         *) print -u2 "unknown target $t"; exit 1;;
     esac
     # The ELF header does not tell the ABIs apart; the C library bases do.
+    # ABIv11's remover uses only stdlib (StdlibBase), the frontend and
+    # worker crt (CrtBase); mainline's all use stdc (StdCBase).
+    local libset helperset
     case $t in
-        *-abiv11-*) libset=__aros_libset_CrtBase;;
-        *-abiv1-*) libset=__aros_libset_StdCBase;;
+        *-abiv11-*) libset=__aros_libset_CrtBase helperset=__aros_libset_StdlibBase;;
+        *-abiv1-*) libset=__aros_libset_StdCBase helperset=__aros_libset_StdCBase;;
     esac
     [[ -f $root/tools/release/README-$t.txt ]] || { print -u2 "unknown target $t"; exit 1; }
     for f in $b/Limpet $b/limpet-console $b/limpet-handler $b/limpet-handler-remove; do
@@ -57,6 +61,14 @@ package_target() {  # $1 = target
     for f in $b/Limpet $b/limpet-console; do
         nm $f | grep -q " $libset\$" || { print -u2 "$f has no $libset: not built for $t"; exit 1; }
     done
+    nm $b/limpet-handler-remove | grep -q " $helperset\$" ||
+        { print -u2 "$b/limpet-handler-remove has no $helperset: not built for $t"; exit 1; }
+    # Every binary must be the one make target built for this target: this
+    # also covers limpet-handler, which links no C library at all.
+    [[ -f $b/build-record ]] || { print -u2 "$b/build-record missing: build with make target TARGET=$t"; exit 1; }
+    [[ $(head -1 $b/build-record) == "target $t" ]] || { print -u2 "$b/build-record is for $(head -1 $b/build-record), not $t"; exit 1; }
+    (cd $b && tail -n +2 build-record | shasum -a 256 -c --quiet) ||
+        { print -u2 "$b: a binary differs from what make target built for $t"; exit 1; }
     check_version $b/Limpet
     local d=$out/stage-$t/Limpet; common $d
     cp $b/Limpet $d/Limpet

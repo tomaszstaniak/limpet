@@ -38,7 +38,8 @@ LimpetStatus limpet_presentation_decode(const XtyControl *reply,
     if (known & XTY_PRESENT_KNOWN_INTERPRETATION) p.interpretation = reply->values[6];
     if (known & XTY_PRESENT_KNOWN_INPUT) p.input = reply->values[7];
     if (known & XTY_PRESENT_KNOWN_FEATURES) p.features = reply->values[8];
-    /* values[9..11] are reserved for later fields: ignored, not rejected,
+    if (known & XTY_PRESENT_KNOWN_TEXT) p.text = reply->values[9];
+    /* values[10..11] are reserved for later fields: ignored, not rejected,
        so a newer terminal keeps working with this client. */
     *out = p;
     return LIMPET_OK;
@@ -155,6 +156,61 @@ int limpet_can_set_title(const LimpetPresentation *p)
 {
     return p && (p->known & XTY_PRESENT_KNOWN_FEATURES) &&
            (p->features & XTY_FEATURE_TITLE);
+}
+
+int limpet_text_utf8(const LimpetPresentation *p)
+{
+    return p && (p->known & XTY_PRESENT_KNOWN_TEXT) && (p->text & XTY_TEXT_UTF8);
+}
+
+int limpet_text_wide(const LimpetPresentation *p)
+{
+    return limpet_text_utf8(p) && (p->text & XTY_TEXT_WIDE);
+}
+
+int limpet_text_combining(const LimpetPresentation *p)
+{
+    return limpet_text_utf8(p) && (p->text & XTY_TEXT_COMBINING);
+}
+
+void limpet_identity_request(XtyControl *request)
+{
+    if (!request) return;
+    memset(request, 0, sizeof *request);
+    request->version = XTY_CONTROL_VERSION;
+    request->operation = XTY_GET_IDENTITY;
+}
+
+LimpetStatus limpet_identity_decode(const XtyControl *reply, LimpetIdentity *out)
+{
+    LimpetIdentity id;
+    const unsigned char *name;
+    size_t i, n = 0;
+
+    if (!out) return LIMPET_BAD_ARGUMENT;
+    memset(out, 0, sizeof *out);
+    if (!reply) return LIMPET_BAD_ARGUMENT;
+    if (reply->version != XTY_CONTROL_VERSION || reply->operation != XTY_GET_IDENTITY ||
+        reply->reserved[0] != XTY_PACKET_MAGIC || reply->reserved[1])
+        return LIMPET_INVALID_REPLY;
+    memset(&id, 0, sizeof id);
+    id.known = reply->values[0];
+    if (id.known & XTY_IDENTITY_KNOWN_NAME) {
+        /* Bytes as the terminal stored them, not 32-bit values: the same on
+           either byte order. The name ends at the first NUL; the rest is
+           padding, and anything after it would be smuggled data. */
+        name = (const unsigned char *)&reply->values[4];
+        while (n < XTY_IDENTITY_NAME_BYTES && name[n]) ++n;
+        if (!n || n == XTY_IDENTITY_NAME_BYTES) return LIMPET_INVALID_REPLY;
+        for (i = 0; i < n; ++i) if (name[i] < 0x20 || name[i] > 0x7e) return LIMPET_INVALID_REPLY;
+        for (i = n; i < XTY_IDENTITY_NAME_BYTES; ++i) if (name[i]) return LIMPET_INVALID_REPLY;
+        memcpy(id.name, name, n);
+    }
+    if (id.known & XTY_IDENTITY_KNOWN_VERSION) {
+        id.major = reply->values[1]; id.minor = reply->values[2]; id.patch = reply->values[3];
+    }
+    *out = id;
+    return LIMPET_OK;
 }
 
 /* Length of one valid UTF-8 scalar at s (n bytes left) that is not a

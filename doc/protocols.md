@@ -190,10 +190,11 @@ The response marker distinguishes a completed request from an unchanged block. O
 | 1 | `XTY_CAPS` | `ERROR_ACTION_NOT_KNOWN` | yes |
 | 2-12 | config, geometry, read state, flush, drain, flow | `ERROR_ACTION_NOT_KNOWN` | yes |
 | 13 | `XTY_GET_PRESENTATION` | **yes** | yes, when attached to the renderer |
+| 14 | `XTY_GET_IDENTITY` (0.8.0) | **yes** | yes, when attached to the renderer |
 
 `XTY_ACTION_CANCEL` is accepted by the Shell session from Limpet 0.4.1, for a
 client's own pending read only (no capability bit; a refusal means not
-supported). Operation 13 is described in [presentation.md](presentation.md). Operations
+supported). Operations 13 and 14 are described in [presentation.md](presentation.md). Operations
 1 to 12, `XTY_ACTION_CANCEL` and the immediate I/O actions are described in
 the header and in [the experimental guide](sdk/experimental.md).
 

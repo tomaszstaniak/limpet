@@ -98,17 +98,25 @@ int main(int argc,char **argv)
     if(argc>(resize?5:6)) Delay(strtol(argv[resize?5:6],NULL,0));
     s=LockPubScreen(NULL);
     if(!s) { PutStr((CONST_STRPTR)"win-inject: no public screen\n"); return 20; }
-    /* Nothing that may wait (a console write) while IBase is locked. */
+    /* The window is found and, for "size", handed to Intuition under the
+       IBase lock: while it is held the window cannot be closed, so the
+       pointer is valid when ChangeWindowBox reads it. ChangeWindowBox only
+       queues the change (DoASyncAction, nothing that waits on IBase), and
+       Intuition checks the window again when it carries the change out
+       (ResourceExisting in int_changewindowbox, mainline and ABIv11
+       rom/intuition/changewindowbox.c): a window closed in between is
+       skipped. Nothing that may wait, such as a console write, runs while
+       the lock is held. A click uses only the coordinates read here. */
     lock=LockIBase(0);
     w=find(s,argv[2]);
-    if(w) { left=w->LeftEdge; top=w->TopEdge; width=w->Width; height=w->Height; }
+    if(w) {
+        left=w->LeftEdge; top=w->TopEdge; width=w->Width; height=w->Height;
+        if(resize) ChangeWindowBox(w,left,top,a,b);
+    }
     UnlockIBase(lock);
-    if(w) printf("before %d,%d %dx%d\n",left,top,width,height);
     if(!w) { printf("win-inject: no window with \"%s\"\n",argv[2]); UnlockPubScreen(NULL,s); return 10; }
-    /* The window may close between the lookup and these calls; a test
-       tool accepts that, as a user clicking it would. */
-    if(resize) ChangeWindowBox(w,left,top,a,b);
-    else rc=click(left+a,top+b,argc>5?(UWORD)strtoul(argv[5],NULL,0):0);
+    printf("before %d,%d %dx%d\n",left,top,width,height);
+    if(!resize) rc=click(left+a,top+b,argc>5?(UWORD)strtoul(argv[5],NULL,0):0);
     Delay(25);
     lock=LockIBase(0);
     if(find(s,argv[2])==w) { left=w->LeftEdge; top=w->TopEdge; width=w->Width; height=w->Height; }

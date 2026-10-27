@@ -25,18 +25,18 @@
 #include "tty_control.h"
 
 #define LIMPET_SDK_VERSION_MAJOR 0
-#define LIMPET_SDK_VERSION_MINOR 5
+#define LIMPET_SDK_VERSION_MINOR 6
 #define LIMPET_SDK_VERSION_PATCH 0
-#define LIMPET_SDK_VERSION_STRING "0.5.0"
+#define LIMPET_SDK_VERSION_STRING "0.6.0"
 
-/* Binary guard. SDK 0.2 appended `input` and SDK 0.3 `features` to
-   LimpetPresentation, so a function that fills the struct writes more than
-   an older client reserved. These functions therefore have new link names
-   in each such release: source code is unchanged, but an object compiled
-   with an older header no longer links against this library and must be
-   rebuilt, instead of having its stack overwritten. */
-#define limpet_query_presentation limpet_query_presentation_v3
-#define limpet_presentation_decode limpet_presentation_decode_v3
+/* Binary guard. SDK 0.2 appended `input`, SDK 0.3 `features` and SDK 0.6
+   `text` to LimpetPresentation, so a function that fills the struct writes
+   more than an older client reserved. These functions therefore have new
+   link names in each such release: source code is unchanged, but an
+   object compiled with an older header no longer links against this
+   library and must be rebuilt, instead of having its stack overwritten. */
+#define limpet_query_presentation limpet_query_presentation_v4
+#define limpet_presentation_decode limpet_presentation_decode_v4
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,6 +82,8 @@ typedef struct {
                                 turn on (XTY_PRESENT_KNOWN_INPUT) */
     uint32_t features;       /* XTY_FEATURE_* bits (XTY_PRESENT_KNOWN_FEATURES,
                                 Limpet 0.3.0 and later) */
+    uint32_t text;           /* XTY_TEXT_* bits (XTY_PRESENT_KNOWN_TEXT,
+                                Limpet 0.8.0 and later; SDK 0.6.0) */
 } LimpetPresentation;
 
 /* Zero the block and set version and operation. Every other field must be
@@ -151,6 +153,38 @@ uint32_t limpet_rows(const LimpetPresentation *p);
    (XTY_FEATURE_TITLE). Limpet 0.2.x answers the query but does not
    confirm it; never send a title then: CON: would print it as text. */
 int limpet_can_set_title(const LimpetPresentation *p);
+
+/* 1 when the terminal confirmed that written bytes are decoded as UTF-8
+   (XTY_TEXT_UTF8). 0 means "write ASCII": unknown (CON:, older Limpet) or
+   confirmed Latin-1. */
+int limpet_text_utf8(const LimpetPresentation *p);
+
+/* 1 when it also confirmed that wide characters (CJK, emoji) take two
+   cells (XTY_TEXT_WIDE) / that combining marks and ZWJ sequences join the
+   previous cell (XTY_TEXT_COMBINING). Both imply nothing without UTF-8. */
+int limpet_text_wide(const LimpetPresentation *p);
+int limpet_text_combining(const LimpetPresentation *p);
+
+/* ---- Terminal identity (operation 14, SDK 0.6.0) ----
+
+   For showing which terminal a program runs in ("Limpet 0.8.0"). Decide
+   what to write from the presentation query, never from the name. */
+typedef struct {
+    uint32_t known;          /* XTY_IDENTITY_KNOWN_* bits */
+    uint32_t major, minor, patch;
+    char name[XTY_IDENTITY_NAME_BYTES]; /* NUL-terminated printable ASCII,
+                                           "" unless the name bit is set */
+} LimpetIdentity;
+
+void limpet_identity_request(XtyControl *request);
+/* LIMPET_OK or LIMPET_INVALID_REPLY (wrong envelope, a name that is not
+   1..31 printable ASCII bytes followed by NUL padding). *out is zeroed on
+   failure. Pure. */
+LimpetStatus limpet_identity_decode(const XtyControl *reply, LimpetIdentity *out);
+/* As limpet_query_presentation, for the identity: LIMPET_UNSUPPORTED from
+   CON: and terminals older than Limpet 0.8.0. BLOCKS until the handler
+   replies. */
+LimpetStatus limpet_query_identity(BPTR output, LimpetIdentity *out, LONG *ioerr);
 
 /* ---- Sequence builders (pure) ----
 

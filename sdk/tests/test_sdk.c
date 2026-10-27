@@ -17,6 +17,7 @@ enum { LIMPET_REPLY, CON_REPLY, SILENT_REFUSAL, ECHO_BLOCK, BAD_RESULT,
 static int mode, packets, interactive = 1;
 static unsigned rows = 24, columns = 80, pens = XTY_COLOR_PENS;
 static LONG last_error;
+static const char *identity_name = "Limpet", *identity_version = "0.8.0-test1";
 static SIPTR last_action, last_arg3, last_arg4, last_arg5;
 
 LONG IoErr(void) { return last_error; }
@@ -31,6 +32,12 @@ SIPTR DoPkt(void *port, LONG action, SIPTR a1, SIPTR a2, SIPTR a3, SIPTR a4, SIP
     last_action = action; last_arg3 = a3; last_arg4 = a4; last_arg5 = a5;
     switch (mode) {
     case LIMPET_REPLY:
+        if (block->operation == XTY_GET_IDENTITY) {
+            if (!xterm_identity_reply(block, (size_t)a3, identity_name, identity_version)) {
+                last_error = ERROR_BAD_NUMBER; return DOSFALSE;
+            }
+            last_error = 0; return DOSTRUE;
+        }
         if (!xterm_presentation_reply(block, (size_t)a3, rows, columns, pens)) {
             last_error = ERROR_BAD_NUMBER; return DOSFALSE;
         }
@@ -136,7 +143,8 @@ static void test_query(void)
     p = query(LIMPET_OK, 0);
     assert(last_action == XTY_ACTION_CONTROL && last_arg3 == 64 &&
            last_arg4 == XTY_PACKET_MAGIC && last_arg5 == 0);
-    assert(p.known == 127 && limpet_color_level(&p) == XTY_COLOR_RGB);
+    assert(p.known == 255 && limpet_color_level(&p) == XTY_COLOR_RGB);
+    assert(limpet_text_utf8(&p) && limpet_text_wide(&p) && limpet_text_combining(&p));
     assert(p.input == (XTY_INPUT_BRACKETED_PASTE | XTY_INPUT_RESIZE_REPORT | XTY_INPUT_WHEEL_REPORT | XTY_INPUT_MODIFIED_ENTER));
     assert(XTY_INPUT_WHEEL_REPORT == 4u);
     assert(limpet_uses_pens(&p) && limpet_has_bold(&p) && limpet_can_rewrite_line(&p));
@@ -193,6 +201,54 @@ static void test_query(void)
 
     assert(limpet_query_presentation(CONSOLE, NULL, NULL) == LIMPET_BAD_ARGUMENT);
     assert(limpet_query_presentation(0, &p, NULL) == LIMPET_BAD_ARGUMENT);
+}
+
+static void test_identity(void)
+{
+    LimpetIdentity id; XtyControl c; LONG error = -5; unsigned char *name;
+
+    mode = LIMPET_REPLY; memset(&id, 0xaa, sizeof id);
+    assert(limpet_query_identity(CONSOLE, &id, &error) == LIMPET_OK && error == 0);
+    assert(last_action == XTY_ACTION_CONTROL && last_arg3 == 64 && last_arg4 == XTY_PACKET_MAGIC);
+    assert(id.known == (XTY_IDENTITY_KNOWN_NAME | XTY_IDENTITY_KNOWN_VERSION));
+    assert(!strcmp(id.name, "Limpet") && id.major == 0 && id.minor == 8 && id.patch == 0);
+    /* No version is no version, not 0.0.0. */
+    identity_version = NULL;
+    assert(limpet_query_identity(CONSOLE, &id, NULL) == LIMPET_OK);
+    assert(id.known == XTY_IDENTITY_KNOWN_NAME && !id.major && !id.minor && !id.patch);
+    identity_version = "0.8.0-test1";
+    /* CON: and older Limpet: unsupported, everything zeroed. */
+    mode = CON_REPLY; memset(&id, 0xaa, sizeof id);
+    assert(limpet_query_identity(CONSOLE, &id, &error) == LIMPET_UNSUPPORTED &&
+           error == ERROR_ACTION_NOT_KNOWN && !id.known && !id.name[0]);
+    interactive = 0; packets = 0;
+    assert(limpet_query_identity(CONSOLE, &id, NULL) == LIMPET_NOT_INTERACTIVE && packets == 0);
+    interactive = 1;
+    /* The terminal refuses a request with stray values or a bad name. */
+    mode = LIMPET_REPLY; limpet_identity_request(&c); c.values[5] = 1;
+    assert(limpet_control(CONSOLE, &c) == DOSFALSE && IoErr() == ERROR_BAD_NUMBER);
+    limpet_identity_request(&c);
+    assert(!xterm_identity_reply(&c, sizeof c, "Lim\tpet", "1.0.0"));
+    assert(!xterm_identity_reply(&c, sizeof c, "", "1.0.0"));
+    assert(!xterm_identity_reply(&c, sizeof c, "0123456789012345678901234567890123", "1.0.0"));
+    /* The client refuses names that are not 1..31 printable bytes + NUL. */
+    limpet_identity_request(&c);
+    assert(xterm_identity_reply(&c, sizeof c, "Limpet", "1.2.3"));
+    assert(limpet_identity_decode(&c, &id) == LIMPET_OK && id.patch == 3);
+    name = (unsigned char *)&c.values[4];
+    name[10] = 'x';                         /* data after the terminating NUL */
+    assert(limpet_identity_decode(&c, &id) == LIMPET_INVALID_REPLY && !id.known);
+    name[10] = 0; name[2] = 0x1b;           /* an escape in the name */
+    assert(limpet_identity_decode(&c, &id) == LIMPET_INVALID_REPLY);
+    memset(name, 'a', XTY_IDENTITY_NAME_BYTES);  /* no NUL at all */
+    assert(limpet_identity_decode(&c, &id) == LIMPET_INVALID_REPLY);
+    memset(name, 0, XTY_IDENTITY_NAME_BYTES);    /* name bit with an empty name */
+    assert(limpet_identity_decode(&c, &id) == LIMPET_INVALID_REPLY);
+    c.values[0] = XTY_IDENTITY_KNOWN_VERSION;    /* version only is fine */
+    assert(limpet_identity_decode(&c, &id) == LIMPET_OK && !id.name[0] && id.minor == 2);
+    c.operation = XTY_GET_PRESENTATION;
+    assert(limpet_identity_decode(&c, &id) == LIMPET_INVALID_REPLY);
+    assert(limpet_query_identity(CONSOLE, NULL, NULL) == LIMPET_BAD_ARGUMENT);
 }
 
 static void test_decode(void)
@@ -452,13 +508,14 @@ int main(void)
 {
     test_decode();
     test_query();
+    test_identity();
     test_sgr();
     test_write_dos();
     test_osc8();
     test_title();
     test_kitty();
-    assert(!strcmp(LIMPET_SDK_VERSION_STRING, "0.5.0") && LIMPET_SDK_VERSION_MINOR == 5);
-    puts("LIMPET SDK PASS: query against the terminal's reply code, refusals, malformed and future replies, "
+    assert(!strcmp(LIMPET_SDK_VERSION_STRING, "0.6.0") && LIMPET_SDK_VERSION_MINOR == 6);
+    puts("LIMPET SDK PASS: query against the terminal's reply code, text bits, identity, refusals, malformed and future replies, "
          "SGR, OSC 8, window title, Kitty framing and limits");
     return 0;
 }

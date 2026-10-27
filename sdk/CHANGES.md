@@ -1,5 +1,30 @@
 # Limpet SDK changes
 
+## 0.6.0 (unreleased)
+
+Works with Limpet 0.1.0 to 0.8.0.
+
+Added:
+
+- Text bits in the presentation reply (`XTY_PRESENT_KNOWN_TEXT`,
+  `LimpetPresentation.text`): `XTY_TEXT_UTF8` (written bytes are decoded as
+  UTF-8), `XTY_TEXT_WIDE` (wide characters take two cells) and
+  `XTY_TEXT_COMBINING` (combining clusters join one cell), with
+  `limpet_text_utf8`, `limpet_text_wide` and `limpet_text_combining`.
+  Limpet 0.8.0 sets all three. Without the known bit nothing is known:
+  write ASCII.
+- Terminal identity, operation 14 (`XTY_GET_IDENTITY`): name and version
+  of the terminal, for display. `limpet_query_identity`,
+  `limpet_identity_request`, `limpet_identity_decode`, `LimpetIdentity`.
+  `CON:` and Limpet before 0.8.0 answer `LIMPET_UNSUPPORTED`.
+
+Changed:
+
+- `LimpetPresentation` has a new last field, so `limpet_query_presentation`
+  and `limpet_presentation_decode` have new link names (`_v4`). Rebuild
+  programs: their source needs no change. Programs built with older SDKs
+  keep working with Limpet 0.8.0; they do not see the new bits.
+
 ## 0.5.0 (2026-10-24)
 
 Works with Limpet 0.1.0 to 0.7.0.

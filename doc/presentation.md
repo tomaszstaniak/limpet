@@ -18,7 +18,7 @@ The reply uses the control envelope described in [protocols.md](protocols.md#env
 
 | Field | Meaning |
 | --- | --- |
-| values[0] | Known-field mask: bit 0 colours, bit 1 styles, bit 2 line editing, bit 3 geometry, bit 4 colour interpretation, bit 5 input modes (0.2.0), bit 6 features (0.3.0) |
+| values[0] | Known-field mask: bit 0 colours, bit 1 styles, bit 2 line editing, bit 3 geometry, bit 4 colour interpretation, bit 5 input modes (0.2.0), bit 6 features (0.3.0), bit 7 text (0.8.0) |
 | values[1] | Colour level: 0 none, 1 ANSI 16, 2 indexed 256, 3 RGB 24-bit |
 | values[2] | Style mask: bit 0 SGR bold plus SGR reset |
 | values[3] | Line mask: bit 0 CR, bit 1 CSI K erase from cursor to end of line |
@@ -27,7 +27,24 @@ The reply uses the control envelope described in [protocols.md](protocols.md#env
 | values[6] | Colour interpretation mask: bit 0 `XTY_COLOR_PENS` |
 | values[7] | Input modes a raw-mode client may turn on, valid with known bit 5 (value 32): bit 0 bracketed paste (DEC 2004), bit 1 resize reports (DEC 2048), bit 2 wheel reports (private 2100), bit 3 Shift+Enter as `CSI 27 ; 2 ; 13 ~` after `CSI > 4 ; 1 m` (Limpet 0.6.0). Limpet 0.2.0 and later; 0.1.0 leaves the field and its known bit clear |
 | values[8] | Terminal features, valid with known bit 6 (value 64, `XTY_PRESENT_KNOWN_FEATURES`): bit 0 `XTY_FEATURE_TITLE`, OSC 0/2 set the window title. Limpet 0.3.0 and later; 0.2.x leaves the field and its known bit clear, so an answered query alone never means titles work |
-| values[9..11] | Reserved, zero |
+| values[9] | How text is shown, valid with known bit 7 (value 128, `XTY_PRESENT_KNOWN_TEXT`): bit 0 `XTY_TEXT_UTF8`, written bytes are decoded as UTF-8 (an ill-formed sequence shows as U+FFFD); bit 1 `XTY_TEXT_WIDE`, characters of East Asian width W or F and emoji presentation sequences take two cells; bit 2 `XTY_TEXT_COMBINING`, combining marks, variation selectors and ZWJ sequences join the cell before them. Limpet 0.8.0 sets all three. Without the known bit nothing is known about the encoding: write ASCII |
+| values[10..11] | Reserved, zero |
+
+## Terminal identity (operation 14)
+
+`XTY_GET_IDENTITY = 14`, same envelope and request rules as operation 13.
+It names the terminal for display, for example in a system information
+program; it is not a capability test.
+
+| Field | Meaning |
+| --- | --- |
+| values[0] | Known mask: bit 0 name, bit 1 version |
+| values[1..3] | Version major, minor, patch, valid with bit 1 |
+| values[4..11] | Name: 1 to 31 bytes of printable ASCII (0x20..0x7e), then NUL bytes up to 32, as stored in memory (not as 32-bit numbers), valid with bit 0 |
+
+Limpet 0.8.0 answers name `Limpet` and its version, in a Shell session and
+on the experimental PTY. `CON:` and earlier Limpet versions answer
+`ERROR_ACTION_NOT_KNOWN`.
 
 A clear known bit means unknown, not unsupported. A set known bit with a
 zero feature value means confirmed absent. Geometry is known only when both

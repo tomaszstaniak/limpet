@@ -36,4 +36,7 @@ target: target-check
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/openurl-probe tools/openurl_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_CFLAGS) $(T_FRONT_FLAGS) -o $(TD)/probes/test_aros_endpoint tests/test_aros_endpoint.c $(SESSION_SRC) $(T_LDFLAGS)
 	$(if $(T_STRIP),$(T_STRIP) --strip-debug $(TD)/Limpet $(TD)/limpet-console $(TD)/limpet-handler $(TD)/limpet-handler-remove)
+	@# Provenance for make-packages.sh: which target these files were built
+	@# for, and their bytes. The handler has no C library marker to check.
+	@(echo "target $(TARGET)"; cd $(TD) && shasum -a 256 Limpet limpet-console limpet-handler limpet-handler-remove) > $(TD)/build-record
 	@echo "$(TARGET): built in $(TD)"

@@ -3,6 +3,18 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## Unreleased
+
+New for programs:
+
+- The presentation query says whether written text is decoded as UTF-8,
+  whether wide characters take two cells and combining marks join one
+  (SDK 0.6.0, `limpet_text_utf8`). Without it a program cannot tell
+  Limpet from a console that shows bytes as Latin-1.
+- A program can ask which terminal it runs in and its version (operation
+  14, `limpet_query_identity`), to show it, for example, in a system
+  information listing.
+
 ## 0.7.1 (2026-10-27)
 
 For AROS ABIv11 x86_64, mainline AROS x86_64 and, as a test build, AROS on

@@ -21,12 +21,13 @@
 enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
        XTY_SET_GEOMETRY, XTY_GET_READ_STATE, XTY_FLUSH, XTY_SET_CONFIG_DISCARD_INPUT,
        XTY_DRAIN, XTY_DRAIN_CONFIG, XTY_DRAIN_CONFIG_DISCARD_INPUT, XTY_OUTPUT_FLOW,
-       XTY_GET_PRESENTATION };
+       XTY_GET_PRESENTATION, XTY_GET_IDENTITY };
 /* Operation 13: renderer-owned snapshot on the actual output FileHandle.
    Request: reserved and values all zero. Reply values: [0] known mask,
    [1] color level, [2] styles, [3] line controls, [4] rows, [5] columns,
    [6] color interpretation (known bit 4), [7] input features (known bit
-   32, Limpet 0.2.0 and later; 0.1.0 leaves both clear); [8..11] zero. Clear known bits
+   32, Limpet 0.2.0 and later; 0.1.0 leaves both clear); [8] features and
+   [9] text, below; [10..11] zero. Clear known bits
    mean unknown, not unsupported. INPUT_BRACKETED_PASTE: in raw mode the
    client may set DEC mode 2004 (CSI ? 2004 h) and then receives a paste
    framed by CSI 200 ~ and CSI 201 ~, without Limpet's multi-line
@@ -68,8 +69,24 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
    whole sequence), empty text drops the program's title. The title lasts
    while the command that was in the foreground when it arrived runs;
    characters outside Latin-1 show as '?'. CON: prints OSC as text.
+   TEXT in [9], valid only with KNOWN_TEXT in [0] (Limpet 0.8.0; earlier
+   replies leave both clear): how written text is shown. TEXT_UTF8: bytes
+   are decoded as UTF-8 (an ill-formed sequence shows as U+FFFD), not as
+   Latin-1. TEXT_WIDE: characters of East Asian width W or F and emoji
+   presentation sequences take two cells. TEXT_COMBINING: combining marks,
+   variation selectors and ZWJ sequences join the cell before them. A
+   clear bit with KNOWN_TEXT set is confirmed absent; without KNOWN_TEXT
+   nothing is known, and a client should write ASCII.
    Generic PTYs do not imply presentation support. This query neither
-   reads keyboard input nor changes terminal modes. No response deadline. */
+   reads keyboard input nor changes terminal modes. No response deadline.
+   Operation 14, XTY_GET_IDENTITY: which terminal draws this output
+   FileHandle. Request: reserved and values all zero. Reply values: [0]
+   known mask (IDENTITY_KNOWN_*), [1..3] version major, minor, patch
+   (known bit 2), [4..11] the terminal's name as 1..31 bytes of printable
+   ASCII (0x20..0x7e), padded with NUL to 32 bytes, in byte order as
+   written to memory (known bit 1). A console that does not know the
+   operation answers ERROR_ACTION_NOT_KNOWN. For display only: decide
+   capabilities from the presentation reply, never from the name. */
 #define XTY_PRESENT_KNOWN_COLORS 1u
 #define XTY_PRESENT_KNOWN_STYLES 2u
 #define XTY_PRESENT_KNOWN_LINES 4u
@@ -77,6 +94,13 @@ enum { XTY_CAPS=1, XTY_GET_CONFIG, XTY_SET_CONFIG, XTY_GET_GEOMETRY,
 #define XTY_PRESENT_KNOWN_INTERPRETATION 16u
 #define XTY_PRESENT_KNOWN_INPUT 32u
 #define XTY_PRESENT_KNOWN_FEATURES 64u
+#define XTY_PRESENT_KNOWN_TEXT 128u
+#define XTY_TEXT_UTF8 1u
+#define XTY_TEXT_WIDE 2u
+#define XTY_TEXT_COMBINING 4u
+#define XTY_IDENTITY_KNOWN_NAME 1u
+#define XTY_IDENTITY_KNOWN_VERSION 2u
+#define XTY_IDENTITY_NAME_BYTES 32u
 #define XTY_INPUT_BRACKETED_PASTE 1u
 #define XTY_INPUT_RESIZE_REPORT 2u
 #define XTY_INPUT_WHEEL_REPORT 4u

@@ -266,6 +266,14 @@ static void dispatch(ArosTtyPackets *s,TtyEnd end,struct DosPacket *p)
             ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);return;
         }
         memcpy(&control,(void *)p->dp_Arg2,sizeof control);
+        if(control.operation==XTY_GET_IDENTITY) {
+            if(!s->presentation_enabled || end!=TTY_SLAVE)
+                ReplyPkt(p,DOSFALSE,ERROR_ACTION_NOT_KNOWN);
+            else if(xterm_identity_reply((void *)p->dp_Arg2,sizeof control,XTERM_IDENTITY_NAME,LIMPET_VERSION))
+                ReplyPkt(p,DOSTRUE,0);
+            else ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
+            return;
+        }
         if(control.operation==XTY_GET_PRESENTATION) {
             if(!s->presentation_enabled || end!=TTY_SLAVE)
                 ReplyPkt(p,DOSFALSE,ERROR_ACTION_NOT_KNOWN);

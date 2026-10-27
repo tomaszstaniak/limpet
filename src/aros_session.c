@@ -337,8 +337,13 @@ void aros_session_poll(ArosSession *s)
             else {
                 memcpy(&in,(void *)p->dp_Arg2,sizeof in);
                 if(!s->console || !s->presentation_enabled || s->stopping ||
-                   in.operation!=XTY_GET_PRESENTATION)
+                   (in.operation!=XTY_GET_PRESENTATION && in.operation!=XTY_GET_IDENTITY))
                     ReplyPkt(p,DOSFALSE,ERROR_ACTION_NOT_KNOWN);
+                else if(in.operation==XTY_GET_IDENTITY) {
+                    if(xterm_identity_reply((void *)p->dp_Arg2,sizeof in,XTERM_IDENTITY_NAME,LIMPET_VERSION))
+                        ReplyPkt(p,DOSTRUE,0);
+                    else ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);
+                }
                 else if(!xterm_presentation_reply((void *)p->dp_Arg2,sizeof in,s->rows,s->columns,
                         s->amiga_pens?XTY_COLOR_PENS:0))
                     ReplyPkt(p,DOSFALSE,ERROR_BAD_NUMBER);

@@ -3,8 +3,8 @@
 # terminal makes now exactly as it decoded the reply of the terminal it was
 # built with: same status, same fields. Checked for every published or
 # vendored SDK: 0.1.0 (before the input bit), 0.2.0 (before the feature
-# bit), 0.3.0 (before the Shift+Enter input bit) and 0.4.0 (before the
-# OSC 8, icon and further style bits). The new client reading
+# bit), 0.3.0 (before the Shift+Enter input bit), 0.4.0 (before the
+# OSC 8, icon and further style bits) and 0.5.0 (before the text bits). The new client reading
 # an old reply is in test_sdk.c.
 set -eu
 # The old sources are vendored (sdk/tests/compat-<version>), so this runs
@@ -16,10 +16,10 @@ mkdir -p "$out"
 $CC -std=c99 -Wall -Wextra -Werror sdk/tests/compat_gen.c -o "$out/gen-now"
 "$out/gen-now" "$out/reply-now.bin"
 # Each version with the input bits its header defines, and whether an object
-# built with its header may link against the current library (0.4.0 only
-# added a bit, so 0.3.0 objects still fit, as 0.5.0 only adds bits for 0.4.0;
-# 0.1 and 0.2 structs are shorter).
-for entry in 0.1.0:0:no 0.2.0:7:no 0.3.0:7:yes 0.4.0:15:yes; do
+# built with its header may link against the current library. 0.6.0 appends
+# `text` to LimpetPresentation, so every older struct is shorter and no older
+# object links (0.4.0 and 0.5.0 had only added bits to 0.3.0's layout).
+for entry in 0.1.0:0:no 0.2.0:7:no 0.3.0:7:no 0.4.0:15:no 0.5.0:15:no; do
     version=${entry%%:*}; rest=${entry#*:}; known=${rest%%:*}; links=${rest#*:}
     old=$out/old-$version
     cp -R sdk/tests/compat-$version "$old"

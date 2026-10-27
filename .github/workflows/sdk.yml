@@ -22,8 +22,9 @@ jobs:
       # field (known bit 32: DEC 2004, DEC 2048, private 2100); Limpet 0.3.0
       # the features field (known bit 64: window title); Limpet 0.6.0 the
       # input bit 8 (Shift+Enter, CSI > 4 ; 1 m); Limpet 0.7.0 the style bits
-      # and the OSC 8 and icon feature bits (SDK 0.5.0). Older clients are checked
+      # and the OSC 8 and icon feature bits (SDK 0.5.0); Limpet 0.8.0 the text
+      # bits (known bit 128) and the identity operation 14 (SDK 0.6.0). Older clients are checked
       # by sdk/tests/test_sdk_compat.sh.
       - name: Protocol header is the reviewed one
         run: |
-          echo "e251be4ac5b6108ee0616a2a4ac47514878e6ddd8b633dfed491e126a7b1858f  sdk/include/limpet/tty_control.h" | sha256sum -c -
+          echo "3d965cd7cd958bccb2610839e2f90a35394a21757c37d8169dd1c1570aa55542  sdk/include/limpet/tty_control.h" | sha256sum -c -

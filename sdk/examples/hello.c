@@ -22,6 +22,7 @@ static const char *yes_no(int value) { return value ? "yes" : "no"; }
 int main(void)
 {
     LimpetPresentation p;
+    LimpetIdentity id;
     LONG error;
     LimpetStatus status;
 
@@ -49,6 +50,16 @@ int main(void)
     }
 
     puts("Output is a Limpet console.");
+    /* For display only; what to write is decided from p, not from this. */
+    if (limpet_query_identity(Output(), &id, NULL) == LIMPET_OK &&
+        (id.known & XTY_IDENTITY_KNOWN_NAME)) {
+        if (id.known & XTY_IDENTITY_KNOWN_VERSION)
+            printf("  Terminal:      %s %lu.%lu.%lu\n", id.name, (unsigned long)id.major,
+                   (unsigned long)id.minor, (unsigned long)id.patch);
+        else
+            printf("  Terminal:      %s\n", id.name);
+    } else
+        puts("  Terminal:      not named (Limpet before 0.8.0)");
     if (p.known & XTY_PRESENT_KNOWN_COLORS)
         printf("  Colours:       %s\n", level_name(limpet_color_level(&p)));
     else
@@ -83,10 +94,17 @@ int main(void)
         printf("  Window title:  %s\n", limpet_can_set_title(&p) ? "settable (OSC 0/2)" : "no");
     else
         puts("  Window title:  unknown (Limpet before 0.3.0 does not report it)");
+    /* Text encoding: Limpet 0.8.0 and later. Unknown means write ASCII. */
+    if (p.known & XTY_PRESENT_KNOWN_TEXT)
+        printf("  Text:          %s%s%s\n", limpet_text_utf8(&p) ? "UTF-8" : "not UTF-8",
+               limpet_text_wide(&p) ? ", wide characters in two cells" : "",
+               limpet_text_combining(&p) ? ", combining marks joined" : "");
+    else
+        puts("  Text:          unknown (Limpet before 0.8.0): write ASCII");
     if (p.known & ~(uint32_t)(XTY_PRESENT_KNOWN_COLORS | XTY_PRESENT_KNOWN_STYLES |
                               XTY_PRESENT_KNOWN_LINES | XTY_PRESENT_KNOWN_GEOMETRY |
                               XTY_PRESENT_KNOWN_INTERPRETATION | XTY_PRESENT_KNOWN_INPUT |
-                              XTY_PRESENT_KNOWN_FEATURES))
+                              XTY_PRESENT_KNOWN_FEATURES | XTY_PRESENT_KNOWN_TEXT))
         puts("  The terminal also reported fields newer than this SDK; ignored.");
     return RETURN_OK;
 }

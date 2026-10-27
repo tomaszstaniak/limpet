@@ -5,7 +5,7 @@ x86_64; the 0.7.1 builds for mainline x86_64 and the Raspberry Pi have the
 same features ([systems](compatibility.md#systems)). It covers terminal features, application interfaces and the separate
 experimental `LIMPET:` console handler.
 
-Nothing has been added since 0.7.1; see [Unreleased changes](#unreleased-changes).
+Changes after 0.7.1 are listed under [Unreleased changes](#unreleased-changes).
 For installation and platform requirements, see [compatibility](compatibility.md).
 
 ## Feature detection
@@ -807,7 +807,17 @@ part of the ABIv11 release and has not been built for ABIv11.
 
 ## Unreleased changes
 
-None after 0.7.1.
+For the next release (Limpet 0.8.0, SDK 0.6.0):
+
+- The presentation query reports how text is shown: UTF-8 decoding, wide
+  characters in two cells, combining clusters in one
+  (`XTY_PRESENT_KNOWN_TEXT`, `limpet_text_utf8` and the others). A program
+  can tell a terminal that shows Unicode from `CON:` or a terminal that
+  does not say, and write ASCII to those.
+- Terminal identity (operation 14, `limpet_query_identity`): the
+  terminal's name and version, for display only.
+
+See [presentation](presentation.md) and the [SDK API](sdk/api.md).
 
 ## References
 
