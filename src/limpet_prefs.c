@@ -347,13 +347,16 @@ int main(int argc,char **argv)
                         End,
                     Child,HGroup,
                         Child,label("Command line"),
-                        Child,line_view=TextObject,TextFrame,MUIA_Background,MUII_TextBack,End,
+                        /* No minimum width from the text: a long line would
+                           widen the window past its remembered size. */
+                        Child,line_view=TextObject,TextFrame,MUIA_Background,MUII_TextBack,
+                            MUIA_Text_SetMin,FALSE,End,
                         End,
                     Child,HGroup,
                         Child,run=SimpleButton("_Run now"),
                         Child,HSpace(0),
                         End,
-                    Child,status_view=TextObject,MUIA_Text_Contents,(IPTR)status,End,
+                    Child,status_view=TextObject,MUIA_Text_Contents,(IPTR)status,MUIA_Text_SetMin,FALSE,End,
                     End,
                 Child,HGroup,
                     Child,HSpace(0),
