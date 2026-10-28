@@ -46,28 +46,29 @@ colours and progress updates.
 
 Limpet includes:
 
-- Unicode: CJK, emoji (monochrome), combining clusters;
-- 16-colour, 256-colour and 24-bit colour, themes (dark, light, high
-  contrast); the Shell's own prompt keeps its Workbench pen colours;
-- scrollback; selection, copy and paste through the system clipboard;
-- text and scrollback rewrap when the window is resized;
-- the alternate screen used by full-screen programs;
-- Ctrl-C to break the running command;
-- inline images through a documented subset of the Kitty graphics protocol;
-- OSC 8 hyperlinks (Ctrl+click opens them through OpenURL when installed);
-- from 0.2.0: a selection that stays while a program redraws other rows,
-  and bracketed paste, resize reports and wheel reports for full-screen
-  programs such as hardcode;
-- from 0.3.0: a window title that names the running command
-  and, when the program reports it, its state; Ctrl-R search through the
-  command history;
-- from 0.4.0: icons dragged from Workbench put their paths on the
-  command line;
-- from 0.5.0: finding text in the output, and a settings file for the
-  font, theme, scrollback and command history
-  ([details](doc/search-and-settings.md));
-- from 0.6.0: Ctrl-D/E/F and Ctrl-\ as in the system console, and
-  Shift+Enter for programs with their own multi-line input.
+- UTF-8 text, CJK, monochrome emoji and combining characters;
+- 16-colour, 256-colour and 24-bit colour, with dark, light and high-contrast
+  themes; the Shell prompt keeps its Workbench pen colours;
+- DejaVu Sans Mono Nerd Font, including file-type icons for tools such as eza;
+- scrollback, output search and Ctrl-R command-history search;
+- selection that stays while other rows change, and copy and paste through
+  the system clipboard;
+- text and history that reflow when the window is resized;
+- file drag and drop from Workbench onto the command line;
+- window titles showing the running command and, when supplied by the
+  application, its current activity;
+- full-screen applications, bracketed paste, resize and mouse reports,
+  modified Enter and synchronized screen updates;
+- Ctrl-C/D/E/F signals and Ctrl-\ end-of-input;
+- inline images through a [subset of the Kitty graphics protocol](doc/kitty-graphics.md);
+- Ctrl+click links: web addresses go to OpenURL, local files open through
+  Workbench with their default tool;
+- a [settings file](doc/search-and-settings.md) for font, size, theme,
+  scrollback and command history.
+
+[Helix](https://github.com/tomaszstaniak/aros-helix) runs in Limpet as a
+native AROS editor. Terminal applications are separate downloads; they are
+not included with Limpet.
 
 The AROS Shell itself is unchanged: Limpet is the window it runs in.
 Limpet runs alongside the system console for now. Programs that explicitly
@@ -144,16 +145,21 @@ examples and this documentation.
 
 ## Build
 
-Limpet is built on a host with an AROS ABIv11 cross toolchain (GCC 10.5)
-and the ABIv11 SDK:
+Cross-build with the compiler and SDK for the target system. For example,
+with the mainline x86_64 GCC toolchain:
 
-    make abiv11-frontend LIMPET_VERSION=0.5.0 LIMPET_DATE=15.10.2026 \
-         ABIV11_GCC=/path/to/x86_64-aros-gcc \
-         ABIV11_SDK=/path/to/SDK/Development
+```sh
+make target TARGET=aros-x86_64-abiv1-pc \
+    T_CC=/path/to/x86_64-aros-gcc \
+    T_SDK=/path/to/AROS/Developer
+```
 
-The result is `build/abiv11/aros-xterm`, installed as `Limpet`. To reproduce
-an existing release, check out its tag and use its version, date, toolchain
-and SDK. `LIMPET_DATE` is embedded in the binary.
+The other targets are `aros-x86_64-abiv11-pc` and
+`aros-aarch64-abiv1-raspi`. Compiler settings and required variables are in
+[mk/](mk/). Output goes into `build/<target>/`.
+
+To reproduce a release, check out its tag and use the matching compiler,
+SDK, `LIMPET_VERSION` and `LIMPET_DATE`. The date is embedded in the binary.
 
 Run the host tests with:
 
@@ -165,6 +171,20 @@ Planned ports and features: [roadmap](doc/roadmap.md).
 
 The `main` branch may contain work that is not in a release yet. This
 README and `doc/` describe the latest release unless a page says otherwise.
+
+## In development
+
+The following changes are on `main`, but are **not in the 0.7.1 download**:
+
+- [Preferences and startup commands](doc/session-start.md): choose Fastfetch
+  with a compact layout or an AROS image, or run your own command when a
+  new Shell opens. Fastfetch is installed separately.
+- SDK 0.6.0: queries for text support, terminal identity, Kitty graphics
+  support and geometry in pixels.
+- DEC mode 7 to control automatic line wrapping.
+
+See the [unreleased changes](doc/changes.md#unreleased) and
+[roadmap](doc/roadmap.md).
 
 ## Contributing
 
@@ -181,7 +201,8 @@ MIT, see [LICENSE.txt](LICENSE.txt); the SDK is under the same licence and
 contains no third-party code. Bundled components of the terminal keep
 their own licences: HarfBuzz (`vendor/harfbuzz/COPYING`), utf8proc
 (`vendor/utf8proc/LICENSE.md`), Unicode data
-(`data/unicode-17.0/LICENSE.txt`), Unifont (SIL OFL 1.1, `assets/fonts/`)
-and Noto Emoji (SIL OFL 1.1, `assets/fonts/NotoEmoji-OFL.txt`).
+(`data/unicode-17.0/LICENSE.txt`), Unifont (SIL OFL 1.1, `assets/fonts/`),
+Noto Emoji (SIL OFL 1.1, `assets/fonts/NotoEmoji-OFL.txt`) and
+DejaVu Sans Mono Nerd Font (`assets/fonts/DejaVu-NerdFont-LICENSE.txt`).
 
 Author: Tomasz Staniak, <https://tomaszstaniak.com>

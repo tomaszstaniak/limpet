@@ -1,94 +1,68 @@
 # Roadmap
 
-Limpet 0.5.0 is available for AROS x86_64 ABIv11. Completed work includes
-command-history search, file drop, output search and a settings file.
-The long-term goal is to replace `CON:` while keeping compatibility with
-native AROS software.
+Limpet 0.7.1 is available for AROS x86_64 ABIv11 and mainline x86_64
+ABIv1, with an AArch64 Raspberry Pi test build. The experimental `LIMPET:`
+handler is a separate download for all three targets. It does not replace
+`CON:`.
 
-Ports and new features are separate tracks. An unfinished port will not
-hold up an update for an architecture already supported. These are
-development priorities, not announced release dates or completed features.
+## On main, not yet released
 
-## Next round
+- Preferences for a command to run when a new Shell opens, including
+  Fastfetch presets. See [session startup](session-start.md).
+- SDK 0.6.0 queries for text support, terminal identity, Kitty graphics and
+  pixel geometry.
+- DEC mode 7 to turn automatic line wrapping on and off.
 
-- Build for native AROS Raspberry Pi aarch64 using the existing toolchain
-  and Developer SDK already used to compile and link FolioPDF. Check
-  Limpet's dependencies on that target, then run and package the terminal.
-- Reverse command-history search (Ctrl-R) is in 0.3.0, with the window
-  title that names the running program and its state. File drag and drop
-  is in 0.4.0. Scrollback search and a settings file are in 0.5.0, with
-  the experimental LIMPET: handler as a separate archive.
+The [changelog](changes.md) separates these changes from released features.
 
-## More architectures
+## Console compatibility
 
-Start with native AROS Raspberry Pi aarch64. The AROS-patched Clang 20.1.0
-toolchain and Developer SDK from the 2026-08-22 system archive are already
-available and have been used for FolioPDF builds. Reuse that configuration,
-including its large code model, reserved x18 and non-PIC settings.
-This establishes a build starting point, not runtime support for Limpet.
-After that, investigate i386
-ABIv11. Other targets, including m68k, need a dependency and platform
-check before committing to a port.
+The handler already supports queued reads and timed waiters, cancellation,
+Amiga cursor and window reports, Ctrl-C/D/E/F and Ctrl-\, and raw/cooked
+line-feed behaviour. [The compatibility table](limpet-handler.md) records
+what works and the remaining differences, including `AUTO` and `WINDOW`.
 
-For each target, check FreeType, HarfBuzz and utf8proc, pointer sizes,
-DOS packet layout and endianness. A distributable port needs runtime
-checks for Shell startup, Unicode, clipboard, reflow and Ctrl-C, followed
-by a separate package and apkg entry. A successful build alone is not
-a supported port.
+The next step is to close those differences before offering optional,
+reversible replacement of `CON:`. Native Shell behaviour remains part of
+that work, alongside full-screen terminal applications.
 
-Mainline packaging remains a separate task from ABIv11 ports.
+Shared interfaces are being proposed upstream:
 
-## Everyday use
+- [Application capability query](https://github.com/aros-development-team/AROS/issues/1925).
+- [Cancellation of a pending DOS read](https://github.com/aros-development-team/AROS/issues/1926).
+- [Geometry query](https://github.com/aros-development-team/AROS/pull/1920)
+  and [clipboard encoding](https://github.com/aros-development-team/AROS/pull/1909)
+  are under discussion.
 
-The intended order is:
+These are proposals, not accepted AROS interfaces. Limpet's existing private
+contracts remain documented in the [protocol reference](protocols.md).
 
-1. Reverse command-history search with Ctrl-R (done in 0.3.0). It
-   searches commands, not terminal output.
-2. File drag and drop, inserting a correctly quoted path and handling
-   Workbench icons separately from their associated files (done in 0.4.0).
-3. Scrollback search for logs and command output (0.5.0).
-4. Configuration of fonts, theme, scrollback and history limits (0.5.0). Shortcuts are not configurable yet.
-5. Better completion for commands and paths, followed by command arguments.
-6. Horizontal and vertical panes with independent sessions.
+## Everyday use and terminal applications
 
-Prompt configuration stays on the list. Shell prompt syntax and terminal
-presentation should remain distinct.
+Already released: command-history search, file drop, output search, font
+and theme settings, Nerd Font icons and local-file links. Further work:
 
-## Replacing CON:
+- Better completion for commands, paths and command arguments.
+- Configurable shortcuts and prompt presentation.
+- Horizontal and vertical panes with independent sessions.
+- A distributable PTY/termios runtime for local terminal applications.
+- Broader compatibility with editors, pagers and ncurses applications.
+- SSH integration and, later, a multiplexer.
 
-Turn the experimental console handler into a supported ABIv11 option.
-Check programs that open console handles themselves, rather than only
-programs launched inside an existing Limpet window. Installation must be
-optional and reversible before offering a system-console replacement.
+Helix already runs in Limpet as a separate AROS port. That does not imply
+that every POSIX terminal application will run unchanged.
 
-Stage 1 is done in the sources: [LIMPET:](limpet-handler.md) opens a Limpet
-window for `NewShell WINDOW LIMPET:` and for programs that open
-`LIMPET:...` themselves, with CON:'s name syntax, an install and removal
-that last until the next reboot, and a compatibility table measured
-against `CON:`. The same page lists what is missing before it could stand
-in for `CON:`, and a design for that next step.
+## Platforms
 
-## Terminal applications and remote work
+Continue building for mainline x86_64 and Raspberry Pi alongside ABIv11.
+Use mainline facilities where available while retaining compatible paths
+for older systems. The Pi build still needs testing on physical hardware.
+Macaros work is parked; sharing AArch64 and ABIv1 does not establish binary
+compatibility. i386 and other architectures need their own dependency,
+build and runtime checks before a release is promised.
 
-- Build and test the SSH client on ABIv11.
-- Provide a distributable PTY/termios runtime path for local terminal apps.
-- Check compatibility with real editors, pagers and ncurses applications.
-- Work towards a multiplexer such as tmux or an AROS-native equivalent.
-- Extend keyboard reporting, including modifiers and key releases.
+## Graphics
 
-Keep native Shell support, SSH and POSIX application support documented
-separately so users know what is available on their system.
-
-## Graphics and integrations
-
-Extend Kitty graphics with compression, scaling and broader placement
-support. Investigate redraw flicker and tearing using measurements before
-adding a new rendering backend.
-
-Editor integration and extension interfaces are later work. Define them
-around useful integrations rather than a general plugin system upfront.
-
-Doom, tracker interfaces, plasma and other terminal demos remain useful
-experiments. Video, synth/audio extensions, Markdown rendering and an
-animated MOTD or ASCII logo are longer-term ideas. They do not block
-ordinary terminal improvements.
+Extend Kitty graphics beyond the current subset where applications need
+it. Continue measuring scrolling and rendering costs before changing the
+renderer. Demos remain useful examples, but do not hold up console work.
