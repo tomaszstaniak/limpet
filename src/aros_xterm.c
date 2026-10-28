@@ -28,6 +28,9 @@
 #include "aros_drop.h"
 #include "output_search.h"
 #include "settings.h"
+#include "session_start.h"
+#include "session_command.h"
+#include "prefs_port.h"
 #include "console_name.h"
 #include "terminal_input.h"
 #include <dos/var.h>
@@ -1063,13 +1066,14 @@ static void read_switches(void)
 #endif
 static const char version_tag[] __attribute__((used))="$VER: Limpet " LIMPET_VERSION " (" LIMPET_DATE ")";
 
-enum { MENU_ABOUT=1, MENU_CLOSE, MENU_COPY, MENU_PASTE, MENU_FIND, MENU_RELOAD };
+enum { MENU_ABOUT=1, MENU_CLOSE, MENU_COPY, MENU_PASTE, MENU_FIND, MENU_RELOAD, MENU_PREFS };
 static struct NewMenu menu_spec[]={
     {NM_TITLE,(UBYTE *)"Project",NULL,0,0,NULL},
     {NM_ITEM,(UBYTE *)"About Limpet...",NULL,0,0,(APTR)MENU_ABOUT},
 #ifndef XTERM_DOS_HANDLER
     /* Not in the XTERM: worker, which may make no DOS call once it serves
        its port; it takes the settings when its window opens. */
+    {NM_ITEM,(UBYTE *)"Preferences...",NULL,0,0,(APTR)MENU_PREFS},
     {NM_ITEM,(UBYTE *)"Reload settings",NULL,0,0,(APTR)MENU_RELOAD},
 #endif
     {NM_ITEM,NM_BARLABEL,NULL,0,0,NULL},
@@ -1951,6 +1955,14 @@ static void settings_reload(void)
     later=strcmp(next.font,settings.font) || next.font_size!=settings.font_size ||
           next.scrollback!=settings.scrollback || next.history!=settings.history;
     strcpy(settings.theme,next.theme);
+    /* What a new session runs: for the next one in this window (F4). */
+    settings.session_start=next.session_start;
+    strcpy(settings.session_command,next.session_command);
+    strcpy(settings.fastfetch,next.fastfetch);
+    settings.fastfetch_look=next.fastfetch_look;
+    strcpy(settings.fastfetch_config,next.fastfetch_config);
+    settings.fastfetch_hide=next.fastfetch_hide;
+    settings.fastfetch_logo=next.fastfetch_logo;
     settings_theme();
     paint_damage_invalidate(&paint_damage);
     if(settings_message[0]) clip_status=settings_message;
@@ -1960,7 +1972,130 @@ static void settings_reload(void)
         later?"Reloaded: theme applied; font, scrollback and history apply to new windows":
               "Settings reloaded";
 }
+
+/* Project > Preferences: Limpet Preferences (LimpetPrefs in Limpet's
+   drawer), a program of its own, so this window keeps drawing while it is
+   open. It may ask this window to run a line now, through a public port
+   made for it (prefs_port.h). */
+static struct MsgPort *prefs_port;
+static char prefs_port_name[24];
+static void prefs_port_close(void)
+{
+    struct Message *m;
+    if(!prefs_port) return;
+    RemPort(prefs_port);
+    while((m=GetMsg(prefs_port))) {
+        ((XPrefsRequest *)m)->result=XPREFS_NO_SHELL; ReplyMsg(m);
+    }
+    DeleteMsgPort(prefs_port); prefs_port=NULL;
+}
+static ULONG prefs_signal(void)
+{ return prefs_port?1UL<<prefs_port->mp_SigBit:0; }
+static int prefs_port_open(void)
+{
+    unsigned n;
+    if(prefs_port) return 0;
+    if(!(prefs_port=CreateMsgPort())) return -1;
+    Forbid();
+    for(n=1;n<1000;++n) {
+        snprintf(prefs_port_name,sizeof prefs_port_name,XPREFS_PORT_PREFIX "%u",n);
+        if(!FindPort((CONST_STRPTR)prefs_port_name)) break;
+    }
+    prefs_port->mp_Node.ln_Name=prefs_port_name;
+    prefs_port->mp_Node.ln_Pri=0;
+    if(n<1000) AddPort(prefs_port);
+    Permit();
+    if(n>=1000) { DeleteMsgPort(prefs_port); prefs_port=NULL; return -1; }
+    atexit(prefs_port_close);
+    return 0;
+}
+static void open_preferences(void)
+{
+    char path[240],command[2*240+48];
+    struct Process *me=(struct Process *)FindTask(NULL);
+    BPTR home,current,in,out;
+    LONG rc;
+    size_t n;
+    if(prefs_port_open() || !NameFromLock(GetProgramDir(),(STRPTR)path,sizeof path) ||
+       !AddPart((STRPTR)path,(CONST_STRPTR)"LimpetPrefs",sizeof path) ||
+       session_quote_path(path,command,sizeof command-40)) {
+        clip_status="Preferences: cannot be started from here"; return;
+    }
+    n=strlen(command);
+    snprintf(command+n,sizeof command-n," PORT=%s",prefs_port_name);
+    in=Open((CONST_STRPTR)"NIL:",MODE_OLDFILE); out=Open((CONST_STRPTR)"NIL:",MODE_NEWFILE);
+    /* SystemTags would give the program copies of this process's home
+       and current drawer, which would keep Limpet's drawer in use until
+       it ends (CLAUDE.md, NP_HomeDir); it needs neither. */
+    home=me->pr_HomeDir; current=me->pr_CurrentDir;
+    me->pr_HomeDir=BNULL; me->pr_CurrentDir=BNULL;
+    rc=in && out?SystemTags((CONST_STRPTR)command,SYS_Input,in,SYS_Output,out,
+                            SYS_Asynch,TRUE,NP_StackSize,65536,TAG_DONE):-1;
+    me->pr_HomeDir=home; me->pr_CurrentDir=current;
+    if(rc==-1) {
+        if(in) Close(in);
+        if(out) Close(out);
+        clip_status="Preferences: LimpetPrefs could not be started";
+    }
+}
+
+/* A line from Preferences, run as if typed at the Shell's prompt; refused
+   unless the Shell itself waits for a line and nothing is being typed. */
+static int run_now(const char *line,int closing)
+{
+    XForeground fg;
+    if(!shell_session || closing || process_session.eof || !aros_session_active(&process_session))
+        return XPREFS_NO_SHELL;
+    if(screen.alternate_active || process_session.line.raw || !process_session.pending_read ||
+       (aros_session_foreground(&process_session,&fg) && fg.running))
+        return XPREFS_BUSY_PROGRAM;
+    if(command_editor.length || command_editor.searching || paste.length || keyboard_ready() ||
+       output_search.open)
+        return XPREFS_BUSY_TYPING;
+    if(!editor_ready()) return XPREFS_BUSY_PROGRAM;
+    if(!line_editor_insert(&command_editor,line,strlen(line))) return XPREFS_BAD;
+    editor_sync();
+    if(!editor_submit()) {
+        line_editor_action(&command_editor,XLINE_CLEAR); editor_sync();
+        return XPREFS_BUSY_PROGRAM;
+    }
+    return XPREFS_RAN;
+}
+static int prefs_poll(int closing)
+{
+    struct Message *m;
+    int ran=0;
+    if(!prefs_port) return 0;
+    while((m=GetMsg(prefs_port))) {
+        XPrefsRequest *r=(XPrefsRequest *)m;
+        if(m->mn_Length!=sizeof *r || r->magic!=XPREFS_MAGIC || r->action!=XPREFS_RUN ||
+           !memchr(r->line,0,sizeof r->line))
+            r->result=XPREFS_BAD;
+        else if((r->result=run_now(r->line,closing))==XPREFS_RAN) ran=1;
+        ReplyMsg(m);
+    }
+    return ran;
+}
 #endif
+
+/* A Shell with the usual startup (not --from or --no-startup) runs the
+   line set in Preferences once, after S:Shell-Startup; see session_start.h. */
+static int start_shell(void)
+{
+    static char line[XSESSION_TAIL_MAX];
+    int run=0;
+#ifndef XTERM_DOS_HANDLER
+    const char *why=NULL;
+    if(!shell_profile) {
+        run=session_start_line(&settings,line,sizeof line-2,&why);
+        if(run<0) {
+            snprintf(settings_message,sizeof settings_message,"Session start: %s; not run",why);
+            clip_status=settings_message;
+        }
+    }
+#endif
+    return aros_session_start_shell_run(&process_session,shell_profile,run>0?line:NULL);
+}
 
 
 /* The grid that fits the window's inner size. */
@@ -2139,8 +2274,7 @@ int main(int argc,char **argv)
             close_main_window(window); xfont_close(); SetIoErr(error); return RETURN_FAIL;
         }
 #else
-        if(pty_mode?aros_session_start(&process_session,process_command):
-           aros_session_start_shell_profile(&process_session,shell_profile)) {
+        if(pty_mode?aros_session_start(&process_session,process_command):start_shell()) {
             PrintFault(IoErr(),(CONST_STRPTR)(pty_mode?"Cannot start PTY executable":"Cannot start Shell/profile"));
             close_main_window(window); xfont_close(); return RETURN_FAIL;
         }
@@ -2187,7 +2321,11 @@ int main(int argc,char **argv)
              (!shell_session || process_session.line.raw || editor_ready())));
         if(!paste_ready && !keyboard_ready() && !flood_diag_ready() && !(echo_mode==2 && output_ready()))
             Wait((1UL<<window->UserPort->mp_SigBit)|SIGF_CHILD|tick_signal()|aros_drop_signal(&file_drop)|
-                 aros_session_signals(&process_session)|diag_forward_signal()|flood_diag_signals());
+                 aros_session_signals(&process_session)|diag_forward_signal()|flood_diag_signals()
+#ifndef XTERM_DOS_HANDLER
+                 |prefs_signal()
+#endif
+                 );
         PERF_DO(loop_started=PERF_NOW(); ++perf_diag.loops);
         if(settle_poll()) { dirty=1; PERF_DO(++perf_diag.settle_draws); }
         diag_forward();
@@ -2199,6 +2337,9 @@ int main(int argc,char **argv)
         process_session.presentation_features=font_presentation_features;
         process_session.amiga_pens=screen.amiga_pens;
         aros_session_poll(&process_session);
+#ifndef XTERM_DOS_HANDLER
+        if(prefs_poll(closing)) dirty=1;
+#endif
         if(drop_files(closing)) dirty=1;
         flood_diag_queues();
         if(echo_mode==2 && !closing) {
@@ -2331,6 +2472,7 @@ int main(int argc,char **argv)
                     case MENU_FIND: if(!closing) find_start(); break;
 #ifndef XTERM_DOS_HANDLER
                     case MENU_RELOAD: if(!closing) settings_reload(); break;
+                    case MENU_PREFS: if(!closing) open_preferences(); break;
 #endif
                     }
                     pick=item->NextSelect;
@@ -2585,7 +2727,7 @@ int main(int argc,char **argv)
                         process_session.columns=screen.columns;process_session.rows=screen.rows;
                         process_session.pixel_width=screen.columns*xfont_width();
                         process_session.pixel_height=screen.rows*xfont_height();
-                        start_failed=shell_session?aros_session_start_shell_profile(&process_session,shell_profile):
+                        start_failed=shell_session?start_shell():
                             aros_session_start(&process_session,process_command);
                     }
                     if(start_failed) {

@@ -5,6 +5,15 @@ Changes of the terminal. The SDK has its own list in
 
 ## Unreleased
 
+New:
+
+- Project > Preferences opens Limpet Preferences, where a new Shell window
+  can be set to run Fastfetch (compact, or with the AROS logo as a
+  picture, with groups of lines left out) or a command of your own, once,
+  after `S:Shell-Startup`. Run now tries it in the window. Use, Save and
+  Cancel as in the system's preferences. See
+  [A command for every new Shell window](session-start.md).
+
 New for programs:
 
 - The presentation query says whether written text is decoded as UTF-8,

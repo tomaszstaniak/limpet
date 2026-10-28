@@ -55,6 +55,35 @@ int main(void)
     rejects("font=a\001b\n",1,"text");
     { XSettings before; settings_default(&s); before=s;
       assert(settings_parse(&s,"history=5\0x",11,&why)==1 && !memcmp(&before,&s,sizeof s)); }
-    puts("settings PASS: defaults, all keys, CR LF, spaces, bounds, whole-file rejection with line");
+    /* Session start (0.8.0): off by default, every key, lists and words. */
+    settings_default(&s);
+    assert(s.session_start==XSTART_OFF && s.fastfetch_look==XFF_COMPACT && !s.fastfetch_hide &&
+           s.fastfetch_logo==XFF_LOGO_LOOK && !s.session_command[0] && !s.fastfetch[0]);
+    assert(!parse("session_start = fastfetch\nfastfetch=Work:Fastfetch 2/fastfetch\nfastfetch_look=file\n"
+                  "fastfetch_config=ENVARC:my ff.jsonc\nfastfetch_hide= network , hardware\nfastfetch_logo=none\n"
+                  "session_command=Echo \"hello there\"\nfont_size=14\n",&why));
+    assert(s.session_start==XSTART_FASTFETCH && !strcmp(s.fastfetch,"Work:Fastfetch 2/fastfetch"));
+    assert(s.fastfetch_look==XFF_FILE && !strcmp(s.fastfetch_config,"ENVARC:my ff.jsonc"));
+    assert(s.fastfetch_hide==(XFF_NETWORK|XFF_HARDWARE) && s.fastfetch_logo==XFF_LOGO_NONE);
+    assert(!strcmp(s.session_command,"Echo \"hello there\"") && s.font_size==14);
+    settings_default(&s);
+    assert(!parse("fastfetch_hide=\nsession_start=command\nfastfetch_look=picture\nfastfetch_logo=text\n",&why));
+    assert(!s.fastfetch_hide && s.session_start==XSTART_COMMAND && s.fastfetch_look==XFF_PICTURE && s.fastfetch_logo==XFF_LOGO_TEXT);
+    assert(!parse("fastfetch_hide=system,hardware,memory-disks,network",&why) && s.fastfetch_hide==15);
+    rejects("session_start=on",1,"off, fastfetch or command");
+    rejects("session_start=Fastfetch",1,"off, fastfetch or command");
+    rejects("fastfetch_look=big",1,"compact, picture or file");
+    rejects("fastfetch_logo=picture",1,"look, text or none");
+    rejects("fastfetch_hide=disks",1,"separated by commas");
+    rejects("fastfetch_hide=system,system",1,"separated by commas");
+    rejects("fastfetch_hide=system,",1,"separated by commas");
+    rejects("fastfetch_hide=,system",1,"separated by commas");
+    rejects("session_command=",1,"empty");
+    rejects("fastfetch=\n",1,"empty");
+    rejects("session_start=off\nsession_start=off\n",2,"twice");
+    { char line[500]="session_command="; memset(line+16,'a',400); line[416]=0; rejects(line,1,"399"); }
+    { char line[500]="session_command="; memset(line+16,'a',399); line[415]=0;
+      settings_default(&s); assert(!parse(line,&why) && strlen(s.session_command)==399); }
+    puts("settings PASS: defaults, all keys, CR LF, spaces, bounds, whole-file rejection with line, session start");
     return 0;
 }

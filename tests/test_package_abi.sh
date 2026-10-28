@@ -24,6 +24,8 @@ fresh; cp "$tmp/build/$v1/limpet-handler" "$tmp/build/$v11/"
 expect_refused "mainline handler in ABIv11" "differs from what make target built" $v11
 fresh; cp "$tmp/build/$v11/Limpet" "$tmp/build/$v1/"
 expect_refused "ABIv11 program in mainline" "Limpet has no __aros_libset_StdCBase" $v1
+fresh; cp "$tmp/build/$v11/LimpetPrefs" "$tmp/build/$v1/"
+expect_refused "ABIv11 preferences in mainline" "LimpetPrefs has no __aros_libset_StdCBase" $v1
 fresh; rm -rf "$tmp/build/$v11"; cp -R "$tmp/build/$v1" "$tmp/build/$v11"
 expect_refused "mainline build directory as ABIv11" "has no __aros_libset_CrtBase" $v11
 fresh; cp "$tmp/build/$pi/limpet-handler" "$tmp/build/$v1/"

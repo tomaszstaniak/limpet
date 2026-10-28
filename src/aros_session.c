@@ -177,21 +177,31 @@ int aros_session_peer_command(char *command,size_t capacity)
     return session_quote_path(path,command,capacity);
 }
 
-static int start_session(ArosSession *s,const char *command,int console,int shell,BPTR startup)
+static int start_session(ArosSession *s,const char *command,int console,int shell,BPTR startup,
+                         LONG startup_length,const char *tail)
 {
     struct FileHandle *fh[3]={NULL,NULL,NULL};
     struct FileHandle *script=NULL;
     struct Process *child;
     unsigned i;
+    size_t tail_length=tail && *tail?strlen(tail)+2:0;
     if(!s || s->port || s->task_id || !command || (!*command && !shell) ||
-       strlen(command)>=sizeof s->command) return -1;
+       strlen(command)>=sizeof s->command || tail_length>=XSESSION_TAIL_MAX ||
+       (tail && strpbrk(tail,"\r\n"))) return -1;
     memset(s,0,sizeof *s);
     s->console=console; s->shell=shell;
     s->startup_file=startup;
+    /* The line starts on a line of its own, whatever the file's last byte. */
+    if(tail_length) {
+        s->startup_tail[0]='\n'; strcpy(s->startup_tail+1,tail);
+        s->startup_tail[tail_length-1]='\n';
+    }
+    script_stream_init(&s->script,startup?startup_length:0,(long)tail_length);
     strcpy(s->command,command); s->result=-1;
     s->port=CreateMsgPort();
     if(!s->port) return -1;
-    if(startup) {
+    if(startup || tail_length) {
+        s->script_proxy=1;
         script=AllocDosObject(DOS_FILEHANDLE,NULL);
         if(!script) goto fail;
         script->fh_Type=s->port; script->fh_Arg1=4;
@@ -229,9 +239,9 @@ fail:
     return -1;
 }
 int aros_session_start(ArosSession *s,const char *command)
-{ return start_session(s,command,0,0,BNULL); }
+{ return start_session(s,command,0,0,BNULL,0,NULL); }
 int aros_session_start_console(ArosSession *s,const char *command)
-{ return start_session(s,command,1,0,BNULL); }
+{ return start_session(s,command,1,0,BNULL,0,NULL); }
 int aros_session_start_shell(ArosSession *s)
 { return aros_session_start_shell_profile(s,NULL); }
 int aros_session_start_endpoint(ArosSession *s)
@@ -257,9 +267,11 @@ int aros_session_active(const ArosSession *s)
          s->port->mp_MsgList.lh_Head->ln_Succ));
 }
 int aros_session_start_shell_profile(ArosSession *s,const char *profile)
+{ return aros_session_start_shell_run(s,profile,NULL); }
+int aros_session_start_shell_run(ArosSession *s,const char *profile,const char *line)
 {
     BPTR input=BNULL;
-    LONG error;
+    LONG error,length=0;
     if(!s || s->port || s->task_id) { SetIoErr(ERROR_OBJECT_IN_USE); return -1; }
     if(!profile || *profile) {
         input=Open((CONST_STRPTR)(profile?profile:"S:Shell-Startup"),MODE_OLDFILE);
@@ -270,11 +282,12 @@ int aros_session_start_shell_profile(ArosSession *s,const char *profile)
             int examined=fib && ExamineFH(input,fib);
             int regular=examined && fib->fib_DirEntryType<0;
             error=!fib?ERROR_NO_FREE_STORE:!examined?IoErr():ERROR_OBJECT_WRONG_TYPE;
+            if(regular) length=fib->fib_Size;
             if(fib) FreeDosObject(DOS_FIB,fib);
             if(!regular) { Close(input); SetIoErr(error); return -1; }
         }
     }
-    if(!start_session(s,"",1,1,input)) return 0;
+    if(!start_session(s,"",1,1,input,length,line)) return 0;
     error=IoErr();
     if(input) Close(input);
     s->startup_input=BNULL;
@@ -300,19 +313,45 @@ void aros_session_poll(ArosSession *s)
         if(id==4 && (p->dp_Type==ACTION_READ || p->dp_Type==ACTION_SEEK ||
                      p->dp_Type==ACTION_EXAMINE_FH || p->dp_Type==ACTION_END)) {
             LONG result=-1,error=ERROR_INVALID_LOCK;
-            if(s->startup_file) {
-                if(p->dp_Type==ACTION_READ)
-                    result=Read(s->startup_file,(APTR)p->dp_Arg2,p->dp_Arg3);
-                else if(p->dp_Type==ACTION_SEEK)
-                    result=Seek(s->startup_file,p->dp_Arg2,p->dp_Arg3);
-                else if(p->dp_Type==ACTION_EXAMINE_FH)
-                    result=ExamineFH(s->startup_file,BADDR((BPTR)p->dp_Arg2));
-                else {
-                    result=Close(s->startup_file);
+            if(s->script_proxy) {
+                error=0;
+                if(p->dp_Type==ACTION_READ) {
+                    /* The file, then the tail: one stream (script_tail.h). */
+                    LONG part=script_stream_file_part(&s->script,p->dp_Arg3);
+                    result=0;
+                    if(part && s->startup_file) {
+                        result=Read(s->startup_file,(APTR)p->dp_Arg2,part);
+                        if(result<0) error=IoErr();
+                        else script_stream_file_read(&s->script,result);
+                    } else if(part) script_stream_file_read(&s->script,0);
+                    if(!result)
+                        result=script_stream_tail_read(&s->script,s->startup_tail,
+                                                       (char *)p->dp_Arg2,p->dp_Arg3);
+                } else if(p->dp_Type==ACTION_SEEK) {
+                    result=script_stream_seek(&s->script,p->dp_Arg2,p->dp_Arg3);
+                    if(result<0) error=ERROR_SEEK_ERROR;
+                    else if(s->startup_file && s->script.position<s->script.file_length &&
+                            Seek(s->startup_file,s->script.position,OFFSET_BEGINNING)<0) {
+                        error=IoErr(); script_stream_seek(&s->script,result,OFFSET_BEGINNING); result=-1;
+                    }
+                } else if(p->dp_Type==ACTION_EXAMINE_FH) {
+                    struct FileInfoBlock *fib=BADDR((BPTR)p->dp_Arg2);
+                    if(s->startup_file) {
+                        result=ExamineFH(s->startup_file,fib);
+                        if(!result) error=IoErr();
+                    } else {
+                        memset(fib,0,sizeof *fib);
+                        fib->fib_DirEntryType=fib->fib_EntryType=ST_FILE;
+                        result=DOSTRUE;
+                    }
+                    if(result) fib->fib_Size=s->script.file_length+s->script.tail_length;
+                } else {
+                    result=DOSTRUE;
+                    if(s->startup_file) { result=Close(s->startup_file); error=IoErr(); }
                     s->startup_file=s->startup_input=BNULL;
+                    s->script_proxy=0;
                     ++s->startup_closes;
                 }
-                error=IoErr();
             }
             ReplyPkt(p,result,error); continue;
         }

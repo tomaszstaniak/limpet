@@ -11,6 +11,9 @@ T_LDFLAGS = --sysroot=$(T_SDK) -L$(T_SDK)/lib $(T_ARCH_LDFLAGS)
 T_WORKER_ALL_SRC ?= $(T_GUI_SRC) src/aros_handler.c $(T_WORKER_SRC)
 T_GUI_SRC = src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC)
 
+# Limpet Preferences (Zune), a program of its own.
+PREFS_SRC = src/limpet_prefs.c src/settings.c src/settings_edit.c src/session_start.c src/session_command.c
+
 .PHONY: target target-check
 target-check:
 	@test -n "$(T_CC)" && command -v $(firstword $(T_CC)) >/dev/null || { echo "$(TARGET): compiler '$(T_CC)' not found (set T_CC)"; exit 1; }
@@ -23,6 +26,7 @@ target: target-check
 	$(T_CXX) $(HB_FLAGS) $(T_CXX_FLAGS) -DHB_NO_GETENV --sysroot=$(T_SDK) $(T_ARCH_FLAGS) -c $(HB_SRC) -o $(TD)/harfbuzz-handler.o
 	$(T_CC) $(T_CFLAGS) $(T_FRONT_FLAGS) -o $(TD)/Limpet $(T_GUI_SRC) $(TD)/harfbuzz.o $(T_LDFLAGS) $(T_LIBS)
 	$(T_CC) $(T_CFLAGS) -DXTERM_DOS_HANDLER $(T_WORKER_FLAGS) -o $(TD)/limpet-console $(T_WORKER_ALL_SRC) $(TD)/harfbuzz-handler.o $(T_LDFLAGS) $(T_LIBS)
+	$(T_CC) $(T_CFLAGS) -o $(TD)/LimpetPrefs $(PREFS_SRC) $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) $(UNICODE_FLAGS) -nostartfiles -DXHANDLER_WORKER='"limpet-console"' tools/xterm_handler.c $(T_LDFLAGS) -o $(TD)/limpet-handler
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/limpet-handler-remove tools/xterm-console/xterm_remove.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/con-contract tests/con_contract.c $(T_LDFLAGS)
@@ -35,8 +39,8 @@ target: target-check
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/openurl-set-browser tests/openurl_set_browser.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/openurl-probe tools/openurl_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_CFLAGS) $(T_FRONT_FLAGS) -o $(TD)/probes/test_aros_endpoint tests/test_aros_endpoint.c $(SESSION_SRC) $(T_LDFLAGS)
-	$(if $(T_STRIP),$(T_STRIP) --strip-debug $(TD)/Limpet $(TD)/limpet-console $(TD)/limpet-handler $(TD)/limpet-handler-remove)
+	$(if $(T_STRIP),$(T_STRIP) --strip-debug $(TD)/Limpet $(TD)/LimpetPrefs $(TD)/limpet-console $(TD)/limpet-handler $(TD)/limpet-handler-remove)
 	@# Provenance for make-packages.sh: which target these files were built
 	@# for, and their bytes. The handler has no C library marker to check.
-	@(echo "target $(TARGET)"; cd $(TD) && shasum -a 256 Limpet limpet-console limpet-handler limpet-handler-remove) > $(TD)/build-record
+	@(echo "target $(TARGET)"; cd $(TD) && shasum -a 256 Limpet LimpetPrefs limpet-console limpet-handler limpet-handler-remove) > $(TD)/build-record
 	@echo "$(TARGET): built in $(TD)"

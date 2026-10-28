@@ -14,12 +14,12 @@ UNICODE_FLAGS = -Ivendor/utf8proc -DUTF8PROC_STATIC
 INPUT_SRC = src/terminal_input.c src/echo_session.c
 EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c src/output_search.c
 COMPLETION_SRC = src/completion.c src/aros_completion.c
-SESSION_SRC = src/aros_session.c src/perf_diag.c src/redraw_settle.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
+SESSION_SRC = src/aros_session.c src/script_tail.c src/perf_diag.c src/redraw_settle.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/console_geometry.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
 CLUSTER_SRC = src/font_cache.c src/cluster_font.c
-THEME_SRC = src/theme.c src/settings.c src/margin_fill.c
+THEME_SRC = src/theme.c src/settings.c src/session_start.c src/margin_fill.c
 KITTY_SRC = src/kitty_graphics.c
 HYPERLINK_GUI_SRC = src/aros_hyperlink.c src/link_gesture.c
 
@@ -1270,6 +1270,28 @@ test: test-settings
 .PHONY: test-settings
 test-settings: build/test_settings
 	./build/test_settings
+# The command a new Shell window runs (src/session_start.h).
+build/test_session_start: tests/test_session_start.c src/session_start.c src/session_start.h src/settings.c src/settings.h src/session_command.c
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined tests/test_session_start.c src/session_start.c src/settings.c src/session_command.c -o $@
+build/test_script_tail: tests/test_script_tail.c src/script_tail.c src/script_tail.h
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined tests/test_script_tail.c src/script_tail.c -o $@
+test: test-script-tail
+.PHONY: test-script-tail
+test-script-tail: build/test_script_tail
+	./build/test_script_tail
+build/test_settings_edit: tests/test_settings_edit.c src/settings_edit.c src/settings_edit.h src/settings.c src/settings.h
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined tests/test_settings_edit.c src/settings_edit.c src/settings.c -o $@
+test: test-settings-edit
+.PHONY: test-settings-edit
+test-settings-edit: build/test_settings_edit
+	./build/test_settings_edit
+test: test-session-start
+.PHONY: test-session-start
+test-session-start: build/test_session_start
+	./build/test_session_start
 test: test-output-search
 .PHONY: test-output-search
 test-output-search: build/test_output_search

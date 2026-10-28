@@ -6,6 +6,8 @@ For users:
   tested comparison with `CON:`.
 - [Compatibility and limits](compatibility.md).
 - [Search and settings](search-and-settings.md) (0.5.0).
+- [A command for every new Shell window](session-start.md): Fastfetch or
+  your own command, chosen in Preferences (0.8.0).
 - [LIMPET:](limpet-handler.md): Limpet as a console handler (experimental).
 - [Changes](changes.md) of the terminal, release by release.
 - [Roadmap](roadmap.md): planned ports and features.

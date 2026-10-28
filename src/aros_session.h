@@ -3,6 +3,7 @@
 #include "session_queue.h"
 #include "console_input.h"
 #include "aros_break.h"
+#include "script_tail.h"
 #include <exec/ports.h>
 #include <dos/dosextens.h>
 #include <exec/io.h>
@@ -40,6 +41,12 @@ typedef struct {
     int external,opened;
     BPTR startup_input,startup_file;
     unsigned startup_closes;
+    /* The startup script as the Shell reads it: the file, then
+       startup_tail (aros_session_start_shell_run), one stream. */
+#define XSESSION_TAIL_MAX 512
+    XScriptStream script;
+    char startup_tail[XSESSION_TAIL_MAX];
+    int script_proxy;
     IPTR signal_target;
     APTR window; /* The console's window for ACTION_DISK_INFO, or NULL. */
     /* What ACTION_DISK_INFO hands out as CON: does: an IOStdReq whose unit
@@ -86,6 +93,12 @@ int aros_session_start_endpoint(ArosSession *);
 int aros_session_active(const ArosSession *);
 /* NULL: optional S:Shell-Startup; "": clean session; otherwise required file. */
 int aros_session_start_shell_profile(ArosSession *,const char *profile);
+/* The same, and the Shell then runs line once as the startup script's last
+   line: after the startup file, in this session's Shell, before its first
+   prompt. Ctrl-C ends it as any command; if it fails the Shell carries on.
+   Sub-Shells (NewShell, Execute) read their own startup and never see it.
+   NULL or "" runs nothing. At most XSESSION_TAIL_MAX-3 bytes, no line end. */
+int aros_session_start_shell_run(ArosSession *,const char *profile,const char *line);
 int aros_session_interrupt(ArosSession *);
 /* Ctrl-D, Ctrl-E, Ctrl-F in cooked mode, as CON: does them: the break
    signal to the console's reader, nothing into the line. Raw clients get

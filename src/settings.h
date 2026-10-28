@@ -25,11 +25,33 @@
 #define XSETTINGS_FONT_SIZE_MIN 8
 #define XSETTINGS_FONT_SIZE_MAX 20
 
-enum { XSET_FONT=1, XSET_FONT_SIZE=2, XSET_THEME=4, XSET_SCROLLBACK=8, XSET_HISTORY=16 };
+/* What a new Shell window runs after S:Shell-Startup (session_start.h):
+ * nothing, Fastfetch in one of its looks, or the user's own command. */
+#define XSETTINGS_COMMAND_MAX 400
+enum { XSTART_OFF, XSTART_FASTFETCH, XSTART_COMMAND };
+enum { XFF_COMPACT, XFF_PICTURE, XFF_FILE };          /* fastfetch_look */
+enum { XFF_LOGO_LOOK, XFF_LOGO_TEXT, XFF_LOGO_NONE };  /* fastfetch_logo */
+/* fastfetch_hide: groups of lines left out, as the packaged presets name
+ * them (system, hardware, memory-disks, network). */
+enum { XFF_SYSTEM=1, XFF_HARDWARE=2, XFF_MEMORY=4, XFF_NETWORK=8 };
+#define XFF_GROUPS 4
+extern const char *const settings_group_names[XFF_GROUPS];
+
+enum { XSET_FONT=1, XSET_FONT_SIZE=2, XSET_THEME=4, XSET_SCROLLBACK=8, XSET_HISTORY=16,
+       XSET_SESSION_START=32, XSET_SESSION_COMMAND=64, XSET_FASTFETCH=128,
+       XSET_FASTFETCH_LOOK=256, XSET_FASTFETCH_CONFIG=512, XSET_FASTFETCH_HIDE=1024,
+       XSET_FASTFETCH_LOGO=2048 };
 typedef struct {
     char font[XSETTINGS_PATH_MAX];   /* empty: the built-in Vera Mono */
     char theme[XSETTINGS_PATH_MAX];  /* empty: the built-in dark theme */
     unsigned font_size, scrollback, history;
+    unsigned session_start;          /* XSTART_* */
+    char session_command[XSETTINGS_COMMAND_MAX]; /* a Shell command line */
+    char fastfetch[XSETTINGS_PATH_MAX];          /* empty: "fastfetch" by the Path */
+    unsigned fastfetch_look;         /* XFF_COMPACT.. */
+    char fastfetch_config[XSETTINGS_PATH_MAX];   /* for XFF_FILE */
+    unsigned fastfetch_hide;         /* XFF_SYSTEM.. bits */
+    unsigned fastfetch_logo;         /* XFF_LOGO_* */
     unsigned given;                  /* XSET_* the file set */
 } XSettings;
 

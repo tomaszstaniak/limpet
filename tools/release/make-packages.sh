@@ -16,8 +16,8 @@ root=${0:A:h:h:h}
 build=${LIMPET_PACKAGE_BUILD:-$root/build}
 [[ -e $out ]] && { print -u2 "$out exists"; exit 1; }
 # The version is the build's, not this script's: refuse a mismatch.
-check_version() {  # $1 = binary
-    local v=$(strings $1 | sed -n 's/^\$VER: Limpet \([^ ]*\) .*/\1/p' | head -1)
+check_version() {  # $1 = binary, $2 = its name in $VER (default Limpet)
+    local v=$(strings $1 | sed -n "s/^\\\$VER: ${2:-Limpet} \\([^ ]*\\) .*/\\1/p" | head -1)
     [[ $v == $ver ]] || { print -u2 "$1 is version '$v', not $ver; rebuild with LIMPET_VERSION=$ver"; exit 1; }
 }
 mkdir -p $out
@@ -46,15 +46,15 @@ package_target() {  # $1 = target
         *) print -u2 "unknown target $t"; exit 1;;
     esac
     # The ELF header does not tell the ABIs apart; the C library bases do.
-    # ABIv11's remover uses only stdlib (StdlibBase), the frontend and
-    # worker crt (CrtBase); mainline's all use stdc (StdCBase).
+    # ABIv11's remover and LimpetPrefs use only stdlib (StdlibBase), the
+    # frontend and worker crt (CrtBase); mainline's all use stdc (StdCBase).
     local libset helperset
     case $t in
         *-abiv11-*) libset=__aros_libset_CrtBase helperset=__aros_libset_StdlibBase;;
         *-abiv1-*) libset=__aros_libset_StdCBase helperset=__aros_libset_StdCBase;;
     esac
     [[ -f $root/tools/release/README-$t.txt ]] || { print -u2 "unknown target $t"; exit 1; }
-    for f in $b/Limpet $b/limpet-console $b/limpet-handler $b/limpet-handler-remove; do
+    for f in $b/Limpet $b/LimpetPrefs $b/limpet-console $b/limpet-handler $b/limpet-handler-remove; do
         file -b $f | grep -q "ELF 64-bit.*$want" ||
             { print -u2 "$f is not an ELF for $t: $(file -b $f)"; exit 1; }
     done
@@ -63,8 +63,9 @@ package_target() {  # $1 = target
     for f in $b/Limpet $b/limpet-console; do
         nm $f | grep " $libset\$" >/dev/null || { print -u2 "$f has no $libset: not built for $t"; exit 1; }
     done
-    nm $b/limpet-handler-remove | grep " $helperset\$" >/dev/null ||
-        { print -u2 "$b/limpet-handler-remove has no $helperset: not built for $t"; exit 1; }
+    for f in $b/limpet-handler-remove $b/LimpetPrefs; do
+        nm $f | grep " $helperset\$" >/dev/null || { print -u2 "$f has no $helperset: not built for $t"; exit 1; }
+    done
     # Every binary must be the one make target built for this target: this
     # also covers limpet-handler, which links no C library at all.
     [[ -f $b/build-record ]] || { print -u2 "$b/build-record missing: build with make target TARGET=$t"; exit 1; }
@@ -72,9 +73,13 @@ package_target() {  # $1 = target
     (cd $b && tail -n +2 build-record | shasum -a 256 -c --quiet) ||
         { print -u2 "$b: a binary differs from what make target built for $t"; exit 1; }
     check_version $b/Limpet
+    check_version $b/LimpetPrefs LimpetPrefs
     local d=$out/stage-$t/Limpet; common $d
     cp $b/Limpet $d/Limpet
     cp $root/assets/icon/Limpet.info.png $d/Limpet.info
+    # Project > Preferences starts it; the icon lets Workbench start it too.
+    cp $b/LimpetPrefs $d/LimpetPrefs
+    cp $root/assets/icon/Limpet.info.png $d/LimpetPrefs.info
     sed "s/@VERSION@/$ver/g" $root/tools/release/README-$t.txt > $d/README.txt
     grep -q '@VERSION@' $d/README.txt && { print -u2 "README still has @VERSION@"; exit 1; }
     # the drawer's own icon, beside it at the archive root (apkg installs it)
