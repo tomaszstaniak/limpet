@@ -316,6 +316,10 @@ void aros_session_poll(ArosSession *s)
             if(s->script_proxy) {
                 error=0;
                 if(p->dp_Type==ACTION_READ) {
+                    /* The Shell has not read the console yet: its breaks
+                       (Ctrl-C on a startup command) go to it until a
+                       program reads the console. */
+                    if(s->console) aros_break_bind(&s->breaker,p->dp_Port->mp_SigTask);
                     /* The file, then the tail: one stream (script_tail.h). */
                     LONG part=script_stream_file_part(&s->script,p->dp_Arg3);
                     result=0;

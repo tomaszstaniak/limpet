@@ -847,9 +847,13 @@ static void draw_screen(struct Window *window)
     static unsigned run_images[MAX_ROWS];
     unsigned cursor_col=screen.cursor_column;
     int cursor=(!screen.view_offset || display==&command_view) && screen.cursor_visible;
-    /* `screen` here is the local copy; the live view is anything but the
-       command editor's view, and only while not scrolled into history. */
-    int images_live=display!=&command_view && !screen.view_offset;
+    /* `screen` here is the local copy. Images are shown while it is not
+       scrolled into history, the command editor's view included: it is the
+       terminal's screen with the typed line written over it, and its
+       scroll_count follows that line if it scrolls the screen, so images
+       stay in place over their text. (They used to vanish while a line was
+       typed under fastfetch's logo.) */
+    int images_live=!screen.view_offset;
     if(!paint_damage_geometry(&paint_damage,screen.rows,screen.columns)) return;
 #ifdef XTERM_PERF_DIAG
     { int t=perf_model_torn(&screen);
@@ -1838,16 +1842,18 @@ static int theme_from_command_line;
 static char settings_message[160];
 
 /* 1 with the file's text, 0 when there is none, -1 when it is too large. */
-static int settings_read(char *text,size_t *length)
+static int settings_read(const char *name,char *text,size_t *length)
 {
-    static const char *const places[]={"ENV:Limpet/Limpet.conf","ENVARC:Limpet/Limpet.conf"};
     struct Process *self=(struct Process *)FindTask(NULL);
     APTR window=self->pr_WindowPtr;
     unsigned i; int result=0;
     /* A missing ENVARC: is no reason for a requester. */
     self->pr_WindowPtr=(APTR)-1;
     for(i=0;i<2 && !result;++i) {
-        BPTR f=Open((CONST_STRPTR)places[i],MODE_OLDFILE);
+        char place[48];
+        BPTR f;
+        snprintf(place,sizeof place,"%s:Limpet/%s",i?"ENVARC":"ENV",name);
+        f=Open((CONST_STRPTR)place,MODE_OLDFILE);
         LONG n;
         if(!f) continue;
         n=Read(f,text,XSETTINGS_FILE_MAX+1);
@@ -1865,7 +1871,7 @@ static int settings_load(XSettings *into)
 {
     static char text[XSETTINGS_FILE_MAX+1];
     size_t length=0; const char *why=NULL; int line;
-    switch(settings_read(text,&length)) {
+    switch(settings_read("Limpet.conf",text,&length)) {
     case 0: return 0;
     case -1:
         snprintf(settings_message,sizeof settings_message,
@@ -1879,6 +1885,36 @@ static int settings_load(XSettings *into)
     }
     return 0;
 }
+
+#ifndef XTERM_DOS_HANDLER
+/* Session.conf: what a new Shell window runs (settings.h). On any error
+   nothing runs and the title says why; `into` keeps its other settings. */
+static void session_settings_load(XSettings *into)
+{
+    static char text[XSETTINGS_FILE_MAX+1];
+    XSettings next;
+    size_t length=0; const char *why=NULL; int line;
+    settings_default(&next);
+    switch(settings_read("Session.conf",text,&length)) {
+    case -1:
+        snprintf(settings_message,sizeof settings_message,"Session.conf is over 4096 bytes; nothing runs");
+        break;
+    case 1:
+        if((line=settings_parse_session(&next,text,length,&why))) {
+            snprintf(settings_message,sizeof settings_message,"Session.conf line %d: %s; nothing runs",line,why);
+            settings_default(&next);
+        }
+        break;
+    }
+    into->session_start=next.session_start;
+    strcpy(into->session_command,next.session_command);
+    strcpy(into->fastfetch,next.fastfetch);
+    into->fastfetch_look=next.fastfetch_look;
+    strcpy(into->fastfetch_config,next.fastfetch_config);
+    into->fastfetch_hide=next.fastfetch_hide;
+    into->fastfetch_logo=next.fastfetch_logo;
+}
+#endif
 
 static void settings_theme(void)
 {
@@ -1956,13 +1992,7 @@ static void settings_reload(void)
           next.scrollback!=settings.scrollback || next.history!=settings.history;
     strcpy(settings.theme,next.theme);
     /* What a new session runs: for the next one in this window (F4). */
-    settings.session_start=next.session_start;
-    strcpy(settings.session_command,next.session_command);
-    strcpy(settings.fastfetch,next.fastfetch);
-    settings.fastfetch_look=next.fastfetch_look;
-    strcpy(settings.fastfetch_config,next.fastfetch_config);
-    settings.fastfetch_hide=next.fastfetch_hide;
-    settings.fastfetch_logo=next.fastfetch_logo;
+    session_settings_load(&settings);
     settings_theme();
     paint_damage_invalidate(&paint_damage);
     if(settings_message[0]) clip_status=settings_message;
@@ -1979,6 +2009,9 @@ static void settings_reload(void)
    made for it (prefs_port.h). */
 static struct MsgPort *prefs_port;
 static char prefs_port_name[24];
+/* Names are reused once a window closes: the key tells this window's
+   requests from those of an editor opened by a closed one. */
+static ULONG prefs_key;
 static void prefs_port_close(void)
 {
     struct Message *m;
@@ -2006,6 +2039,9 @@ static int prefs_port_open(void)
     if(n<1000) AddPort(prefs_port);
     Permit();
     if(n>=1000) { DeleteMsgPort(prefs_port); prefs_port=NULL; return -1; }
+    {   struct DateStamp now; DateStamp(&now);
+        prefs_key=((ULONG)(IPTR)prefs_port^(ULONG)now.ds_Tick^((ULONG)now.ds_Minute<<12))&0x7fffffffUL;
+        if(!prefs_key) prefs_key=1; }
     atexit(prefs_port_close);
     return 0;
 }
@@ -2018,11 +2054,15 @@ static void open_preferences(void)
     size_t n;
     if(prefs_port_open() || !NameFromLock(GetProgramDir(),(STRPTR)path,sizeof path) ||
        !AddPart((STRPTR)path,(CONST_STRPTR)"LimpetPrefs",sizeof path) ||
-       session_quote_path(path,command,sizeof command-40)) {
+       session_quote_path(path,command,sizeof command-48)) {
         clip_status="Preferences: cannot be started from here"; return;
     }
+    /* An asynchronous start reports nothing about a missing program. */
+    {   BPTR lock=Lock((CONST_STRPTR)path,SHARED_LOCK);
+        if(!lock) { clip_status="Preferences: LimpetPrefs is not in Limpet's drawer"; return; }
+        UnLock(lock); }
     n=strlen(command);
-    snprintf(command+n,sizeof command-n," PORT=%s",prefs_port_name);
+    snprintf(command+n,sizeof command-n," PORT=%s KEY=%lu",prefs_port_name,(unsigned long)prefs_key);
     in=Open((CONST_STRPTR)"NIL:",MODE_OLDFILE); out=Open((CONST_STRPTR)"NIL:",MODE_NEWFILE);
     /* SystemTags would give the program copies of this process's home
        and current drawer, which would keep Limpet's drawer in use until
@@ -2046,8 +2086,10 @@ static int run_now(const char *line,int closing)
     XForeground fg;
     if(!shell_session || closing || process_session.eof || !aros_session_active(&process_session))
         return XPREFS_NO_SHELL;
+    /* Only the Shell itself at its prompt: a reader that cannot be named
+       may be a program reading a line. */
     if(screen.alternate_active || process_session.line.raw || !process_session.pending_read ||
-       (aros_session_foreground(&process_session,&fg) && fg.running))
+       !aros_session_foreground(&process_session,&fg) || fg.running)
         return XPREFS_BUSY_PROGRAM;
     if(command_editor.length || command_editor.searching || paste.length || keyboard_ready() ||
        output_search.open)
@@ -2069,7 +2111,7 @@ static int prefs_poll(int closing)
     while((m=GetMsg(prefs_port))) {
         XPrefsRequest *r=(XPrefsRequest *)m;
         if(m->mn_Length!=sizeof *r || r->magic!=XPREFS_MAGIC || r->action!=XPREFS_RUN ||
-           !memchr(r->line,0,sizeof r->line))
+           r->key!=prefs_key || !memchr(r->line,0,sizeof r->line))
             r->result=XPREFS_BAD;
         else if((r->result=run_now(r->line,closing))==XPREFS_RAN) ran=1;
         ReplyMsg(m);
@@ -2200,6 +2242,9 @@ int main(int argc,char **argv)
 #endif
     settings_default(&settings);
     settings_load(&settings);
+#ifndef XTERM_DOS_HANDLER
+    session_settings_load(&settings);
+#endif
     settings_theme();
     if(settings_buffers()) {
         if(handler_mode) SetIoErr(ERROR_NO_FREE_STORE);

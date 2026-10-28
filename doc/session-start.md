@@ -54,6 +54,11 @@ In `CON:` and in output written to a file, Fastfetch uses the text logo.
   typed into the window for it.
 - Ctrl-C stops it, as any command. If the program is missing or fails, the
   Shell says so and carries on as usual.
+- If a command in `S:Shell-Startup` fails (return code at or above the
+  Shell's `FailAt`), the Shell stops reading the script there and the line
+  does not run either.
+- It runs as a script line: a program that asks whether it runs at an
+  interactive prompt is told it does not.
 - After F4 (new session in the same window) it runs again.
 
 ## Run now
@@ -73,12 +78,12 @@ has no window to run the line in; **Run now** is then unavailable.
 
 ## Where it is kept
 
-The choices are keys in `Limpet.conf` (see
-[Search and settings](search-and-settings.md)): **Use** writes
-`ENV:Limpet/Limpet.conf`, **Save** writes `ENVARC:Limpet/Limpet.conf` as
-well. Limpet Preferences writes only these keys; the font, theme and every
-other line of the file stay as they were. A key at its default value is not
-written.
+The choices are kept in `Session.conf`, beside `Limpet.conf`: **Use**
+writes `ENV:Limpet/Session.conf`, **Save** writes
+`ENVARC:Limpet/Session.conf` as well. `Limpet.conf` (font, theme,
+scrollback, history) is not touched, so a Limpet older than 0.8.0 keeps
+reading it as before. Lines of your own in `Session.conf` (comments, for
+example) stay where they are; a key at its default value is not written.
 
 | Key | Value |
 | --- | --- |
@@ -86,10 +91,9 @@ written.
 | `session_command` | the command line, up to 399 bytes |
 | `fastfetch` | path of the Fastfetch program; default `fastfetch` |
 | `fastfetch_look` | `compact` (default), `picture` or `file` |
-| `fastfetch_config` | path of your configuration file, for `file` |
+| `fastfetch_config` | path of your configuration file, for `file`; it must end in `.jsonc`, `.json` or `.json5` |
 | `fastfetch_hide` | groups left out, separated by commas: `system`, `hardware`, `memory-disks`, `network` |
 | `fastfetch_logo` | `look` (default), `text` or `none` |
 
-Limpet 0.7.1 and earlier do not know these keys and ignore a file that has
-them (with a message in the title bar). Set **Run** to **Nothing** and
-**Save** before going back to an older Limpet.
+A `Session.conf` with a mistake in it runs nothing; the window's title bar
+names the line, as for `Limpet.conf`.

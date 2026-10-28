@@ -63,12 +63,14 @@ static int line_key(const char *line, size_t length)
     return -1;
 }
 
-size_t settings_edit_session(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity)
+int settings_edit_session(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
+                          size_t *length)
 {
     char buffer[64];
     unsigned written = 0;
     size_t pos = 0, n = 0;
     int k;
+    *length = 0;
     if (!capacity) return 0;
     out[0] = 0;
     while (pos < old_length) {
@@ -91,5 +93,6 @@ size_t settings_edit_session(const char *old, size_t old_length, const XSettings
         v = value(s, k, buffer, sizeof buffer);
         if (v && !put_key(out, capacity, &n, k, v)) return 0;
     }
-    return n;
+    *length = n;
+    return 1;
 }

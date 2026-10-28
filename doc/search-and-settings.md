@@ -85,7 +85,6 @@ An example:
 | `theme` | path of a theme file (see the Themes drawer) | the built-in dark theme | at once with Project > Reload settings, and in new windows |
 | `scrollback` | 100 to 1000 lines | 256 | in new windows |
 | `history` | 1 to 500 commands | 32 | in new windows |
-| `session_start` and the other `session_` and `fastfetch` keys | see [A command for every new Shell window](session-start.md) | `off` | in new windows |
 
 - **`scrollback`** is the number of lines kept at the widest window, 160
   columns. A narrower window keeps more of its shorter lines: 512 lines at
@@ -118,6 +117,9 @@ the title bar says when font, size, scrollback or history differ, which
 apply to windows opened after that. A file that is wrong is ignored, the
 window keeps what it has, and the title bar names the line and says
 `nothing changed`.
+
+What a new Shell window runs is kept in `Session.conf` beside this file;
+see [A command for every new Shell window](session-start.md).
 
 Windows of the experimental `LIMPET:` handler read the same file when they
 open; they have no Reload settings (see [LIMPET:](limpet-handler.md)).

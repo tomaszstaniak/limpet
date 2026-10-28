@@ -8,7 +8,7 @@ static int build(const char *conf)
 {
     XSettings s; const char *w;
     settings_default(&s);
-    assert(!settings_parse(&s, conf, strlen(conf), &w));
+    assert(!settings_parse_session(&s, conf, strlen(conf), &w));
     return session_start_line(&s, line, sizeof line, &why);
 }
 int main(void)
@@ -27,6 +27,12 @@ int main(void)
                  "fastfetch_config=ENVARC:a \"b\" *.jsonc") == 1);
     assert(!strcmp(line, "\"Work:My Tools/fastfetch\" -c \"ENVARC:a *\"b*\" **.jsonc\""));
     assert(build("session_start=fastfetch\nfastfetch_look=file") == -1 && strstr(why, "no configuration file"));
+    assert(build("session_start=fastfetch\nfastfetch_look=file\nfastfetch_config=RAM:mine") == -1 && strstr(why, ".jsonc"));
+    assert(build("session_start=fastfetch\nfastfetch_look=file\nfastfetch_config=RAM:Mine.JSON5") == 1);
+    {   XSettings s; char line9[600];
+        settings_default(&s); s.session_start = XSTART_FASTFETCH;
+        memset(s.fastfetch, '*', 250); s.fastfetch[250] = 0;   /* quoted: 502 bytes, the line then too long */
+        assert(session_start_line(&s, line9, 510, &why) == -1 && !line9[0] && strstr(why, "too long")); }
     assert(build("session_start=fastfetch\nfastfetch=RAM:$x/ff") == -1 && strstr(why, "program"));
     assert(build("session_start=fastfetch\nfastfetch_look=file\nfastfetch_config=RAM:`x`") == -1 && strstr(why, "configuration"));
     /* The user's own command, as written. */

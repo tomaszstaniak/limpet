@@ -1,10 +1,10 @@
 /* Limpet Preferences: what a new Shell window runs once it has read
  * S:Shell-Startup. A Zune program of its own, started from a Limpet
- * window's Project > Preferences (or from a Shell). It edits only the
- * session-start keys of Limpet.conf (settings_edit.h): Use writes
- * ENV:Limpet/Limpet.conf, Save writes it to ENVARC: as well, Cancel
- * changes nothing. Run now asks the window it was opened from to run the
- * line at its Shell prompt (prefs_port.h). */
+ * window's Project > Preferences (or from a Shell). It writes Session.conf
+ * (settings.h, settings_edit.h): Use ENV:Limpet/Session.conf, Save the one
+ * in ENVARC: as well, each edited from its own text; Cancel changes
+ * nothing. Run now asks the window it was opened from to run the line at
+ * its Shell prompt (prefs_port.h). */
 #include "settings.h"
 #include "settings_edit.h"
 #include "session_start.h"
@@ -31,13 +31,13 @@
 #endif
 static const char version_tag[] __attribute__((used))="$VER: LimpetPrefs " LIMPET_VERSION " (" LIMPET_DATE ")";
 
-#define SESSION_FILE "ENV:Limpet/Limpet.conf"
-#define KEPT_FILE "ENVARC:Limpet/Limpet.conf"
+#define SESSION_FILE "ENV:Limpet/Session.conf"
+#define KEPT_FILE "ENVARC:Limpet/Session.conf"
 
 enum { ID_CHANGED=1, ID_SAVE, ID_USE, ID_CANCEL, ID_RUN, ID_CHOOSE };
 
-static char file_text[XSETTINGS_FILE_MAX+1];
-static size_t file_length;
+static char session_text[XSETTINGS_FILE_MAX+1],kept_text[XSETTINGS_FILE_MAX+1];
+static size_t session_length,kept_length;
 static XSettings loaded;
 static char status[160];
 static char line_text[600];
@@ -45,23 +45,36 @@ static char line_text[600];
 static Object *app,*win,*start_cycle,*pages,*program,*look_cycle,*config_pop,*config,
     *show[XFF_GROUPS],*logo_cycle,*command,*choose,*line_view,*run,*status_view;
 
-/* ENV:, else ENVARC:, as Limpet reads it. 0 when neither has a file. */
-static int read_file(char *text,size_t *length)
+/* 1 with the file's text, 0 without the file, -1 when it is too large. */
+static int read_file(const char *name,char *text,size_t *length)
 {
-    static const char *const names[]={SESSION_FILE,KEPT_FILE};
-    unsigned i;
-    *length=0;
-    for(i=0;i<2;++i) {
-        BPTR f=Open((CONST_STRPTR)names[i],MODE_OLDFILE);
-        LONG n;
-        if(!f) continue;
-        n=Read(f,text,XSETTINGS_FILE_MAX+1);
-        Close(f);
-        if(n<0 || n>XSETTINGS_FILE_MAX) return -1;
-        *length=(size_t)n; text[n]=0;
-        return 1;
-    }
-    return 0;
+    BPTR f=Open((CONST_STRPTR)name,MODE_OLDFILE);
+    LONG n;
+    *length=0; text[0]=0;
+    if(!f) return 0;
+    n=Read(f,text,XSETTINGS_FILE_MAX+1);
+    Close(f);
+    if(n<0 || n>XSETTINGS_FILE_MAX) return -1;
+    *length=(size_t)n; text[n]=0;
+    return 1;
+}
+
+/* A name from a requester or typed in, made absolute here: ASL can give a
+   drawer relative to this program's current one ("//sub"), which a Shell
+   would read relative to its own. Names that cannot be locked stay. */
+static void absolute(char *path,size_t size)
+{
+    char full[XSETTINGS_PATH_MAX];
+    BPTR lock;
+    struct Process *self=(struct Process *)FindTask(NULL);
+    APTR window=self->pr_WindowPtr;
+    if(!path[0] || strchr(path,':')) return;
+    self->pr_WindowPtr=(APTR)-1;
+    lock=Lock((CONST_STRPTR)path,SHARED_LOCK);
+    self->pr_WindowPtr=window;
+    if(!lock) return;
+    if(NameFromLock(lock,(STRPTR)full,sizeof full) && strlen(full)<size) strcpy(path,full);
+    UnLock(lock);
 }
 
 static int write_one(const char *name,const char *text,size_t length)
@@ -113,12 +126,15 @@ static void gather(XSettings *s)
         if(!value_of(show[i],MUIA_Selected)) s->fastfetch_hide|=1u<<i;
     s->fastfetch_logo=(unsigned)value_of(logo_cycle,MUIA_Cycle_Active);
     copy_text(s->session_command,sizeof s->session_command,string_of(command));
+    absolute(s->fastfetch,sizeof s->fastfetch);
+    absolute(s->fastfetch_config,sizeof s->fastfetch_config);
 }
 
 static struct MsgPort *reply_port;
 static XPrefsRequest request;
 static int request_out;
 static const char *port_name;
+static ULONG port_key;
 
 static void refresh(void)
 {
@@ -134,7 +150,7 @@ static void refresh(void)
     else if(!r) copy_text(line_text,sizeof line_text,"(nothing)");
     else snprintf(line_text,sizeof line_text,"Not possible: %s",why);
     set(line_view,MUIA_Text_Contents,line_text);
-    set(run,MUIA_Disabled,r<=0 || !port_name || request_out);
+    set(run,MUIA_Disabled,r<=0 || !port_name || !reply_port || request_out);
 }
 
 static void say(const char *text)
@@ -143,19 +159,20 @@ static void say(const char *text)
     set(status_view,MUIA_Text_Contents,status);
 }
 
+/* Use: ENV: only; Save: ENVARC: too. Each file is edited from its own
+   text, so lines of the user's in either stay as they are there. */
 static int store(int keep)
 {
-    static char out[XSETTINGS_FILE_MAX+1];
+    static char out[XSETTINGS_FILE_MAX+1],kept[XSETTINGS_FILE_MAX+1];
     XSettings s;
-    size_t n;
+    size_t n=0,k=0;
     gather(&s);
-    n=settings_edit_session(file_text,file_length,&s,out,sizeof out);
-    if(!n && (file_length || s.session_start!=XSTART_OFF || s.session_command[0] || s.fastfetch[0] ||
-              s.fastfetch_config[0] || s.fastfetch_hide || s.fastfetch_look || s.fastfetch_logo)) {
-        say("Limpet.conf would be over 4096 bytes; nothing was written");
+    if(!settings_edit_session(session_text,session_length,&s,out,sizeof out,&n) ||
+       (keep && !settings_edit_session(kept_text,kept_length,&s,kept,sizeof kept,&k))) {
+        say("Session.conf would be over 4096 bytes; nothing was written");
         return 0;
     }
-    if(!write_one(SESSION_FILE,out,n) || (keep && !write_one(KEPT_FILE,out,n))) {
+    if(!write_one(SESSION_FILE,out,n) || (keep && !write_one(KEPT_FILE,kept,k))) {
         say(keep?"Could not write ENV:Limpet or ENVARC:Limpet":"Could not write ENV:Limpet");
         return 0;
     }
@@ -174,13 +191,13 @@ static void run_now(void)
     request.message.mn_Node.ln_Type=NT_MESSAGE;
     request.message.mn_Length=sizeof request;
     request.message.mn_ReplyPort=reply_port;
-    request.magic=XPREFS_MAGIC; request.action=XPREFS_RUN;
+    request.magic=XPREFS_MAGIC; request.action=XPREFS_RUN; request.key=port_key;
     /* The window may close at any time: find and send under Forbid. */
     Forbid();
     port=FindPort((CONST_STRPTR)port_name);
     if(port) PutMsg(port,&request.message);
     Permit();
-    if(!port) { say("The Limpet window is closed"); port_name=NULL; refresh(); return; }
+    if(!port) { say("Not run: the Limpet window is closed"); port_name=NULL; refresh(); return; }
     request_out=1;
     say("Sent to the Limpet window...");
     refresh();
@@ -193,7 +210,7 @@ static void run_answered(void)
         "Not run: a program is running in the Limpet window",
         "Not run: something is being typed in the Limpet window",
         "Not run: the Limpet window has no Shell",
-        "Not run: this Limpet does not take the request",
+        "Not run: the Limpet window is closed",
     };
     if(!GetMsg(reply_port)) return;
     request_out=0;
@@ -212,7 +229,8 @@ static void choose_program(void)
     set(app,MUIA_Application_Sleep,TRUE);
     if(fr && AslRequestTags(fr,ASLFR_Window,(IPTR)value_of(win,MUIA_Window_Window),TAG_DONE)) {
         copy_text(path,sizeof path,(const char *)fr->fr_Drawer);
-        if(AddPart((STRPTR)path,fr->fr_File,sizeof path) && !session_quote_path(path,quoted,sizeof quoted) &&
+        if(AddPart((STRPTR)path,fr->fr_File,sizeof path) && (absolute(path,sizeof path),1) &&
+           !session_quote_path(path,quoted,sizeof quoted) &&
            strlen(quoted)<XSETTINGS_COMMAND_MAX) {
             set(command,MUIA_String_Contents,quoted);
         } else say("That name cannot be used in a Shell line");
@@ -232,7 +250,7 @@ int main(int argc,char **argv)
     static const char *logos[]={"As in the look","Text","None",NULL};
     static const char *group_labels[XFF_GROUPS]={"System","Hardware","Memory and disks","Network"};
     struct RDArgs *args=NULL;
-    IPTR arg[1]={0};
+    IPTR arg[2]={0,0};
     const char *why;
     ULONG sigs=0;
     int result=RETURN_OK,r;
@@ -240,18 +258,27 @@ int main(int argc,char **argv)
     unsigned i;
 
     if(argc>0) {
-        args=ReadArgs((CONST_STRPTR)"PORT/K",(APTR)arg,NULL);
+        args=ReadArgs((CONST_STRPTR)"PORT/K,KEY/K/N",(APTR)arg,NULL);
         if(!args) { PrintFault(IoErr(),(CONST_STRPTR)"LimpetPrefs"); return RETURN_FAIL; }
-        if(arg[0] && !strncmp((const char *)arg[0],XPREFS_PORT_PREFIX,strlen(XPREFS_PORT_PREFIX)))
+        if(arg[0] && arg[1] && !strncmp((const char *)arg[0],XPREFS_PORT_PREFIX,strlen(XPREFS_PORT_PREFIX))) {
             port_name=(const char *)arg[0];
+            port_key=(ULONG)*(LONG *)arg[1];
+        }
     }
     settings_default(&loaded);
-    r=read_file(file_text,&file_length);
-    if(r<0) { file_length=0; copy_text(status,sizeof status,"Limpet.conf is over 4096 bytes; it will be replaced"); }
-    else if(r>0 && (r=settings_parse(&loaded,file_text,file_length,&why))) {
-        snprintf(status,sizeof status,"Limpet.conf line %d: %s; Limpet ignores the file",r,why);
-        settings_default(&loaded);
-    } else copy_text(status,sizeof status,port_name?"":"Run now works when opened from a Limpet window");
+    /* Shown: ENV:'s file, else ENVARC:'s, as Limpet reads them. */
+    {   int in_session=read_file(SESSION_FILE,session_text,&session_length);
+        int in_kept=read_file(KEPT_FILE,kept_text,&kept_length);
+        const char *text=in_session?session_text:kept_text;
+        size_t length=in_session?session_length:kept_length;
+        if(in_session<0) session_length=0;
+        if(in_kept<0) kept_length=0;
+        r=in_session?in_session:in_kept;
+        if(r<0) copy_text(status,sizeof status,"Session.conf is over 4096 bytes; it will be replaced");
+        else if(r>0 && (r=settings_parse_session(&loaded,text,length,&why))) {
+            snprintf(status,sizeof status,"Session.conf line %d: %s; Limpet runs nothing",r,why);
+            settings_default(&loaded);
+        } else copy_text(status,sizeof status,port_name?"":"Run now: open Preferences from a Limpet window"); }
     reply_port=CreateMsgPort();
 
     groups_box=HGroup,End;
@@ -291,7 +318,7 @@ int main(int argc,char **argv)
                                 MUIA_Popstring_Button,(IPTR)PopButton(MUII_PopFile),
                                 ASLFR_TitleText,(IPTR)"Choose the Fastfetch program",
                                 End,
-                            Child,HSpace(0),
+                            Child,Label1((STRPTR)""),
                             Child,TextObject,MUIA_Text_Contents,(IPTR)"\33i(empty: fastfetch from the Shell's search path)",End,
                             Child,label("Look"),
                             Child,look_cycle=CycleObject,MUIA_Cycle_Entries,(IPTR)looks,End,
@@ -314,7 +341,7 @@ int main(int argc,char **argv)
                                     MUIA_String_MaxLen,XSETTINGS_COMMAND_MAX,MUIA_CycleChain,1,End,
                                 Child,choose=SimpleButton("C_hoose program..."),
                                 End,
-                            Child,HSpace(0),
+                            Child,Label1((STRPTR)""),
                             Child,VSpace(0),
                             End,
                         End,
@@ -324,8 +351,9 @@ int main(int argc,char **argv)
                         End,
                     Child,HGroup,
                         Child,run=SimpleButton("_Run now"),
-                        Child,status_view=TextObject,MUIA_Text_Contents,(IPTR)status,End,
+                        Child,HSpace(0),
                         End,
+                    Child,status_view=TextObject,MUIA_Text_Contents,(IPTR)status,End,
                     End,
                 Child,HGroup,
                     Child,HSpace(0),
@@ -395,7 +423,7 @@ int main(int argc,char **argv)
     }
     set(win,MUIA_Window_Open,FALSE);
     /* A request still out: its reply comes, the window replies at once. */
-    while(request_out) { WaitPort(reply_port); run_answered(); }
+    while(request_out && reply_port) { WaitPort(reply_port); run_answered(); }
     MUI_DisposeObject(app);
     if(reply_port) DeleteMsgPort(reply_port);
     if(args) FreeArgs(args);

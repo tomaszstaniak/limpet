@@ -1,8 +1,8 @@
 #ifndef XTERM_SETTINGS_H
 #define XTERM_SETTINGS_H
 #include <stddef.h>
-/* Limpet's settings file: ENV:Limpet/Limpet.conf, else ENVARC:Limpet/Limpet.conf
- * (read by the frontend; this model only parses). One key=value per line,
+/* Limpet's settings files: ENV:Limpet/Limpet.conf, else ENVARC:Limpet/Limpet.conf,
+ * and Session.conf beside it (read by the frontend; this model only parses). One key=value per line,
  * # comments and blank lines; spaces around the value are dropped, so a path
  * may hold spaces inside. A file is taken whole or not at all: any unknown or
  * repeated key, bad number, value out of range or line without '=' rejects
@@ -58,6 +58,12 @@ typedef struct {
 void settings_default(XSettings *);
 /* 0: the file's values are in *s. Otherwise the 1-based number of the first
  * line that is wrong (or 1 for a file that is too large or not text), *s is
- * unchanged and *why says what is wrong. */
+ * unchanged and *why says what is wrong. Limpet.conf takes the font, theme,
+ * scrollback and history keys, as in 0.7.1 and before. */
 int settings_parse(XSettings *s, const char *text, size_t length, const char **why);
+/* The same for Session.conf (ENV:Limpet/, else ENVARC:Limpet/), which holds
+ * only the session-start keys: a file of its own, so that a Limpet older
+ * than 0.8.0, which refuses a Limpet.conf with keys it does not know, never
+ * sees them. Written by Limpet Preferences (settings_edit.h). */
+int settings_parse_session(XSettings *s, const char *text, size_t length, const char **why);
 #endif

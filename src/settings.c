@@ -70,7 +70,18 @@ static int text_value(char *dst, size_t capacity, const char *v, size_t n, const
     return 1;
 }
 
+enum { SESSION_KEYS = XSET_SESSION_START|XSET_SESSION_COMMAND|XSET_FASTFETCH|XSET_FASTFETCH_LOOK|
+                      XSET_FASTFETCH_CONFIG|XSET_FASTFETCH_HIDE|XSET_FASTFETCH_LOGO };
+
+static int parse(XSettings *out, const char *text, size_t length, const char **why, unsigned allowed);
+
 int settings_parse(XSettings *out, const char *text, size_t length, const char **why)
+{ return parse(out, text, length, why, ~(unsigned)SESSION_KEYS); }
+
+int settings_parse_session(XSettings *out, const char *text, size_t length, const char **why)
+{ return parse(out, text, length, why, SESSION_KEYS); }
+
+static int parse(XSettings *out, const char *text, size_t length, const char **why, unsigned allowed)
 {
     XSettings s = *out;
     size_t pos = 0;
@@ -158,6 +169,7 @@ int settings_parse(XSettings *out, const char *text, size_t length, const char *
             s.fastfetch_logo = (unsigned)v;
         } else { *why = "unknown key"; return line; }
 #undef KEY
+        if (!(bit & allowed)) { *why = "unknown key"; return line; }
         if (given & bit) { *why = "the key is there twice"; return line; }
         given |= bit;
         pos = end + 1;

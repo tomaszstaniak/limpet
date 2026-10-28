@@ -11,6 +11,18 @@ static int append(char *out, size_t capacity, size_t *n, const char *text)
     return 1;
 }
 
+static int ends_with(const char *text, const char *end)
+{
+    size_t n = strlen(text), k = strlen(end), i;
+    if (n < k) return 0;
+    for (i = 0; i < k; ++i) {
+        char c = text[n - k + i];
+        if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+        if (c != end[i]) return 0;
+    }
+    return 1;
+}
+
 int session_start_line(const XSettings *s, char *out, size_t capacity, const char **why)
 {
     char quoted[2 * XSETTINGS_PATH_MAX + 3];
@@ -32,12 +44,17 @@ int session_start_line(const XSettings *s, char *out, size_t capacity, const cha
         if (session_quote_path(s->fastfetch, quoted, sizeof quoted)) {
             *why = "the Fastfetch program's name cannot be used in a Shell line"; return -1;
         }
-        append(out, capacity, &n, quoted);
-    } else append(out, capacity, &n, "fastfetch");
+        if (!append(out, capacity, &n, quoted)) goto long_line;
+    } else if (!append(out, capacity, &n, "fastfetch")) goto long_line;
     if (s->fastfetch_look == XFF_FILE) {
         if (!s->fastfetch_config[0]) { *why = "no configuration file is chosen"; return -1; }
+        /* Fastfetch adds .jsonc to a name without one of its endings. */
+        if (!ends_with(s->fastfetch_config, ".jsonc") && !ends_with(s->fastfetch_config, ".json") &&
+            !ends_with(s->fastfetch_config, ".json5")) {
+            *why = "the configuration file's name must end in .jsonc, .json or .json5"; out[0] = 0; return -1;
+        }
         if (session_quote_path(s->fastfetch_config, quoted, sizeof quoted)) {
-            *why = "the configuration file's name cannot be used in a Shell line"; return -1;
+            *why = "the configuration file's name cannot be used in a Shell line"; out[0] = 0; return -1;
         }
         if (!append(out, capacity, &n, " -c ") || !append(out, capacity, &n, quoted)) goto long_line;
     } else if (!append(out, capacity, &n, s->fastfetch_look == XFF_PICTURE ? " -c aros-logo" : " -c aros-compact"))

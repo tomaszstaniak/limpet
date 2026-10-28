@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 static XSettings s;
+static int session; /* parse as Session.conf */
 static int parse(const char *text, const char **why)
-{ return settings_parse(&s,text,strlen(text),why); }
+{ return (session?settings_parse_session:settings_parse)(&s,text,strlen(text),why); }
 static void rejects(const char *text, int line, const char *reason)
 {
     XSettings before; const char *why;
@@ -55,17 +56,22 @@ int main(void)
     rejects("font=a\001b\n",1,"text");
     { XSettings before; settings_default(&s); before=s;
       assert(settings_parse(&s,"history=5\0x",11,&why)==1 && !memcmp(&before,&s,sizeof s)); }
-    /* Session start (0.8.0): off by default, every key, lists and words. */
+    /* Session start (0.8.0): its keys live in Session.conf, never in
+       Limpet.conf (which an older Limpet would then ignore whole). */
+    rejects("session_start=fastfetch",1,"unknown key");
+    session=1;
+    rejects("font=x.ttf",1,"unknown key");
+    rejects("session_start=off\nhistory=5",2,"unknown key");
     settings_default(&s);
     assert(s.session_start==XSTART_OFF && s.fastfetch_look==XFF_COMPACT && !s.fastfetch_hide &&
            s.fastfetch_logo==XFF_LOGO_LOOK && !s.session_command[0] && !s.fastfetch[0]);
     assert(!parse("session_start = fastfetch\nfastfetch=Work:Fastfetch 2/fastfetch\nfastfetch_look=file\n"
                   "fastfetch_config=ENVARC:my ff.jsonc\nfastfetch_hide= network , hardware\nfastfetch_logo=none\n"
-                  "session_command=Echo \"hello there\"\nfont_size=14\n",&why));
+                  "session_command=Echo \"hello there\"\n",&why));
     assert(s.session_start==XSTART_FASTFETCH && !strcmp(s.fastfetch,"Work:Fastfetch 2/fastfetch"));
     assert(s.fastfetch_look==XFF_FILE && !strcmp(s.fastfetch_config,"ENVARC:my ff.jsonc"));
     assert(s.fastfetch_hide==(XFF_NETWORK|XFF_HARDWARE) && s.fastfetch_logo==XFF_LOGO_NONE);
-    assert(!strcmp(s.session_command,"Echo \"hello there\"") && s.font_size==14);
+    assert(!strcmp(s.session_command,"Echo \"hello there\"") && s.font_size==13);
     settings_default(&s);
     assert(!parse("fastfetch_hide=\nsession_start=command\nfastfetch_look=picture\nfastfetch_logo=text\n",&why));
     assert(!s.fastfetch_hide && s.session_start==XSTART_COMMAND && s.fastfetch_look==XFF_PICTURE && s.fastfetch_logo==XFF_LOGO_TEXT);
