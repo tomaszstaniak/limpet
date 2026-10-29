@@ -3,7 +3,7 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## Unreleased
+## 0.8.0 (2026-10-29)
 
 New:
 
@@ -13,6 +13,11 @@ New:
   after `S:Shell-Startup`. Run now tries it in the window. Use, Save and
   Cancel as in the system's preferences. See
   [A command for every new Shell window](session-start.md).
+
+Fixed:
+
+- Inline images remain visible when the next command line is edited and
+  scroll with the surrounding text.
 
 New for programs:
 

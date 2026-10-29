@@ -1,6 +1,6 @@
 # Limpet SDK changes
 
-## 0.6.0 (unreleased)
+## 0.6.0 (2026-10-29)
 
 Works with Limpet 0.1.0 to 0.8.0.
 

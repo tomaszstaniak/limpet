@@ -29,9 +29,18 @@ About this build
 
 This build has the same features as Limpet @VERSION@ for ABIv11; the
 changes of each version are listed in doc/changes.md in the source
-(https://github.com/tomaszstaniak/limpet). New in 0.7.1: Ctrl+click on a
-link to a local file says in the window title whether the file was handed
-to Workbench, was not found, or could not be opened.
+(https://github.com/tomaszstaniak/limpet).
+
+New in 0.8.0
+------------
+
+Project > Preferences opens Limpet Preferences. Choose Fastfetch or your own
+command to run when a new Shell window opens. Use applies the setting until
+restart; Save keeps it. Fastfetch is a separate download.
+
+Applications can query text support, terminal identity, image support and
+pixel geometry through SDK 0.6.0. Automatic line wrapping can be disabled.
+Inline images stay visible while you type the next command.
 
 
 Requirements
