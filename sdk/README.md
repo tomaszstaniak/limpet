@@ -1,4 +1,4 @@
-# Limpet SDK 0.4.0
+# Limpet SDK 0.6.0
 
 The SDK provides a presentation query and helpers for colour, progress
 lines, links, images and window titles in the Limpet terminal. Programs
@@ -40,20 +40,21 @@ window and from the Shell in a `CON:` window.
 
 ## Compatibility
 
-Works against Limpet 0.6.0 (every feature), 0.3.0 to 0.5.0 (everything
-except Shift+Enter, which they do not report), 0.2.0 and 0.2.1 (also
-without the window title, which they do not confirm) and 0.1.0 (also
-without the input modes, which it reports as unknown). Code written for an
-earlier SDK compiles unchanged. Objects built with SDK 0.3.0 link with this
-version unchanged; objects built with 0.1 or 0.2 must be rebuilt. Details:
-`doc/versioning.md`.
+Limpet 0.8.0 reports all capabilities exposed by this SDK. The public
+geometry packet is supported from Limpet 0.7.0; text capabilities, terminal
+identity and the Kitty graphics capability bit require 0.8.0. Earlier
+versions still work: an unsupported query or unknown bit is not a promise
+that the terminal supports the feature.
+
+Existing source can be rebuilt with SDK 0.6.0. Rebuild objects that use
+`LimpetPresentation`: its added text field changes the structure and the
+query/decode link names. Programs already built with older SDKs continue
+to work with new terminals. See `doc/versioning.md`.
 
 ## Build requirements
 
 An ABIv11 x86_64 C toolchain and matching Developer SDK are required.
 The prebuilt library uses GCC 10.5 and the 2026.09 SDK. Rebuild it when
-using an incompatible toolchain. Verification records are in
-`doc/sdk/verification-0.4.0.md`, `doc/sdk/verification-0.3.0.md` and
-`doc/sdk/verification-0.2.0.md`.
+using an incompatible toolchain. The release checks are recorded in `doc/sdk/verification-0.6.0.md`.
 
 Project: <https://github.com/tomaszstaniak/limpet>

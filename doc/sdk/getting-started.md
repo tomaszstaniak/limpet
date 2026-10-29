@@ -10,7 +10,7 @@ AROS C cross-compilation setup is required.
   **ABIv11 Developer SDK**. The SDK was built and tested with GCC 10.5 and
   the 2026.09 Developer SDK.
 - `make`, `unzip`.
-- To run the result: AROS ABIv11 x86_64 and Limpet 0.6.0 or later for
+- To run the result: AROS ABIv11 x86_64 and Limpet 0.8.0 or later for
   all SDK features. Earlier Limpet versions report newer features as unknown;
   unsupported consoles use plain-text fallback.
 
@@ -20,8 +20,8 @@ SDK release ships a library for ABIv11 only. See
 
 ## 1. Unpack
 
-    unzip limpet-sdk-0.4.0.zip
-    cd limpet-sdk-0.4.0
+    unzip limpet-sdk-0.6.0.zip
+    cd limpet-sdk-0.6.0
 
 | Path | Contents |
 | --- | --- |
@@ -57,7 +57,7 @@ using the prebuilt one, run the same command with `rebuild-lib`, then
 Copy `build/abiv11/` to the AROS machine, start Limpet, and run `hello`
 from the Limpet window:
 
-    Limpet SDK 0.4.0
+    Limpet SDK 0.6.0
     Output is a Limpet console.
       Colours:       24-bit colour (SGR 38;2;r;g;b)
       SGR 30-37:     Workbench screen pens; ANSI colours go as 38;5;0-15
@@ -74,7 +74,7 @@ Limpet 0.2.x the last line reads
 
 Run it again in a normal AROS Shell window (`CON:`):
 
-    Limpet SDK 0.4.0
+    Limpet SDK 0.6.0
     This console does not answer the Limpet query (CON: or another console).
     Nothing is known about it: plain text only.
 
@@ -108,8 +108,8 @@ int main(void)
 Build it like the examples:
 
     x86_64-aros-gcc -O2 --sysroot=$AROS_SDK -I$AROS_SDK/include \
-        -Ilimpet-sdk-0.4.0/include myprog.c -o myprog \
-        -L$AROS_SDK/lib -Llimpet-sdk-0.4.0/lib/abiv11 -lLimpet
+        -Ilimpet-sdk-0.6.0/include myprog.c -o myprog \
+        -L$AROS_SDK/lib -Llimpet-sdk-0.6.0/lib/abiv11 -lLimpet
 
 Or skip the library and compile the two files in `src/` into your program;
 they need nothing but `dos.library` and the C library.
