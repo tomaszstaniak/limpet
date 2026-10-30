@@ -68,16 +68,26 @@ Limpet includes:
 - a [settings file](doc/search-and-settings.md) for font, size, theme,
   scrollback and command history.
 
-[Helix](https://github.com/tomaszstaniak/aros-helix) runs in Limpet as a
-native AROS editor. Terminal applications are separate downloads; they are
-not included with Limpet.
-
 The AROS Shell itself is unchanged: Limpet is the window it runs in.
 Limpet runs alongside the system console for now. Programs that explicitly
 open `CON:` still use the existing console handler.
 
 [Why Limpet](doc/why-limpet.md) compares the Shell in `CON:` and in Limpet,
 with the same bytes sent to both.
+
+## Applications
+
+![Fastfetch showing AROS system information and a graphical logo in Limpet](doc/screenshots/fastfetch-aros.png)
+
+[Fastfetch](https://github.com/tomaszstaniak/aros-fastfetch) with the AROS
+image logo. Choose it in Project > Preferences to run it when a new window opens.
+
+![Helix editing Rust code with syntax highlighting in Limpet](doc/screenshots/helix-aros.png)
+
+[Helix](https://github.com/tomaszstaniak/aros-helix), editing Rust with syntax
+highlighting and its own colour theme.
+
+Both run natively on AROS and are separate downloads.
 
 ## Install
 
