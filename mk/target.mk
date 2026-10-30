@@ -9,10 +9,10 @@ T_PROBE_CFLAGS = $(OPTFLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(T_SDK)
 T_LDFLAGS = --sysroot=$(T_SDK) -L$(T_SDK)/lib $(T_ARCH_LDFLAGS)
 # The worker's sources in link order; a target may give its own order.
 T_WORKER_ALL_SRC ?= $(T_GUI_SRC) src/aros_handler.c $(T_WORKER_SRC)
-T_GUI_SRC = src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC)
+T_GUI_SRC = src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC)
 
 # Limpet Preferences (Zune), a program of its own.
-PREFS_SRC = src/limpet_prefs.c src/settings.c src/settings_edit.c src/session_start.c src/session_command.c
+PREFS_SRC = src/limpet_prefs.c src/settings.c src/settings_edit.c src/session_start.c src/session_command.c $(WINDOW_SRC)
 
 .PHONY: target target-check
 target-check:

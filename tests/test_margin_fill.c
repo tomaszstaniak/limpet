@@ -53,12 +53,14 @@ int main(void)
     n = margin_rects(&s, &t, &g, r, 64);
     covers(n, &g);
     assert(n == 4 && at(n, 0, 0) == 0x101010 && at(n, g.window_width - 1, 50) == 0x101010);
+    /* A translucent window shows these at its opacity. */
+    assert(r[0].clear && r[1].clear && r[2].clear && r[3].clear);
 
     /* Alternate screen filled with one colour, like Helix: one colour, still four. */
     out("\033[?1049h\033[48;2;59;34;76m\033[2J");
     n = margin_rects(&s, &t, &g, r, 64);
     covers(n, &g);
-    assert(n == 4 && at(n, 5, 5) == 0x3b224c && at(n, g.window_width - 1, g.window_height - 1) == 0x3b224c);
+    assert(n == 4 && !r[0].clear && at(n, 5, 5) == 0x3b224c && at(n, g.window_width - 1, g.window_height - 1) == 0x3b224c);
 
     /* A status line in another colour on the last row: the bottom band and the
      * side margins of that row take it, the rows above keep theirs. */

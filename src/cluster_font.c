@@ -1,4 +1,5 @@
 #include "cluster_font.h"
+#include "background.h"
 #include "aros_font.h"
 #include "perf_diag.h"
 #ifdef __AROS__
@@ -224,6 +225,22 @@ const XClusterRaster *xfont_cluster(const uint32_t *s,unsigned count,unsigned sp
     cluster_fill(e,s,count,span);
 #endif
     return r;
+}
+
+void xfont_cluster_rgba(const XClusterRaster *r,uint32_t fg,uint32_t bg,unsigned bg_alpha,
+                        unsigned char *out,unsigned char *alpha)
+{
+    unsigned i,c;
+    if(!r || !out || !alpha || r->width>XRASTER_MAX || r->height>XRASTER_MAX) return;
+    for(i=0;i<r->width*r->height;++i) {
+        unsigned a=r->pixels[i]>>24,total=background_over_alpha(a,bg_alpha);
+        alpha[i]=(unsigned char)total;
+        for(c=0;c<3;++c) {
+            unsigned shift=16-8*c;
+            unsigned p=r->colour ? (r->pixels[i]>>shift)&255 : (((fg>>shift)&255)*a+127)/255;
+            out[i*3+c]=background_over_channel(p,a,(bg>>shift)&255,bg_alpha,total);
+        }
+    }
 }
 
 void xfont_cluster_rgb(const XClusterRaster *r,uint32_t fg,uint32_t bg,unsigned char *out)

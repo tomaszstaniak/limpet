@@ -14,6 +14,29 @@ static int edit(const char *old, const char *conf)
 int main(void)
 {
     XSettings back; const char *why;
+    /* Window.conf: its own keys only, defaults left out, other lines kept. */
+    {
+        XSettings w;
+        settings_default(&w);
+        assert(w.background_opacity == 100 && !w.background_blur);
+        assert(!settings_parse_window(&w, "background_opacity=70\nbackground_blur=on\n", 41, &why));
+        assert(w.background_opacity == 70 && w.background_blur == 1);
+        assert(settings_edit_window("# mine\nbackground_opacity=30\n", 29, &w, out, sizeof out, &n));
+        assert(!strcmp(out, "# mine\nbackground_opacity=70\nbackground_blur=on\n"));
+        settings_default(&w);
+        assert(settings_edit_window("# mine\nbackground_opacity=30\nbackground_blur=on\n", 48, &w, out, sizeof out, &n));
+        assert(!strcmp(out, "# mine\n"));
+        settings_default(&w);
+        /* Out of range, unknown words and other files' keys: the whole file is refused. */
+        assert(settings_parse_window(&w, "background_opacity=19\n", 22, &why) == 1);
+        assert(settings_parse_window(&w, "background_opacity=101\n", 23, &why) == 1);
+        assert(settings_parse_window(&w, "background_blur=yes\n", 20, &why) == 1);
+        assert(settings_parse_window(&w, "font_size=12\n", 13, &why) == 1);
+        assert(w.background_opacity == 100);
+        /* And its keys are unknown to the other two files. */
+        assert(settings_parse(&w, "background_opacity=70\n", 22, &why) == 1);
+        assert(settings_parse_session(&w, "background_blur=on\n", 19, &why) == 1);
+    }
     /* Nothing chosen: the file comes back as it was. */
     assert(edit("", "") && !n && !out[0]);
     assert(edit("# mine\nx = y\n", "") && !strcmp(out, "# mine\nx = y\n"));

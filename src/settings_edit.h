@@ -11,4 +11,7 @@
  * XSETTINGS_FILE_MAX. */
 int settings_edit_session(const char *old, size_t old_length, const XSettings *, char *out, size_t capacity,
                           size_t *length);
+/* The same for the background keys in Window.conf. */
+int settings_edit_window(const char *old, size_t old_length, const XSettings *, char *out, size_t capacity,
+                         size_t *length);
 #endif

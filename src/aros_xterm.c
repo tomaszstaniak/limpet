@@ -31,6 +31,9 @@
 #include "session_start.h"
 #include "session_command.h"
 #include "prefs_port.h"
+#include "background.h"
+#include "window_alpha.h"
+#include "backdrop_blur.h"
 #include "console_name.h"
 #include "terminal_input.h"
 #include <dos/var.h>
@@ -686,7 +689,8 @@ static void kitty_mark_rows(unsigned i,long first,long end)
 }
 /* Copy the part of each visible image that falls in this text row; returns
    which images it drew, to be confirmed once the row upload succeeds. */
-static unsigned kitty_composite(const XTermScreen *s,int live,unsigned row,unsigned char *pixels,unsigned pitch)
+static unsigned kitty_composite(const XTermScreen *s,int live,unsigned row,unsigned char *pixels,unsigned pitch,
+                                unsigned char *alpha,unsigned alpha_pitch)
 {
     XKittyCursor c;unsigned i,w=xfont_width(),h=xfont_height(),drawn=0;
     if(!live) return 0;
@@ -703,11 +707,18 @@ static unsigned kitty_composite(const XTermScreen *s,int live,unsigned row,unsig
             const unsigned char *src;unsigned char *dst=pixels+y*pitch+x0*3;
             if(iy>=image->height) break;
             src=image->pixels+(size_t)iy*image->width*image->channels;
-            if(image->channels==3) memcpy(dst,src,width*3);
-            else {
+            unsigned char *plane=alpha?alpha+y*alpha_pitch+x0:NULL;
+            if(image->channels==3) {
+                memcpy(dst,src,width*3);
+                if(plane) memset(plane,255,width);
+            } else {
                 unsigned x;
                 for(x=0;x<width;++x) {
                     unsigned a=src[x*4+3];
+                    if(plane) {
+                        background_over_pixel(dst+x*3,plane+x,src[x*4],src[x*4+1],src[x*4+2],a);
+                        continue;
+                    }
                     dst[x*3]=(unsigned char)((src[x*4]*a+dst[x*3]*(255-a))/255);
                     dst[x*3+1]=(unsigned char)((src[x*4+1]*a+dst[x*3+1]*(255-a))/255);
                     dst[x*3+2]=(unsigned char)((src[x*4+2]*a+dst[x*3+2]*(255-a))/255);
@@ -717,6 +728,22 @@ static unsigned kitty_composite(const XTermScreen *s,int live,unsigned row,unsig
         drawn|=1u<<i;
     }
     return drawn;
+}
+/* Where the text area lies in the window's RastPort. A GimmeZeroZero window's
+   RastPort is its inner area, clipped by its inner layer. A translucent
+   window cannot be one: under its composited inner layer the outer layer
+   would hide what is behind the window, so it is a plain window, its origin
+   is the border and nothing but this clip keeps text off the border until
+   the size change is handled. Set by draw_screen for each pass. */
+static unsigned inner_x,inner_y,inner_width=~0u,inner_height=~0u;
+/* Cuts a rectangle (inner coordinates) to the inner area; 1 if it was cut. */
+static int inner_clip(unsigned x,unsigned y,unsigned *width,unsigned *height)
+{
+    unsigned w=x<inner_width?inner_width-x:0,h=y<inner_height?inner_height-y:0;
+    int cut=*width>w || *height>h;
+    if(*width>w) *width=w;
+    if(*height>h) *height=h;
+    return cut;
 }
 /* Upload each fast-path image's visible rectangle straight from its pixels. */
 static void kitty_blit_fast(struct RastPort *rp,const XTermScreen *s)
@@ -734,10 +761,19 @@ static void kitty_blit_fast(struct RastPort *rp,const XTermScreen *s)
         y0=(unsigned)((top-k->first)*h);
         y1=(unsigned)((end-k->first)*h);if(y1>image->height) y1=image->height;
         if(y0>=y1) continue;
-        if(WritePixelArray(image->pixels,0,y0,image->width*3,rp,MARGIN+x0,MARGIN+(unsigned)(k->first*(long)h)+y0,
-                           width,y1-y0,RECTFMT_RGB)==width*(y1-y0)) {
-            kitty_mark_rows(i,top,end);++kitty_fast_blits;
-        } else {
+        {
+            unsigned top_y=MARGIN+(unsigned)(k->first*(long)h)+y0,hh=y1-y0;
+            int cut=inner_clip(MARGIN+x0,top_y,&width,&hh);
+            y1=y0+hh;
+            if(cut) { long r;for(r=top;r<end;++r) paint_damage_forget_row(&paint_damage,(unsigned)r); }
+            if(!width || !hh) continue;
+            if(WritePixelArray(image->pixels,0,y0,image->width*3,rp,inner_x+MARGIN+x0,inner_y+top_y,
+                               width,hh,RECTFMT_RGB)!=width*hh) goto failed;
+        }
+        kitty_mark_rows(i,top,end);++kitty_fast_blits;
+        continue;
+failed:
+        {
             /* Partly drawn: take the row path on the next pass. */
             long r;++kitty_fast_failed;kitty_shown[i].serial=0;
             for(r=top;r<end;++r) paint_damage_forget_row(&paint_damage,(unsigned)r);
@@ -806,23 +842,61 @@ static int perf_model_torn(const XTermScreen *s)
 
 static unsigned char *frame_pixels;
 static size_t frame_size;
+/* The default background's alpha in this window, 255 on the opaque path.
+   frame_alpha is the alpha of frame_pixels, frame_argb the two together for
+   the upload. Only a translucent window pays for them. */
+static unsigned background_alpha=255;
+static unsigned char *frame_alpha,*frame_argb;
+static size_t frame_alpha_size;
+static unsigned char paint_alpha[MAX_COLUMNS];
+/* What the window's margins hold: each change of a composited window is
+   composed again, so unchanged margins are not rewritten. */
+static MarginRect margins_shown[MARGIN_RECTS_MAX(MAX_ROWS,MAX_COLUMNS)];
+static size_t margins_shown_count;
+static int margins_valid;
+/* A rectangle of one colour and alpha, written through frame_argb in as many
+   pieces as it takes. FillPixelArray() is no use here: it maps the colour on
+   the screen's bitmap, which has no alpha, and left such a window's margins
+   at alpha 0 (mainline 9802c8c0, 800x600x24). */
+static void argb_fill(struct RastPort *rp,unsigned x,unsigned y,unsigned width,unsigned height,
+                      unsigned alpha,uint32_t rgb)
+{
+    unsigned lines=width?(unsigned)(frame_alpha_size/width):0,done;
+    size_t i;
+    if(!lines) return;
+    if(lines>height) lines=height;
+    for(i=0;i<(size_t)width*lines;++i) {
+        unsigned char *p=frame_argb+i*4;
+        p[0]=(unsigned char)alpha; p[1]=rgb>>16; p[2]=rgb>>8; p[3]=rgb;
+    }
+    for(done=0;done<height;done+=lines) {
+        unsigned n=height-done<lines?height-done:lines;
+        WritePixelArray(frame_argb,0,0,width*4,rp,x,y+done,width,n,RECTFMT_ARGB);
+    }
+}
 /* Rows [first,end) of frame_pixels, already committed to paint_damage. */
 static void upload_run(struct Window *window,struct RastPort *rp,const XTermScreen *screen,
                        unsigned w,unsigned h,unsigned pitch,unsigned first,unsigned end,
-                       const unsigned *images,uint64_t *upload_us)
+                       const unsigned *images,uint64_t *upload_us,const unsigned char *alpha_plane)
 {
-    unsigned row,i,width=screen->columns*w,height=(end-first)*h;
+    unsigned row,i,width=screen->columns*w,height=(end-first)*h,y=MARGIN+first*h;
+    int cut=inner_clip(MARGIN,y,&width,&height);
     ULONG uploaded;
     (void)window;
 #ifdef XTERM_PERF_DIAG
     uint64_t started=PERF_NOW();
 #endif
-    uploaded=WritePixelArray(frame_pixels+(size_t)first*h*pitch,0,0,pitch,rp,MARGIN,MARGIN+first*h,
-                             width,height,RECTFMT_RGB);
+    if(alpha_plane) {
+        background_interleave(frame_pixels+(size_t)first*h*pitch,pitch,
+                              alpha_plane+(size_t)first*h*(pitch/3),pitch/3,width,height,frame_argb);
+        uploaded=width&&height?WritePixelArray(frame_argb,0,0,width*4,rp,inner_x+MARGIN,inner_y+y,
+                                               width,height,RECTFMT_ARGB):0;
+    } else uploaded=width&&height?WritePixelArray(frame_pixels+(size_t)first*h*pitch,0,0,pitch,rp,
+                                                  inner_x+MARGIN,inner_y+y,width,height,RECTFMT_RGB):0;
     PERF_DO(*upload_us+=PERF_NOW()-started; perf_diag.rows+=end-first;
             perf_diag.pixels+=(unsigned long)width*height);
     (void)upload_us;
-    if(uploaded!=width*height) {
+    if(cut || uploaded!=width*height) {
         paint_damage_invalidate(&paint_damage);
         for(row=first;row<end;++row) flood_diag_upload(window,row,0);
         return;
@@ -854,7 +928,17 @@ static void draw_screen(struct Window *window)
        stay in place over their text. (They used to vanish while a line was
        typed under fastfetch's logo.) */
     int images_live=!screen.view_offset;
+    /* The translucent drawing, when its buffers can be had: the frame of a
+       pass that cannot have them goes out solid. */
+    unsigned char *alpha_plane=NULL;
     if(!paint_damage_geometry(&paint_damage,screen.rows,screen.columns)) return;
+    if(window->Flags&WFLG_GIMMEZEROZERO) {
+        inner_x=inner_y=0;inner_width=inner_height=~0u;
+    } else {
+        inner_x=window->BorderLeft;inner_y=window->BorderTop;
+        inner_width=window->GZZWidth>0?(unsigned)window->GZZWidth:0;
+        inner_height=window->GZZHeight>0?(unsigned)window->GZZHeight:0;
+    }
 #ifdef XTERM_PERF_DIAG
     { int t=perf_model_torn(&screen);
       if(t>=0) { ++perf_diag.model_checked;
@@ -874,17 +958,53 @@ static void draw_screen(struct Window *window)
     /* Never clear the text grid before uploading finished rows: that exposes
      * a blank frame on every keystroke. Only fill the unused margins, in the
      * edge cells' colours on the alternate screen (margin_fill.h). */
+    pitch=screen.columns*w*3;
+    if(background_alpha!=255) {
+        /* frame_pixels first: without it there is nothing to go with. */
+        size_t needed=(size_t)screen.rows*h*(pitch/3);
+        if((size_t)screen.rows*h*pitch>frame_size) {
+            if(frame_pixels) FreeVec(frame_pixels);
+            frame_size=(size_t)screen.rows*h*pitch;
+            if(!(frame_pixels=AllocVec(frame_size,MEMF_ANY))) frame_size=0;
+        }
+        if(needed>frame_alpha_size) {
+            if(frame_alpha) FreeVec(frame_alpha);
+            if(frame_argb) FreeVec(frame_argb);
+            frame_alpha=AllocVec(needed,MEMF_ANY);
+            frame_argb=AllocVec(needed*4,MEMF_ANY);
+            frame_alpha_size=frame_alpha && frame_argb?needed:0;
+            if(!frame_alpha_size) {
+                if(frame_alpha) FreeVec(frame_alpha);
+                if(frame_argb) FreeVec(frame_argb);
+                frame_alpha=frame_argb=NULL;
+            }
+        }
+        if(frame_pixels && frame_alpha_size) alpha_plane=frame_alpha;
+    }
     {
         static MarginRect margins[MARGIN_RECTS_MAX(MAX_ROWS,MAX_COLUMNS)];
         MarginGeometry geometry={w,h,MARGIN,(unsigned)window->GZZWidth,(unsigned)window->GZZHeight};
         size_t i,n=margin_rects(&screen,&theme,&geometry,margins,sizeof margins/sizeof *margins);
-        for(i=0;i<n;++i) {
-            colours(rp,margins[i].rgb,margins[i].rgb);
-            RectFill(rp,margins[i].x0,margins[i].y0,margins[i].x1,margins[i].y1);
+        if(alpha_plane) {
+            if(!margins_valid || n!=margins_shown_count || memcmp(margins,margins_shown,n*sizeof *margins)) {
+                for(i=0;i<n;++i) {
+                    unsigned a=margins[i].clear?background_alpha:255;
+                    argb_fill(rp,inner_x+margins[i].x0,inner_y+margins[i].y0,
+                              margins[i].x1-margins[i].x0+1,margins[i].y1-margins[i].y0+1,
+                              a,margins[i].rgb);
+                }
+                memcpy(margins_shown,margins,n*sizeof *margins);
+                margins_shown_count=n;margins_valid=1;
+            }
+        } else {
+            margins_valid=0;
+            for(i=0;i<n;++i) {
+                colours(rp,margins[i].rgb,margins[i].rgb);
+                RectFill(rp,inner_x+margins[i].x0,inner_y+margins[i].y0,inner_x+margins[i].x1,inner_y+margins[i].y1);
+            }
         }
     }
     SetDrMd(rp, JAM2);
-    pitch=screen.columns*w*3;
     /* Changed rows are rasterised into one buffer and uploaded as runs of
      * adjacent rows, one WritePixelArray each. Uploading every row as soon
      * as it was rasterised showed a scrolled screen half old and half new
@@ -900,6 +1020,7 @@ static void draw_screen(struct Window *window)
     for (row = 0; row < screen.rows; ++row) {
         unsigned y,x, images;
         unsigned char *pixels=frame_pixels?frame_pixels+(size_t)row*h*pitch:row_pixels;
+        unsigned char *alphas=alpha_plane?alpha_plane+(size_t)row*h*(pitch/3):NULL;
         for (col = 0; col < screen.columns; ++col) {
             XTermCell cell = screen_view_cell(&screen, row, col);
             int found=finding?search_marks[row*screen.columns+col]:0;
@@ -907,6 +1028,7 @@ static void draw_screen(struct Window *window)
             paint_row[col].cell=cell;
             paint_row[col].fg=selected?theme.selection_fg:theme_fg(&theme,&cell);
             paint_row[col].bg=selected?theme.selection_bg:theme_bg(&theme,&cell);
+            if(alpha_plane) paint_alpha[col]=background_cell_clear(&cell,selected)?background_alpha:255;
             paint_row[col].cursor_colour=theme.cursor;
             paint_row[col].flags=(cursor && row==screen.cursor_row && col==cursor_col?XPAINT_CURSOR:0)|
                 ((cell.colour_flags&XCOLOUR_UNDERLINE || found==1 ||
@@ -915,7 +1037,7 @@ static void draw_screen(struct Window *window)
         }
         if(!paint_damage_changed(&paint_damage,row,paint_row)) {
             if(run_first>=0) upload_run(window,rp,&screen,w,h,pitch,(unsigned)run_first,row,
-                                        run_images,&upload_us);
+                                        run_images,&upload_us,alpha_plane);
             run_first=-1;
             continue;
         }
@@ -925,6 +1047,7 @@ static void draw_screen(struct Window *window)
                 unsigned at=y*pitch+(col*w+x)*3;
                 pixels[at]=bg>>16; pixels[at+1]=bg>>8; pixels[at+2]=bg;
             }
+            if(alphas) for(y=0;y<h;++y) memset(alphas+y*(pitch/3)+col*w,paint_alpha[col],w);
         }
 #ifdef XTERM_PERF_DIAG
         uint64_t glyphs_started=PERF_NOW();
@@ -941,6 +1064,7 @@ static void draw_screen(struct Window *window)
                 for(y=0;y<h;++y) for(x=0;x<w;++x) if(boxdraw_pixel(cell.ch,w,h,x,y)) {
                     unsigned at=y*pitch+(col*w+x)*3;
                     pixels[at]=fg>>16; pixels[at+1]=fg>>8; pixels[at+2]=fg;
+                    if(alphas) alphas[y*(pitch/3)+col*w+x]=255;
                 }
                 continue;
             }
@@ -949,7 +1073,12 @@ static void draw_screen(struct Window *window)
             r=xfont_cluster(scalars,count,cell.width);
             if(r->width>XRASTER_MAX || r->height>XRASTER_MAX ||
                r->width>screen.columns*w-col*w || r->height>h) continue;
-            xfont_cluster_rgb(r,paint_row[col].fg,paint_row[col].bg,rgb);
+            if(alphas) {
+                unsigned char coverage[XRASTER_MAX*XRASTER_MAX];
+                xfont_cluster_rgba(r,paint_row[col].fg,paint_row[col].bg,paint_alpha[col],rgb,coverage);
+                for(y=0;y<r->height;++y)
+                    memcpy(alphas+y*(pitch/3)+col*w,coverage+y*r->width,r->width);
+            } else xfont_cluster_rgb(r,paint_row[col].fg,paint_row[col].bg,rgb);
             for(y=0;y<r->height;++y)
                 memcpy(pixels+y*pitch+col*w*3,rgb+y*r->width*3,r->width*3);
         }
@@ -961,6 +1090,7 @@ static void draw_screen(struct Window *window)
                     unsigned at=(h-2)*pitch+(col*w+x)*3;
                     pixels[at]=fg>>16; pixels[at+1]=fg>>8; pixels[at+2]=fg;
                 }
+                if(alphas) memset(alphas+(h-2)*(pitch/3)+col*w,255,w);
             }
         for(col=0;col<screen.columns;++col) if(paint_row[col].flags&XPAINT_CURSOR) {
             unsigned width=paint_row[col].cell.width*w;
@@ -970,8 +1100,9 @@ static void draw_screen(struct Window *window)
                 pixels[at]=theme.cursor>>16;
                 pixels[at+1]=theme.cursor>>8; pixels[at+2]=theme.cursor;
             }
+            if(alphas) memset(alphas+(h-1)*(pitch/3)+col*w,255,width);
         }
-        images=kitty_composite(&screen,images_live,row,pixels,pitch);
+        images=kitty_composite(&screen,images_live,row,pixels,pitch,alphas,pitch/3);
         ++paint_rows;
         if(frame_pixels) {
             /* Committed now; a failed upload of the run invalidates all. */
@@ -985,11 +1116,13 @@ static void draw_screen(struct Window *window)
 #ifdef XTERM_PERF_DIAG
         uint64_t upload_started=PERF_NOW();
 #endif
-        ULONG uploaded=WritePixelArray(pixels,0,0,pitch,rp,MARGIN,MARGIN+row*h,
-                          screen.columns*w,h,RECTFMT_RGB);
+        unsigned upload_w=screen.columns*w,upload_h=h;
+        int upload_cut=inner_clip(MARGIN,MARGIN+row*h,&upload_w,&upload_h);
+        ULONG uploaded=upload_w&&upload_h?WritePixelArray(pixels,0,0,pitch,rp,inner_x+MARGIN,inner_y+MARGIN+row*h,
+                          upload_w,upload_h,RECTFMT_RGB):0;
         PERF_DO(upload_us+=PERF_NOW()-upload_started; ++perf_diag.rows;
                 perf_diag.pixels+=(unsigned long)screen.columns*w*h);
-        if(uploaded==screen.columns*w*h) {
+        if(!upload_cut && uploaded==screen.columns*w*h) {
             unsigned i;
             paint_damage_commit(&paint_damage,row,paint_row);
             flood_diag_upload(window,row,1);
@@ -997,7 +1130,7 @@ static void draw_screen(struct Window *window)
         } else flood_diag_upload(window,row,0);
     }
     if(run_first>=0) upload_run(window,rp,&screen,w,h,pitch,(unsigned)run_first,screen.rows,
-                                run_images,&upload_us);
+                                run_images,&upload_us,alpha_plane);
     kitty_blit_fast(rp,&screen);
     kitty_count_drawn(&screen);
     PERF_DO(perf_draw_delay());
@@ -1916,6 +2049,65 @@ static void session_settings_load(XSettings *into)
 }
 #endif
 
+/* Window.conf: the window's background. On any error the background stays
+   solid and the title says why. */
+static void window_settings_load(XSettings *into)
+{
+    static char text[XSETTINGS_FILE_MAX+1];
+    XSettings next;
+    size_t length=0; const char *why=NULL; int line;
+    settings_default(&next);
+    switch(settings_read("Window.conf",text,&length)) {
+    case -1:
+        snprintf(settings_message,sizeof settings_message,"Window.conf is over 4096 bytes; not used");
+        break;
+    case 1:
+        if((line=settings_parse_window(&next,text,length,&why))) {
+            snprintf(settings_message,sizeof settings_message,"Window.conf line %d: %s; not used",line,why);
+            settings_default(&next);
+        }
+        break;
+    }
+    into->background_opacity=next.background_opacity;
+    into->background_blur=next.background_blur;
+}
+
+/* What this window's background is: asked when it opens, after every size
+   change, and when the setting changes. A window that has lost its surface
+   is an ordinary one from then on and gets everything drawn again, solid. */
+static int window_translucent,window_blurred;
+static struct Window *background_window;
+static void background_update(void)
+{
+    struct Window *w=background_window;
+    int composited=w && window_alpha_composited(w);
+    unsigned next=background_path(settings.background_opacity,window_translucent,composited)==XBACKGROUND_PATH_ALPHA?
+        background_alpha_byte(settings.background_opacity):255;
+    if(window_translucent && !composited) {
+        window_translucent=window_blurred=0;
+        if(w) {
+            RefreshWindowFrame(w);
+            clip_status="Not enough memory for a transparent window: its background stays solid";
+        }
+    }
+    if(next==background_alpha) return;
+    background_alpha=next;
+    margins_valid=0;
+    paint_damage_invalidate(&paint_damage);
+}
+#ifndef XTERM_DOS_HANDLER
+/* Window.conf again: Project > Reload settings and Use in Limpet Preferences. */
+static int background_reload(void)
+{
+    int later;
+    window_settings_load(&settings);
+    background_update();
+    later=settings.background_opacity<100 ?
+          !window_translucent || !!settings.background_blur!=window_blurred : 0;
+    return later;
+}
+#endif
+
 static void settings_theme(void)
 {
     if(theme_from_command_line) return;
@@ -1978,7 +2170,7 @@ static int settings_buffers(void)
 /* Project > Reload settings: the theme now, the rest in new windows. */
 static void settings_reload(void)
 {
-    XSettings next; unsigned later;
+    XSettings next; unsigned later; int background_later;
     settings_default(&next);
     settings_message[0]=0;
     if(settings_load(&next)) {
@@ -1995,7 +2187,9 @@ static void settings_reload(void)
     session_settings_load(&settings);
     settings_theme();
     paint_damage_invalidate(&paint_damage);
+    background_later=background_reload();
     if(settings_message[0]) clip_status=settings_message;
+    else if(background_later) clip_status="Reloaded; the window's background applies to new windows";
     else clip_status=theme_from_command_line?
         (later?"Reloaded; --theme keeps its theme; font, scrollback and history apply to new windows":
                "Reloaded; --theme keeps its theme"):
@@ -2110,10 +2304,13 @@ static int prefs_poll(int closing)
     if(!prefs_port) return 0;
     while((m=GetMsg(prefs_port))) {
         XPrefsRequest *r=(XPrefsRequest *)m;
-        if(m->mn_Length!=sizeof *r || r->magic!=XPREFS_MAGIC || r->action!=XPREFS_RUN ||
-           r->key!=prefs_key || !memchr(r->line,0,sizeof r->line))
+        if(m->mn_Length!=sizeof *r || r->magic!=XPREFS_MAGIC || r->key!=prefs_key ||
+           (r->action!=XPREFS_RUN && r->action!=XPREFS_APPLY_WINDOW) || !memchr(r->line,0,sizeof r->line))
             r->result=XPREFS_BAD;
-        else if((r->result=run_now(r->line,closing))==XPREFS_RAN) ran=1;
+        else if(r->action==XPREFS_APPLY_WINDOW) {
+            if(background_reload()) clip_status="The window's background applies to new windows";
+            r->result=XPREFS_RAN; ran=1;
+        } else if((r->result=run_now(r->line,closing))==XPREFS_RAN) ran=1;
         ReplyMsg(m);
     }
     return ran;
@@ -2242,6 +2439,7 @@ int main(int argc,char **argv)
 #endif
     settings_default(&settings);
     settings_load(&settings);
+    window_settings_load(&settings);
 #ifndef XTERM_DOS_HANDLER
     session_settings_load(&settings);
 #endif
@@ -2264,6 +2462,8 @@ int main(int argc,char **argv)
     if(diag_exit_stage==2) { xfont_close();return RETURN_OK; }
 #endif
     {
+        struct TagItem blur_tag;
+        ULONG alpha_tag=TAG_IGNORE;
         ULONG flags=WFLG_CLOSEGADGET | WFLG_DRAGBAR | WFLG_DEPTHGADGET |
                   WFLG_SIZEGADGET | WFLG_SIZEBBOTTOM | WFLG_ACTIVATE |
                   WFLG_GIMMEZEROZERO | WFLG_SIMPLE_REFRESH | WFLG_REPORTMOUSE;
@@ -2276,6 +2476,22 @@ int main(int argc,char **argv)
         if(o&XCON_NODRAG) flags&=~WFLG_DRAGBAR;
         if(o&XCON_NOBORDER) flags|=WFLG_BORDERLESS;
         if(o&XCON_BACKDROP) { flags|=WFLG_BACKDROP; flags&=~(WFLG_DRAGBAR|WFLG_SIZEGADGET|WFLG_SIZEBBOTTOM); }
+        /* Solid windows are as they always were; only a chosen opacity on a
+           screen that says it can show it asks for anything new. */
+        if(settings.background_opacity<100) {
+            struct Screen *on=LockPubScreen((CONST_STRPTR)(console_spec.screen[0]?console_spec.screen:NULL));
+            if(!on) on=LockPubScreen(NULL);
+            if(on) {
+                window_translucent=window_alpha_supported(on);
+                window_blurred=window_translucent && settings.background_blur && backdrop_blur_supported(on);
+                UnlockPubScreen(NULL,on);
+            }
+        }
+        if(window_translucent) {
+            flags&=~(WFLG_GIMMEZEROZERO|WFLG_SIMPLE_REFRESH);
+            alpha_tag=window_alpha_tag();
+        }
+        backdrop_blur_tag(&blur_tag,window_blurred);
     window = OpenWindowTags(NULL,
         WA_Title, (IPTR)(console_spec.title[0]?console_spec.title:"Limpet"),
         WA_Left, console_spec.left>=0?console_spec.left:40,
@@ -2292,6 +2508,8 @@ int main(int argc,char **argv)
         WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_REFRESHWINDOW | IDCMP_NEWSIZE | IDCMP_RAWKEY |
                   IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE | IDCMP_INACTIVEWINDOW | IDCMP_MENUPICK,
         WA_Flags, flags,
+        alpha_tag, (IPTR)TRUE,
+        blur_tag.ti_Tag, blur_tag.ti_Data,
         TAG_DONE);
     }
     if (!window) {
@@ -2300,6 +2518,8 @@ int main(int argc,char **argv)
         return RETURN_FAIL;
     }
     attach_menu(window);
+    background_window=window;
+    background_update();
     fit_grid(window);
 #ifndef XTERM_PROCESS_PORT_CLIENTS
     /* Not in the XTERM: worker: a drop's paths take DOS calls (NameFromLock,
@@ -2653,6 +2873,8 @@ int main(int argc,char **argv)
                 }
             } else if (event == IDCMP_NEWSIZE) {
                 paint_damage_invalidate(&paint_damage);
+                margins_valid=0;
+                background_update();
                 link_gesture_cancel(&link_gesture); link_hovered=0;
                 unsigned cols = (window->GZZWidth - 2 * MARGIN) / xfont_width();
                 unsigned rows = (window->GZZHeight - 2 * MARGIN) / xfont_height();

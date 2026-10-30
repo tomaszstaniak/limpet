@@ -11,4 +11,8 @@ typedef struct XClusterRaster {
 const XClusterRaster *xfont_cluster(const uint32_t *, unsigned count, unsigned span);
 void xfont_cluster_rgb(const XClusterRaster *, uint32_t fg, uint32_t bg,
                       unsigned char *rgb);
+/* The same over a background of alpha bg_alpha, as straight colour + alpha
+ * for a window with per pixel alpha (background.h). */
+void xfont_cluster_rgba(const XClusterRaster *, uint32_t fg, uint32_t bg, unsigned bg_alpha,
+                        unsigned char *rgb, unsigned char *alpha);
 #endif

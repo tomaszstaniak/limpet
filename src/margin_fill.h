@@ -12,10 +12,13 @@
  * the background of the cells next to it: the left and right margins per
  * row, the top and bottom margins per column, each corner from its corner
  * cell. The colour is the cell's own (inverse applied, selection ignored),
- * never the cursor's. Otherwise the margin is the theme's background. */
+ * never the cursor's. Otherwise the margin is the theme's background.
+ * `clear` says that the colour is the default background, which a translucent
+ * window shows at its opacity (background.h). */
 typedef struct {
     unsigned x0, y0, x1, y1; /* inclusive, in window inner coordinates */
     uint32_t rgb;
+    unsigned clear;
 } MarginRect;
 
 typedef struct {

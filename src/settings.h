@@ -35,12 +35,18 @@ enum { XFF_LOGO_LOOK, XFF_LOGO_TEXT, XFF_LOGO_NONE };  /* fastfetch_logo */
  * them (system, hardware, memory-disks, network). */
 enum { XFF_SYSTEM=1, XFF_HARDWARE=2, XFF_MEMORY=4, XFF_NETWORK=8 };
 #define XFF_GROUPS 4
+/* The window's background (Window.conf): how solid the terminal's default
+ * background is, in percent, and whether what is behind it is blurred. Kept
+ * as written on systems that cannot show them; see background.h. */
+#define XSETTINGS_BACKGROUND_OPACITY_DEFAULT 100
+#define XSETTINGS_BACKGROUND_OPACITY_MIN 20
+#define XSETTINGS_BACKGROUND_OPACITY_MAX 100
 extern const char *const settings_group_names[XFF_GROUPS];
 
 enum { XSET_FONT=1, XSET_FONT_SIZE=2, XSET_THEME=4, XSET_SCROLLBACK=8, XSET_HISTORY=16,
        XSET_SESSION_START=32, XSET_SESSION_COMMAND=64, XSET_FASTFETCH=128,
        XSET_FASTFETCH_LOOK=256, XSET_FASTFETCH_CONFIG=512, XSET_FASTFETCH_HIDE=1024,
-       XSET_FASTFETCH_LOGO=2048 };
+       XSET_FASTFETCH_LOGO=2048, XSET_BACKGROUND_OPACITY=4096, XSET_BACKGROUND_BLUR=8192 };
 typedef struct {
     char font[XSETTINGS_PATH_MAX];   /* empty: the built-in Vera Mono */
     char theme[XSETTINGS_PATH_MAX];  /* empty: the built-in dark theme */
@@ -52,6 +58,8 @@ typedef struct {
     char fastfetch_config[XSETTINGS_PATH_MAX];   /* for XFF_FILE */
     unsigned fastfetch_hide;         /* XFF_SYSTEM.. bits */
     unsigned fastfetch_logo;         /* XFF_LOGO_* */
+    unsigned background_opacity;     /* percent */
+    unsigned background_blur;        /* 0 or 1 */
     unsigned given;                  /* XSET_* the file set */
 } XSettings;
 
@@ -66,4 +74,7 @@ int settings_parse(XSettings *s, const char *text, size_t length, const char **w
  * than 0.8.0, which refuses a Limpet.conf with keys it does not know, never
  * sees them. Written by Limpet Preferences (settings_edit.h). */
 int settings_parse_session(XSettings *s, const char *text, size_t length, const char **why);
+/* The same for Window.conf beside them: the background keys. A file of its
+ * own for the same reason; written by Limpet Preferences too. */
+int settings_parse_window(XSettings *s, const char *text, size_t length, const char **why);
 #endif

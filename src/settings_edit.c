@@ -2,10 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
-enum { KEYS = 7 };
+enum { SESSION_KEYS = 7, KEYS = 9 };
 static const char *const keys[KEYS] = {
     "session_start", "session_command", "fastfetch", "fastfetch_look",
-    "fastfetch_config", "fastfetch_hide", "fastfetch_logo"
+    "fastfetch_config", "fastfetch_hide", "fastfetch_logo",
+    "background_opacity", "background_blur"
 };
 
 /* The value of key k, or NULL when it is at its default. */
@@ -29,6 +30,11 @@ static const char *value(const XSettings *s, int k, char *buffer, size_t size)
             if (s->fastfetch_hide & (1u << i))
                 n += (size_t)snprintf(buffer + n, size - n, "%s%s", n ? "," : "", settings_group_names[i]);
         return buffer;
+    case 7:
+        if (s->background_opacity == XSETTINGS_BACKGROUND_OPACITY_DEFAULT) return NULL;
+        snprintf(buffer, size, "%u", s->background_opacity);
+        return buffer;
+    case 8: return s->background_blur ? "on" : NULL;
     default: return s->fastfetch_logo != XFF_LOGO_LOOK && s->fastfetch_logo <= XFF_LOGO_NONE ? logo[s->fastfetch_logo] : NULL;
     }
 }
@@ -48,8 +54,9 @@ static int put_key(char *out, size_t capacity, size_t *n, int k, const char *v)
            put(out, capacity, n, v, strlen(v)) && put(out, capacity, n, "\n", 1);
 }
 
-/* Which session key a line sets, or -1 (comment, blank, any other key). */
-static int line_key(const char *line, size_t length)
+/* Which of the keys first..last-1 a line sets, or -1 (comment, blank, any
+ * other key). */
+static int line_key(const char *line, size_t length, int first, int last)
 {
     size_t k = 0, e;
     int i;
@@ -58,13 +65,13 @@ static int line_key(const char *line, size_t length)
     while (e < length && line[e] != '=') ++e;
     if (e == length) return -1;
     while (e > k && (line[e - 1] == ' ' || line[e - 1] == '\t')) --e;
-    for (i = 0; i < KEYS; ++i)
+    for (i = first; i < last; ++i)
         if (strlen(keys[i]) == e - k && !memcmp(line + k, keys[i], e - k)) return i;
     return -1;
 }
 
-int settings_edit_session(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
-                          size_t *length)
+static int edit(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
+                size_t *length, int first, int last)
 {
     char buffer[64];
     unsigned written = 0;
@@ -76,7 +83,7 @@ int settings_edit_session(const char *old, size_t old_length, const XSettings *s
     while (pos < old_length) {
         size_t end = pos;
         while (end < old_length && old[end] != '\n') ++end;
-        k = line_key(old + pos, end - pos);
+        k = line_key(old + pos, end - pos, first, last);
         if (k < 0) {
             /* As it was, with a line end if the file's last line had none. */
             if (!put(out, capacity, &n, old + pos, end - pos) || !put(out, capacity, &n, "\n", 1)) return 0;
@@ -87,7 +94,7 @@ int settings_edit_session(const char *old, size_t old_length, const XSettings *s
         }
         pos = end + 1;
     }
-    for (k = 0; k < KEYS; ++k) {
+    for (k = first; k < last; ++k) {
         const char *v;
         if (written & (1u << k)) continue;
         v = value(s, k, buffer, sizeof buffer);
@@ -96,3 +103,11 @@ int settings_edit_session(const char *old, size_t old_length, const XSettings *s
     *length = n;
     return 1;
 }
+
+int settings_edit_session(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
+                          size_t *length)
+{ return edit(old, old_length, s, out, capacity, length, 0, SESSION_KEYS); }
+
+int settings_edit_window(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
+                         size_t *length)
+{ return edit(old, old_length, s, out, capacity, length, SESSION_KEYS, KEYS); }

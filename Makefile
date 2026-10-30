@@ -20,6 +20,7 @@ CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
 CLUSTER_SRC = src/font_cache.c src/cluster_font.c
 THEME_SRC = src/theme.c src/settings.c src/session_start.c src/margin_fill.c
+WINDOW_SRC = src/window_alpha.c src/backdrop_blur.c
 KITTY_SRC = src/kitty_graphics.c
 HYPERLINK_GUI_SRC = src/aros_hyperlink.c src/link_gesture.c
 
@@ -66,7 +67,7 @@ abiv11-frontend:
 	@test -d "$(ABIV11_SDK)/include" || { echo "Set ABIV11_SDK to the ABIv11 Developer SDK"; exit 1; }
 	mkdir -p build/abiv11
 	$(ABIV11_CXX) $(HB_FLAGS) --sysroot=$(ABIV11_SDK) -c $(HB_SRC) -o build/abiv11/harfbuzz.o
-	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -o build/abiv11/aros-xterm src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
+	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -o build/abiv11/aros-xterm src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 
 # DIAGNOSTIC frontend only (XTERM_PERF_DIAG): aggregated responsiveness
 # counters written once a second to $$XTERM_PERF_LOG. Never package or ship it.
@@ -74,7 +75,7 @@ abiv11-frontend:
 abiv11-perf:
 	@test -f build/abiv11/harfbuzz.o || { echo "Run make abiv11-frontend first (ABIv11 HarfBuzz object)"; exit 1; }
 	mkdir -p build/abiv11/perf
-	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -DXTERM_PERF_DIAG -o build/abiv11/perf/aros-xterm src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
+	$(ABIV11_GCC) $(OPTFLAGS) $(VERSION_FLAGS) -std=gnu99 -Wall -Wextra -Werror --sysroot=$(ABIV11_SDK) -I$(ABIV11_SDK)/include $(UNICODE_FLAGS) -Ivendor/harfbuzz/src -DXTERM_NO_TASK_NOTIFY -DXTERM_PERF_DIAG -o build/abiv11/perf/aros-xterm src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 
 # Guest tools for the file drop check (docs/file-drop.md): what a program
 # receives (argv and ReadArgs), and a drawer of awkward names with icons.
@@ -153,7 +154,7 @@ ABIV11_LDFLAGS = --sysroot=$(ABIV11_SDK) -L$(ABIV11_SDK)/lib
 # and HarfBuzz skips its lazy getenv (GetVar opens ENV:/ENVARC:). See
 # docs/abiv11-worker-dos-audit.md. Mainline keeps its private session port.
 ABIV11_WORKER_FLAGS = -DXTERM_DOS_HANDLER -DXTERM_PROCESS_PORT_CLIENTS -DXTERM_FONTS_IN_MEMORY
-ABIV11_WORKER_SRC = src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_handler.c src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_completion_job.c src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz-handler.o
+ABIV11_WORKER_SRC = src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_handler.c src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_completion_job.c src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz-handler.o
 .PHONY: abiv11-handler
 abiv11-handler:
 	@test -n "$(ABIV11_GCC)" || { echo "Set ABIV11_GCC to the x86_64 ABIv11 compiler"; exit 1; }
@@ -185,11 +186,11 @@ abiv11-handler-probe:
 abiv11-handler-diag:
 	@test -f build/abiv11/harfbuzz.o || { echo "Run make abiv11-frontend first (ABIv11 HarfBuzz object)"; exit 1; }
 	mkdir -p build/abiv11/diag
-	$(ABIV11_GCC) $(ABIV11_CFLAGS) -DXTERM_DOS_HANDLER -DXTERM_DIAG_FORWARD -o build/abiv11/diag/aros-xterm-worker src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_handler.c src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o $(ABIV11_LDFLAGS) -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
+	$(ABIV11_GCC) $(ABIV11_CFLAGS) -DXTERM_DOS_HANDLER -DXTERM_DIAG_FORWARD -o build/abiv11/diag/aros-xterm-worker src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_handler.c src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/abiv11/harfbuzz.o $(ABIV11_LDFLAGS) -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 
-$(OUT): src/aros_xterm.c $(HYPERLINK_GUI_SRC) src/aros_font.c $(CLUSTER_SRC) src/aros_font.h src/cluster_font.h src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(INPUT_SRC) src/aros_input.c src/aros_input.h $(CLIP_GUI_SRC) $(CLIP_GUI_HEADERS) $(UNICODE_SRC) build/harfbuzz-aros.o
+$(OUT): src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) src/aros_font.c $(CLUSTER_SRC) src/aros_font.h src/cluster_font.h src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(INPUT_SRC) src/aros_input.c src/aros_input.h $(CLIP_GUI_SRC) $(CLIP_GUI_HEADERS) $(UNICODE_SRC) build/harfbuzz-aros.o
 	mkdir -p $(dir $(OUT))
-	$(AROS_GCC) $(CFLAGS) -o $(OUT) src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
+	$(AROS_GCC) $(CFLAGS) -o $(OUT) src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
 
 $(OUT): $(SESSION_SRC) $(SESSION_HEADERS) $(THEME_SRC) src/theme.h
 $(OUT): $(EDITOR_SRC) src/line_editor.h src/line_view.h src/window_title.h src/file_drop.h src/output_search.h src/aros_drop.c src/aros_drop.h
@@ -200,11 +201,11 @@ $(OUT): src/aros_handler.h
 # A fresh segment is loaded per DOS instance; never mount the CRT/GUI directly.
 PTY_FRONT_SRC = src/aros_pty_frontend.c src/aros_tty_packets.c src/aros_tty_signal.c src/tty_service.c src/tty_pair.c src/tty_control.c
 build/aros-xterm-pty: $(OUT) $(PTY_FRONT_SRC) src/aros_pty_frontend.h Makefile build/native-config.json
-	$(AROS_GCC) $(CFLAGS) -DXTERM_PTY_FRONTEND -o $@ src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) $(PTY_FRONT_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
+	$(AROS_GCC) $(CFLAGS) -DXTERM_PTY_FRONTEND -o $@ src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) $(PTY_FRONT_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
 # Diagnostic PTY frontend: RAM:pty-diag.txt and forced SetVBuf failure
 # (docs/pty-output-completeness-20260927.md). Never a release binary.
 build/aros-xterm-pty-diag: $(OUT) $(PTY_FRONT_SRC) src/aros_pty_frontend.h src/pty_fh_diag.h Makefile build/native-config.json
-	$(AROS_GCC) $(CFLAGS) -DXTERM_PTY_FRONTEND -DXTERM_PTY_DIAG -o $@ src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) $(PTY_FRONT_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
+	$(AROS_GCC) $(CFLAGS) -DXTERM_PTY_FRONTEND -DXTERM_PTY_DIAG -o $@ src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) $(PTY_FRONT_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
 build/test_aros_pty_frontend: tests/test_aros_pty_frontend.c $(PTY_FRONT_SRC) src/session_queue.c src/aros_break.c Makefile build/native-config.json
 	$(AROS_GCC) $(CFLAGS) $(filter %.c,$^) $(LDFLAGS) -o $@
 build/tty_pty_frontend_peer: tests/tty_fd_session.c Makefile build/native-config.json
@@ -267,7 +268,7 @@ build/pty-tail-no-newline-libc: tests/pty_tail_no_newline.c Makefile build/nativ
 	$(AROS_GCC) $(CFLAGS) -DTAIL_LIBC $< $(LDFLAGS) -o $@
 
 build/aros-xterm-worker: $(OUT) src/aros_handler.c src/aros_handler.h Makefile
-	$(AROS_GCC) $(CFLAGS) -DXTERM_DOS_HANDLER -o $@ src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_handler.c src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
+	$(AROS_GCC) $(CFLAGS) -DXTERM_DOS_HANDLER -o $@ src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_handler.c src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC) build/harfbuzz-aros.o $(LDFLAGS) -lfreetype2 -lstdc++ -lcybergraphics -lm
 
 package: build/xterm-handler build/aros-xterm-worker
 package: build/geometry-probe
@@ -366,7 +367,7 @@ test: build/test_title_buffer
 test: build/test_osc_title
 test: build/test_window_title
 test: build/test_profile_prompt
-test: build/test_theme build/test_margin_fill build/test_redraw_settle build/test_sync_update
+test: build/test_theme build/test_margin_fill build/test_background build/test_redraw_settle build/test_sync_update
 test: build/test_geometry_reply
 test: build/test_mouse
 test: test-bracketed-paste
@@ -431,6 +432,9 @@ build/test_sync_update: tests/test_sync_update.c src/screen_model.c src/hyperlin
 build/test_redraw_settle: tests/test_redraw_settle.c src/redraw_settle.c src/redraw_settle.h
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $< src/redraw_settle.c -o $@
+build/test_background: tests/test_background.c src/background.h src/screen_model.h
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) tests/test_background.c -o $@
 build/test_margin_fill: tests/test_margin_fill.c src/margin_fill.c src/margin_fill.h src/theme.c src/theme.h src/settings.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) $< src/margin_fill.c src/theme.c src/settings.c src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
@@ -703,6 +707,7 @@ test: $(HOST_TEST) build/test_replay build/test_graphemes build/test_input_echo 
 	./build/test_profile_prompt
 	./build/test_theme
 	./build/test_margin_fill
+	./build/test_background
 	./build/test_redraw_settle
 	./build/test_sync_update
 	./build/test_geometry_reply

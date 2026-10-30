@@ -18,7 +18,7 @@ T_WORKER_FLAGS = -DXTERM_NO_TASK_NOTIFY -DXTERM_PROCESS_PORT_CLIENTS -DXTERM_FON
 T_WORKER_SRC = src/aros_completion_job.c
 # The link order of the 0.7.0 and earlier releases (abiv11-handler), so a
 # rebuild of a released tree gives the released worker byte for byte.
-T_WORKER_ALL_SRC = src/aros_xterm.c $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_handler.c src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_completion_job.c src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC)
+T_WORKER_ALL_SRC = src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_handler.c src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_completion_job.c src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC)
 T_LIBS = -lfreetype2 -lstdc++ -lpthread -lcybergraphics -lm
 T_CXX_FLAGS =
 # Released ABIv11 binaries have always been left as built.

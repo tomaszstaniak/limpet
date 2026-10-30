@@ -7,6 +7,7 @@ void settings_default(XSettings *s)
     s->font_size = XSETTINGS_FONT_SIZE_DEFAULT;
     s->scrollback = XSETTINGS_SCROLLBACK_DEFAULT;
     s->history = XSETTINGS_HISTORY_DEFAULT;
+    s->background_opacity = XSETTINGS_BACKGROUND_OPACITY_DEFAULT;
 }
 
 static int number(const char *v, size_t n, unsigned low, unsigned high, unsigned *out)
@@ -73,13 +74,18 @@ static int text_value(char *dst, size_t capacity, const char *v, size_t n, const
 enum { SESSION_KEYS = XSET_SESSION_START|XSET_SESSION_COMMAND|XSET_FASTFETCH|XSET_FASTFETCH_LOOK|
                       XSET_FASTFETCH_CONFIG|XSET_FASTFETCH_HIDE|XSET_FASTFETCH_LOGO };
 
+enum { WINDOW_KEYS = XSET_BACKGROUND_OPACITY|XSET_BACKGROUND_BLUR };
+
 static int parse(XSettings *out, const char *text, size_t length, const char **why, unsigned allowed);
 
 int settings_parse(XSettings *out, const char *text, size_t length, const char **why)
-{ return parse(out, text, length, why, ~(unsigned)SESSION_KEYS); }
+{ return parse(out, text, length, why, ~(unsigned)(SESSION_KEYS|WINDOW_KEYS)); }
 
 int settings_parse_session(XSettings *out, const char *text, size_t length, const char **why)
 { return parse(out, text, length, why, SESSION_KEYS); }
+
+int settings_parse_window(XSettings *out, const char *text, size_t length, const char **why)
+{ return parse(out, text, length, why, WINDOW_KEYS); }
 
 static int parse(XSettings *out, const char *text, size_t length, const char **why, unsigned allowed)
 {
@@ -167,6 +173,18 @@ static int parse(XSettings *out, const char *text, size_t length, const char **w
             bit = XSET_FASTFETCH_LOGO;
             if (v < 0) { *why = "fastfetch_logo takes look, text or none"; return line; }
             s.fastfetch_logo = (unsigned)v;
+        } else if (KEY("background_opacity")) {
+            bit = XSET_BACKGROUND_OPACITY;
+            if (!number(text + vs, ve - vs, XSETTINGS_BACKGROUND_OPACITY_MIN, XSETTINGS_BACKGROUND_OPACITY_MAX,
+                        &s.background_opacity)) {
+                *why = "background_opacity takes 20 to 100"; return line;
+            }
+        } else if (KEY("background_blur")) {
+            static const char *const w[] = { "off", "on" };
+            int v = word(text + vs, ve - vs, w, 2);
+            bit = XSET_BACKGROUND_BLUR;
+            if (v < 0) { *why = "background_blur takes off or on"; return line; }
+            s.background_blur = (unsigned)v;
         } else { *why = "unknown key"; return line; }
 #undef KEY
         if (!(bit & allowed)) { *why = "unknown key"; return line; }

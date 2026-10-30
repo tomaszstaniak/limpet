@@ -1,16 +1,24 @@
 #include "margin_fill.h"
 
-static uint32_t edge_bg(const XTermScreen *s, const XTheme *t, unsigned row, unsigned col)
+#include "background.h"
+
+/* Colour and clearness go through add() as one value. */
+typedef struct { uint32_t rgb; unsigned clear; } Edge;
+
+static Edge edge_bg(const XTermScreen *s, const XTheme *t, unsigned row, unsigned col)
 {
     XTermCell cell;
-    if (!s->alternate_active) return t->background;
+    Edge e;
+    if (!s->alternate_active) { e.rgb = t->background; e.clear = 1; return e; }
     cell = screen_view_cell(s, row, col);
     cell.colour_flags &= ~XCOLOUR_SELECTED;
-    return theme_bg(t, &cell);
+    e.rgb = theme_bg(t, &cell);
+    e.clear = (unsigned)background_cell_clear(&cell, 0);
+    return e;
 }
 
 static int add(const MarginGeometry *geometry, MarginRect *out, size_t capacity, size_t *n,
-               unsigned x0, unsigned y0, unsigned x1, unsigned y1, uint32_t rgb)
+               unsigned x0, unsigned y0, unsigned x1, unsigned y1, Edge edge)
 {
     /* A window smaller than the grid: clip, and drop what lies outside. */
     if (x0 >= geometry->window_width || y0 >= geometry->window_height) return 1;
@@ -20,11 +28,12 @@ static int add(const MarginGeometry *geometry, MarginRect *out, size_t capacity,
     /* Merge with the previous rectangle of the same band and colour. */
     if (*n) {
         MarginRect *p = &out[*n - 1];
-        if (p->rgb == rgb && p->y0 == y0 && p->y1 == y1 && p->x1 + 1 == x0) { p->x1 = x1; return 1; }
-        if (p->rgb == rgb && p->x0 == x0 && p->x1 == x1 && p->y1 + 1 == y0) { p->y1 = y1; return 1; }
+        int same = p->rgb == edge.rgb && p->clear == edge.clear;
+        if (same && p->y0 == y0 && p->y1 == y1 && p->x1 + 1 == x0) { p->x1 = x1; return 1; }
+        if (same && p->x0 == x0 && p->x1 == x1 && p->y1 + 1 == y0) { p->y1 = y1; return 1; }
     }
     if (*n == capacity) return 0;
-    out[*n].x0 = x0; out[*n].y0 = y0; out[*n].x1 = x1; out[*n].y1 = y1; out[*n].rgb = rgb;
+    out[*n].x0 = x0; out[*n].y0 = y0; out[*n].x1 = x1; out[*n].y1 = y1; out[*n].rgb = edge.rgb; out[*n].clear = edge.clear;
     ++*n;
     return 1;
 }

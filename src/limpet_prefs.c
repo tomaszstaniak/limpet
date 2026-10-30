@@ -10,6 +10,8 @@
 #include "session_start.h"
 #include "session_command.h"
 #include "prefs_port.h"
+#include "window_alpha.h"
+#include "backdrop_blur.h"
 #include <exec/memory.h>
 #include <dos/dos.h>
 #include <libraries/mui.h>
@@ -33,17 +35,25 @@ static const char version_tag[] __attribute__((used))="$VER: LimpetPrefs " LIMPE
 
 #define SESSION_FILE "ENV:Limpet/Session.conf"
 #define KEPT_FILE "ENVARC:Limpet/Session.conf"
+#define WINDOW_FILE "ENV:Limpet/Window.conf"
+#define WINDOW_KEPT_FILE "ENVARC:Limpet/Window.conf"
 
 enum { ID_CHANGED=1, ID_SAVE, ID_USE, ID_CANCEL, ID_RUN, ID_CHOOSE };
 
 static char session_text[XSETTINGS_FILE_MAX+1],kept_text[XSETTINGS_FILE_MAX+1];
 static size_t session_length,kept_length;
+static char window_text[XSETTINGS_FILE_MAX+1],window_kept_text[XSETTINGS_FILE_MAX+1];
+static size_t window_length,window_kept_length;
+/* What this screen can show, asked of the running system. */
+static int can_alpha,can_blur;
 static XSettings loaded;
 static char status[160];
 static char line_text[600];
+static char background_note_text[120];
 
 static Object *app,*win,*start_cycle,*pages,*program,*look_cycle,*config_pop,*config,
-    *show[XFF_GROUPS],*logo_cycle,*command,*choose,*line_view,*run,*status_view;
+    *show[XFF_GROUPS],*logo_cycle,*command,*choose,*line_view,*run,*status_view,
+    *opacity,*blur,*background_note;
 
 /* 1 with the file's text, 0 without the file, -1 when it is too large. */
 static int read_file(const char *name,char *text,size_t *length)
@@ -126,6 +136,9 @@ static void gather(XSettings *s)
         if(!value_of(show[i],MUIA_Selected)) s->fastfetch_hide|=1u<<i;
     s->fastfetch_logo=(unsigned)value_of(logo_cycle,MUIA_Cycle_Active);
     copy_text(s->session_command,sizeof s->session_command,string_of(command));
+    /* Not offered here: stays as it was saved, for a system that can show it. */
+    if(can_alpha) s->background_opacity=(unsigned)value_of(opacity,MUIA_Numeric_Value);
+    if(can_blur) s->background_blur=value_of(blur,MUIA_Selected)?1:0;
     absolute(s->fastfetch,sizeof s->fastfetch);
     absolute(s->fastfetch_config,sizeof s->fastfetch_config);
 }
@@ -151,6 +164,7 @@ static void refresh(void)
     else snprintf(line_text,sizeof line_text,"Not possible: %s",why);
     set(line_view,MUIA_Text_Contents,line_text);
     set(run,MUIA_Disabled,r<=0 || !port_name || !reply_port || request_out);
+    set(blur,MUIA_Disabled,!can_blur || s.background_opacity>=100);
 }
 
 static void say(const char *text)
@@ -164,15 +178,22 @@ static void say(const char *text)
 static int store(int keep)
 {
     static char out[XSETTINGS_FILE_MAX+1],kept[XSETTINGS_FILE_MAX+1];
+    static char wout[XSETTINGS_FILE_MAX+1],wkept[XSETTINGS_FILE_MAX+1];
     XSettings s;
-    size_t n=0,k=0;
+    size_t n=0,k=0,wn=0,wk=0;
     gather(&s);
+    if(!settings_edit_window(window_text,window_length,&s,wout,sizeof wout,&wn) ||
+       (keep && !settings_edit_window(window_kept_text,window_kept_length,&s,wkept,sizeof wkept,&wk))) {
+        say("Window.conf would be over 4096 bytes; nothing was written");
+        return 0;
+    }
     if(!settings_edit_session(session_text,session_length,&s,out,sizeof out,&n) ||
        (keep && !settings_edit_session(kept_text,kept_length,&s,kept,sizeof kept,&k))) {
         say("Session.conf would be over 4096 bytes; nothing was written");
         return 0;
     }
-    if(!write_one(SESSION_FILE,out,n) || (keep && !write_one(KEPT_FILE,kept,k))) {
+    if(!write_one(SESSION_FILE,out,n) || (keep && !write_one(KEPT_FILE,kept,k)) ||
+       !write_one(WINDOW_FILE,wout,wn) || (keep && !write_one(WINDOW_KEPT_FILE,wkept,wk))) {
         say(keep?"Could not write ENV:Limpet or ENVARC:Limpet":"Could not write ENV:Limpet");
         return 0;
     }
@@ -201,6 +222,25 @@ static void run_now(void)
     request_out=1;
     say("Sent to the Limpet window...");
     refresh();
+}
+
+/* After Use and Save: the window Preferences came from shows the new
+   background at once, if it can. Its answer comes back before this program
+   ends (see main). */
+static void apply_to_window(void)
+{
+    struct MsgPort *port;
+    if(!port_name || !reply_port || request_out) return;
+    memset(&request,0,sizeof request);
+    request.message.mn_Node.ln_Type=NT_MESSAGE;
+    request.message.mn_Length=sizeof request;
+    request.message.mn_ReplyPort=reply_port;
+    request.magic=XPREFS_MAGIC; request.action=XPREFS_APPLY_WINDOW; request.key=port_key;
+    Forbid();
+    port=FindPort((CONST_STRPTR)port_name);
+    if(port) PutMsg(port,&request.message);
+    Permit();
+    if(port) request_out=1;
 }
 
 static void run_answered(void)
@@ -279,9 +319,33 @@ int main(int argc,char **argv)
             snprintf(status,sizeof status,"Session.conf line %d: %s; Limpet runs nothing",r,why);
             settings_default(&loaded);
         } else copy_text(status,sizeof status,port_name?"":"Run now: open Preferences from a Limpet window"); }
+    {   int in_window=read_file(WINDOW_FILE,window_text,&window_length);
+        int in_kept=read_file(WINDOW_KEPT_FILE,window_kept_text,&window_kept_length);
+        const char *text=in_window?window_text:window_kept_text;
+        size_t length=in_window?window_length:window_kept_length;
+        struct Screen *screen=LockPubScreen(NULL);
+        if(in_window<0) window_length=0;
+        if(in_kept<0) window_kept_length=0;
+        r=in_window?in_window:in_kept;
+        if(r<0) copy_text(status,sizeof status,"Window.conf is over 4096 bytes; it will be replaced");
+        else if(r>0 && (r=settings_parse_window(&loaded,text,length,&why))) {
+            snprintf(status,sizeof status,"Window.conf line %d: %s; the background stays solid",r,why);
+            loaded.background_opacity=XSETTINGS_BACKGROUND_OPACITY_DEFAULT;
+            loaded.background_blur=0;
+        }
+        can_alpha=window_alpha_supported(screen);
+        can_blur=can_alpha && backdrop_blur_supported(screen);
+        if(screen) UnlockPubScreen(NULL,screen); }
     reply_port=CreateMsgPort();
 
     groups_box=HGroup,End;
+    blur=MUI_MakeObject(MUIO_Checkmark,(IPTR)"Blur");
+    if(!can_alpha) copy_text(background_note_text,sizeof background_note_text,
+        "This screen cannot show transparent windows: the background stays solid.");
+    else if(!can_blur) copy_text(background_note_text,sizeof background_note_text,
+        "Blur needs a system with backdrop blur; this one has none.");
+    else copy_text(background_note_text,sizeof background_note_text,
+        "Blur is experimental: it needs a system change that AROS does not have yet.");
     for(i=0;i<XFF_GROUPS;++i) {
         show[i]=MUI_MakeObject(MUIO_Checkmark,(IPTR)group_labels[i]);
         if(show[i]) {
@@ -294,12 +358,25 @@ int main(int argc,char **argv)
     app=ApplicationObject,
         MUIA_Application_Title,(IPTR)"Limpet Preferences",
         MUIA_Application_Version,(IPTR)(version_tag+1),
-        MUIA_Application_Description,(IPTR)"What a new Limpet Shell window runs",
+        MUIA_Application_Description,(IPTR)"Limpet's window background and what a new Shell window runs",
         MUIA_Application_Base,(IPTR)"LIMPETPREFS",
         SubWindow,win=WindowObject,
             MUIA_Window_Title,(IPTR)"Limpet Preferences",
             MUIA_Window_ID,MAKE_ID('L','P','R','F'),
             WindowContents,VGroup,
+                Child,VGroup,GroupFrameT("Window background (experimental)"),
+                    Child,ColGroup(2),
+                        Child,label("Background opacity"),
+                        Child,opacity=SliderObject,MUIA_CycleChain,1,
+                            MUIA_Numeric_Min,XSETTINGS_BACKGROUND_OPACITY_MIN,
+                            MUIA_Numeric_Max,XSETTINGS_BACKGROUND_OPACITY_MAX,
+                            MUIA_Numeric_Format,(IPTR)"%ld %%",End,
+                        Child,label("Background blur"),
+                        Child,HGroup,Child,blur,Child,LLabel1((STRPTR)"Blur what is behind the window"),Child,HSpace(0),End,
+                        End,
+                    Child,TextObject,MUIA_Text_Contents,(IPTR)"Only the terminal's default background changes. Text, cursor, selection,\npictures and colours set by programs stay solid.",End,
+                    Child,background_note=TextObject,MUIA_Text_Contents,(IPTR)background_note_text,MUIA_Text_SetMin,FALSE,End,
+                    End,
                 Child,VGroup,GroupFrameT("When a new Shell window opens"),
                     Child,ColGroup(2),
                         Child,label("Run"),
@@ -383,6 +460,10 @@ int main(int argc,char **argv)
     for(i=0;i<XFF_GROUPS;++i) set(show[i],MUIA_Selected,!(loaded.fastfetch_hide&(1u<<i)));
     set(logo_cycle,MUIA_Cycle_Active,loaded.fastfetch_logo);
     set(command,MUIA_String_Contents,loaded.session_command);
+    set(opacity,MUIA_Numeric_Value,loaded.background_opacity);
+    set(opacity,MUIA_Disabled,!can_alpha);
+    set(blur,MUIA_Selected,loaded.background_blur!=0);
+    DoMethod(opacity,MUIM_Notify,MUIA_Numeric_Value,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
     for(i=0;i<XFF_GROUPS;++i)
         DoMethod(show[i],MUIM_Notify,MUIA_Selected,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
     DoMethod(start_cycle,MUIM_Notify,MUIA_Cycle_Active,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
@@ -414,7 +495,11 @@ int main(int argc,char **argv)
         case ID_CHANGED: refresh(); break;
         case ID_CHOOSE: choose_program(); refresh(); break;
         case ID_RUN: run_now(); break;
-        case ID_USE: case ID_SAVE: done=store(id==ID_SAVE); break;
+        case ID_USE: case ID_SAVE:
+            /* A Run now still out first: its answer shares the one request. */
+            while(request_out && reply_port) { WaitPort(reply_port); run_answered(); }
+            if((done=store(id==ID_SAVE))) apply_to_window();
+            break;
         }
         if(done) break;
         if(sigs) {
