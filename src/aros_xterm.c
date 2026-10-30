@@ -955,18 +955,21 @@ static void draw_screen(struct Window *window)
 #ifdef XTERM_PERF_DIAG
     uint64_t draw_started=PERF_NOW(); unsigned long rows_before=perf_diag.rows;
 #endif
-    /* Never clear the text grid before uploading finished rows: that exposes
-     * a blank frame on every keystroke. Only fill the unused margins, in the
-     * edge cells' colours on the alternate screen (margin_fill.h). */
     pitch=screen.columns*w*3;
+    /* Changed rows are rasterised into one buffer and uploaded as runs of
+     * adjacent rows, one WritePixelArray each. Uploading every row as soon
+     * as it was rasterised showed a scrolled screen half old and half new
+     * for most of a redraw (a line doubled where the two halves met, read
+     * as glyphs growing at the bottom). The run still lands row by row in
+     * the window, but within the upload, not across the rasterising.
+     * Without the buffer (no memory) rows go up one at a time as before. */
+    if((size_t)screen.rows*h*pitch>frame_size) {
+        if(frame_pixels) FreeVec(frame_pixels);
+        frame_size=(size_t)screen.rows*h*pitch;
+        if(!(frame_pixels=AllocVec(frame_size,MEMF_ANY))) frame_size=0;
+    }
     if(background_alpha!=255) {
-        /* frame_pixels first: without it there is nothing to go with. */
         size_t needed=(size_t)screen.rows*h*(pitch/3);
-        if((size_t)screen.rows*h*pitch>frame_size) {
-            if(frame_pixels) FreeVec(frame_pixels);
-            frame_size=(size_t)screen.rows*h*pitch;
-            if(!(frame_pixels=AllocVec(frame_size,MEMF_ANY))) frame_size=0;
-        }
         if(needed>frame_alpha_size) {
             if(frame_alpha) FreeVec(frame_alpha);
             if(frame_argb) FreeVec(frame_argb);
@@ -980,7 +983,12 @@ static void draw_screen(struct Window *window)
             }
         }
         if(frame_pixels && frame_alpha_size) alpha_plane=frame_alpha;
+        /* Solid for now: everything again once there is memory. */
+        else paint_damage_invalidate(&paint_damage);
     }
+    /* Never clear the text grid before uploading finished rows: that exposes
+     * a blank frame on every keystroke. Only fill the unused margins, in the
+     * edge cells' colours on the alternate screen (margin_fill.h). */
     {
         static MarginRect margins[MARGIN_RECTS_MAX(MAX_ROWS,MAX_COLUMNS)];
         MarginGeometry geometry={w,h,MARGIN,(unsigned)window->GZZWidth,(unsigned)window->GZZHeight};
@@ -1005,18 +1013,6 @@ static void draw_screen(struct Window *window)
         }
     }
     SetDrMd(rp, JAM2);
-    /* Changed rows are rasterised into one buffer and uploaded as runs of
-     * adjacent rows, one WritePixelArray each. Uploading every row as soon
-     * as it was rasterised showed a scrolled screen half old and half new
-     * for most of a redraw (a line doubled where the two halves met, read
-     * as glyphs growing at the bottom). The run still lands row by row in
-     * the window, but within the upload, not across the rasterising.
-     * Without the buffer (no memory) rows go up one at a time as before. */
-    if((size_t)screen.rows*h*pitch>frame_size) {
-        if(frame_pixels) FreeVec(frame_pixels);
-        frame_size=(size_t)screen.rows*h*pitch;
-        if(!(frame_pixels=AllocVec(frame_size,MEMF_ANY))) frame_size=0;
-    }
     for (row = 0; row < screen.rows; ++row) {
         unsigned y,x, images;
         unsigned char *pixels=frame_pixels?frame_pixels+(size_t)row*h*pitch:row_pixels;
@@ -2075,7 +2071,7 @@ static void window_settings_load(XSettings *into)
 /* What this window's background is: asked when it opens, after every size
    change, and when the setting changes. A window that has lost its surface
    is an ordinary one from then on and gets everything drawn again, solid. */
-static int window_translucent,window_blurred;
+static int window_translucent,window_blurred,window_can_blur;
 static struct Window *background_window;
 static void background_update(void)
 {
@@ -2084,7 +2080,7 @@ static void background_update(void)
     unsigned next=background_path(settings.background_opacity,window_translucent,composited)==XBACKGROUND_PATH_ALPHA?
         background_alpha_byte(settings.background_opacity):255;
     if(window_translucent && !composited) {
-        window_translucent=window_blurred=0;
+        window_translucent=window_blurred=window_can_blur=0;
         if(w) {
             RefreshWindowFrame(w);
             clip_status="Not enough memory for a transparent window: its background stays solid";
@@ -2099,12 +2095,10 @@ static void background_update(void)
 /* Window.conf again: Project > Reload settings and Use in Limpet Preferences. */
 static int background_reload(void)
 {
-    int later;
     window_settings_load(&settings);
     background_update();
-    later=settings.background_opacity<100 ?
-          !window_translucent || !!settings.background_blur!=window_blurred : 0;
-    return later;
+    return settings.background_opacity<100 &&
+           (!window_translucent || (window_can_blur && !!settings.background_blur!=window_blurred));
 }
 #endif
 
@@ -2483,7 +2477,8 @@ int main(int argc,char **argv)
             if(!on) on=LockPubScreen(NULL);
             if(on) {
                 window_translucent=window_alpha_supported(on);
-                window_blurred=window_translucent && settings.background_blur && backdrop_blur_supported(on);
+                window_can_blur=window_translucent && backdrop_blur_supported(on);
+                window_blurred=window_can_blur && settings.background_blur;
                 UnlockPubScreen(NULL,on);
             }
         }

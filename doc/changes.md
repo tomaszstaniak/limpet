@@ -3,6 +3,18 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## Unreleased
+
+New, experimental, off until chosen in Limpet Preferences:
+
+- **Background opacity** makes the terminal's default background
+  translucent. Text, cursor, selection, pictures and colours set by
+  programs stay solid and sharp. It needs a screen that can show windows
+  with transparency; elsewhere the setting is kept and the window stays
+  solid. See [Window background](window-background.md).
+- **Background blur** blurs what is behind such a window. It needs a system
+  with backdrop blur, which AROS does not have yet.
+
 ## 0.8.0 (2026-10-29)
 
 New:
