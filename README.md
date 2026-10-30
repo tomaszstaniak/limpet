@@ -65,6 +65,8 @@ Limpet includes:
   Workbench with their default tool;
 - [Project > Preferences](doc/session-start.md) to run Fastfetch or a custom
   command once when a new Shell window opens;
+- an experimental [translucent window background](doc/window-background.md),
+  on systems that can show it, off until chosen in Preferences;
 - a [settings file](doc/search-and-settings.md) for font, size, theme,
   scrollback and command history.
 
