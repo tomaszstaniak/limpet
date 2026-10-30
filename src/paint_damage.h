@@ -2,7 +2,7 @@
 #define XTERM_PAINT_DAMAGE_H
 #include "screen_model.h"
 #define XPAINT_MAX_ROWS 80
-enum { XPAINT_CURSOR=1, XPAINT_UNDERLINE=2 };
+enum { XPAINT_CURSOR=1, XPAINT_UNDERLINE=2, XPAINT_CLEAR=4 };
 typedef struct { XTermCell cell; uint32_t fg,bg,cursor_colour; unsigned flags; } XPaintCell;
 typedef struct {
     XPaintCell *cells;

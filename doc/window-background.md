@@ -16,9 +16,10 @@ background**:
 Press **Use** to keep the choice until the system restarts, **Save** to keep it
 for good, or **Cancel** to leave everything as it was.
 
-A window that is transparent already changes its opacity at once. A solid
-window, and a change of the blur, wait for the next window you open: such a
-window has to be made transparent when it opens.
+The window you opened Preferences from changes its opacity at once if it is
+transparent already; other transparent windows do on Project > Reload settings.
+A solid window, and a change of the blur, wait for the next window you open:
+a window is made transparent when it opens.
 
 ## What changes
 

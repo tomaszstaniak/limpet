@@ -854,24 +854,38 @@ static unsigned char paint_alpha[MAX_COLUMNS];
 static MarginRect margins_shown[MARGIN_RECTS_MAX(MAX_ROWS,MAX_COLUMNS)];
 static size_t margins_shown_count;
 static int margins_valid;
-/* A rectangle of one colour and alpha, written through frame_argb in as many
-   pieces as it takes. FillPixelArray() is no use here: it maps the colour on
-   the screen's bitmap, which has no alpha, and left such a window's margins
-   at alpha 0 (mainline 9802c8c0, 800x600x24). */
+static void frame_alpha_free(void)
+{
+    if(frame_alpha) FreeVec(frame_alpha);
+    if(frame_argb) FreeVec(frame_argb);
+    frame_alpha=frame_argb=NULL;
+    frame_alpha_size=0;
+}
+/* A rectangle of one colour and alpha, in as many pieces as it takes:
+   through frame_argb, or line by line when that could not be had. A
+   composited window always needs this. FillPixelArray() and RectFill() with
+   a colour map it on the screen's bitmap, which has no alpha, and leave the
+   area at alpha 0 (mainline 9802c8c0, 800x600x24): see-through, and not
+   taking clicks. */
 static void argb_fill(struct RastPort *rp,unsigned x,unsigned y,unsigned width,unsigned height,
                       unsigned alpha,uint32_t rgb)
 {
-    unsigned lines=width?(unsigned)(frame_alpha_size/width):0,done;
+    static unsigned char line[(MAX_COLUMNS*XRASTER_MAX+64)*4];
+    unsigned char *buffer=frame_argb;
+    unsigned lines=width&&frame_argb?(unsigned)(frame_alpha_size/width):0,done;
     size_t i;
-    if(!lines) return;
+    if(!lines) {
+        buffer=line;lines=1;
+        if(width>sizeof line/4) width=sizeof line/4;
+    }
     if(lines>height) lines=height;
     for(i=0;i<(size_t)width*lines;++i) {
-        unsigned char *p=frame_argb+i*4;
+        unsigned char *p=buffer+i*4;
         p[0]=(unsigned char)alpha; p[1]=rgb>>16; p[2]=rgb>>8; p[3]=rgb;
     }
     for(done=0;done<height;done+=lines) {
         unsigned n=height-done<lines?height-done:lines;
-        WritePixelArray(frame_argb,0,0,width*4,rp,x,y+done,width,n,RECTFMT_ARGB);
+        WritePixelArray(buffer,0,0,width*4,rp,x,y+done,width,n,RECTFMT_ARGB);
     }
 }
 /* Rows [first,end) of frame_pixels, already committed to paint_damage. */
@@ -931,6 +945,8 @@ static void draw_screen(struct Window *window)
     /* The translucent drawing, when its buffers can be had: the frame of a
        pass that cannot have them goes out solid. */
     unsigned char *alpha_plane=NULL;
+    int composited=window_alpha_composited(window);
+    static int alpha_short;
     if(!paint_damage_geometry(&paint_damage,screen.rows,screen.columns)) return;
     if(window->Flags&WFLG_GIMMEZEROZERO) {
         inner_x=inner_y=0;inner_width=inner_height=~0u;
@@ -968,23 +984,23 @@ static void draw_screen(struct Window *window)
         frame_size=(size_t)screen.rows*h*pitch;
         if(!(frame_pixels=AllocVec(frame_size,MEMF_ANY))) frame_size=0;
     }
-    if(background_alpha!=255) {
+    /* Composited also at 100 %: the setting can change under an open window,
+       and what is not written with its alpha lands see-through. */
+    if(composited) {
         size_t needed=(size_t)screen.rows*h*(pitch/3);
         if(needed>frame_alpha_size) {
-            if(frame_alpha) FreeVec(frame_alpha);
-            if(frame_argb) FreeVec(frame_argb);
+            frame_alpha_free();
             frame_alpha=AllocVec(needed,MEMF_ANY);
             frame_argb=AllocVec(needed*4,MEMF_ANY);
-            frame_alpha_size=frame_alpha && frame_argb?needed:0;
-            if(!frame_alpha_size) {
-                if(frame_alpha) FreeVec(frame_alpha);
-                if(frame_argb) FreeVec(frame_argb);
-                frame_alpha=frame_argb=NULL;
-            }
+            if(frame_alpha && frame_argb) frame_alpha_size=needed;
+            else frame_alpha_free();
         }
-        if(frame_pixels && frame_alpha_size) alpha_plane=frame_alpha;
-        /* Solid for now: everything again once there is memory. */
-        else paint_damage_invalidate(&paint_damage);
+        if(frame_pixels && frame_alpha_size) {
+            /* Rows drawn solid for want of memory get their alpha back. */
+            if(alpha_short) paint_damage_invalidate(&paint_damage);
+            alpha_short=0;
+            alpha_plane=frame_alpha;
+        } else alpha_short=1;
     }
     /* Never clear the text grid before uploading finished rows: that exposes
      * a blank frame on every keystroke. Only fill the unused margins, in the
@@ -993,7 +1009,7 @@ static void draw_screen(struct Window *window)
         static MarginRect margins[MARGIN_RECTS_MAX(MAX_ROWS,MAX_COLUMNS)];
         MarginGeometry geometry={w,h,MARGIN,(unsigned)window->GZZWidth,(unsigned)window->GZZHeight};
         size_t i,n=margin_rects(&screen,&theme,&geometry,margins,sizeof margins/sizeof *margins);
-        if(alpha_plane) {
+        if(composited) {
             if(!margins_valid || n!=margins_shown_count || memcmp(margins,margins_shown,n*sizeof *margins)) {
                 for(i=0;i<n;++i) {
                     unsigned a=margins[i].clear?background_alpha:255;
@@ -1002,7 +1018,9 @@ static void draw_screen(struct Window *window)
                               a,margins[i].rgb);
                 }
                 memcpy(margins_shown,margins,n*sizeof *margins);
-                margins_shown_count=n;margins_valid=1;
+                margins_shown_count=n;
+                /* Under BeginRefresh only the damaged part was reached. */
+                margins_valid=!kitty_refreshing;
             }
         } else {
             margins_valid=0;
@@ -1024,12 +1042,17 @@ static void draw_screen(struct Window *window)
             paint_row[col].cell=cell;
             paint_row[col].fg=selected?theme.selection_fg:theme_fg(&theme,&cell);
             paint_row[col].bg=selected?theme.selection_bg:theme_bg(&theme,&cell);
-            if(alpha_plane) paint_alpha[col]=background_cell_clear(&cell,selected)?background_alpha:255;
             paint_row[col].cursor_colour=theme.cursor;
             paint_row[col].flags=(cursor && row==screen.cursor_row && col==cursor_col?XPAINT_CURSOR:0)|
                 ((cell.colour_flags&XCOLOUR_UNDERLINE || found==1 ||
                   (link_hovered && hyperlink_contains(&screen,&hovered_link,row,col)))
                  ?XPAINT_UNDERLINE:0);
+            if(alpha_plane) {
+                int clear=background_cell_clear(&cell,selected);
+                paint_alpha[col]=clear?background_alpha:255;
+                /* A colour equal to the theme's still differs from none. */
+                if(clear) paint_row[col].flags|=XPAINT_CLEAR;
+            }
         }
         if(!paint_damage_changed(&paint_damage,row,paint_row)) {
             if(run_first>=0) upload_run(window,rp,&screen,w,h,pitch,(unsigned)run_first,row,
@@ -2071,7 +2094,7 @@ static void window_settings_load(XSettings *into)
 /* What this window's background is: asked when it opens, after every size
    change, and when the setting changes. A window that has lost its surface
    is an ordinary one from then on and gets everything drawn again, solid. */
-static int window_translucent,window_blurred,window_can_blur;
+static int window_translucent,window_blurred;
 static struct Window *background_window;
 static void background_update(void)
 {
@@ -2080,10 +2103,13 @@ static void background_update(void)
     unsigned next=background_path(settings.background_opacity,window_translucent,composited)==XBACKGROUND_PATH_ALPHA?
         background_alpha_byte(settings.background_opacity):255;
     if(window_translucent && !composited) {
-        window_translucent=window_blurred=window_can_blur=0;
+        window_translucent=window_blurred=0;
         if(w) {
             RefreshWindowFrame(w);
-            clip_status="Not enough memory for a transparent window: its background stays solid";
+            /* settings_message: a starting session clears clip_status. */
+            snprintf(settings_message,sizeof settings_message,
+                     "Not enough memory for a transparent window: its background stays solid");
+            clip_status=settings_message;
         }
     }
     if(next==background_alpha) return;
@@ -2095,10 +2121,12 @@ static void background_update(void)
 /* Window.conf again: Project > Reload settings and Use in Limpet Preferences. */
 static int background_reload(void)
 {
+    struct Window *w=background_window;
     window_settings_load(&settings);
     background_update();
-    return settings.background_opacity<100 &&
-           (!window_translucent || (window_can_blur && !!settings.background_blur!=window_blurred));
+    return w && settings.background_opacity<100 && window_alpha_supported(w->WScreen) &&
+           (!window_translucent ||
+            (backdrop_blur_supported(w->WScreen) && !!settings.background_blur!=window_blurred));
 }
 #endif
 
@@ -2302,7 +2330,9 @@ static int prefs_poll(int closing)
            (r->action!=XPREFS_RUN && r->action!=XPREFS_APPLY_WINDOW) || !memchr(r->line,0,sizeof r->line))
             r->result=XPREFS_BAD;
         else if(r->action==XPREFS_APPLY_WINDOW) {
+            settings_message[0]=0;
             if(background_reload()) clip_status="The window's background applies to new windows";
+            if(settings_message[0]) clip_status=settings_message;
             r->result=XPREFS_RAN; ran=1;
         } else if((r->result=run_now(r->line,closing))==XPREFS_RAN) ran=1;
         ReplyMsg(m);
@@ -2477,8 +2507,7 @@ int main(int argc,char **argv)
             if(!on) on=LockPubScreen(NULL);
             if(on) {
                 window_translucent=window_alpha_supported(on);
-                window_can_blur=window_translucent && backdrop_blur_supported(on);
-                window_blurred=window_can_blur && settings.background_blur;
+                window_blurred=window_translucent && settings.background_blur && backdrop_blur_supported(on);
                 UnlockPubScreen(NULL,on);
             }
         }
@@ -2562,6 +2591,7 @@ int main(int argc,char **argv)
         settle_close();
         tick_close();
         if(frame_pixels) { FreeVec(frame_pixels); frame_pixels=NULL; frame_size=0; }
+        frame_alpha_free();
         close_main_window(window);xfont_close();return RETURN_FAIL;
     }
     PERF_DO(perf_open());
@@ -2759,6 +2789,9 @@ int main(int argc,char **argv)
             else if (event == IDCMP_REFRESHWINDOW) {
                 paint_damage_invalidate(&paint_damage);
                 BeginRefresh(window); kitty_refreshing=1; draw_screen(window); kitty_refreshing=0; EndRefresh(window, TRUE);
+                /* Such a window keeps its pixels: this pass reached only the
+                   damaged part, and its rows must not count as drawn. */
+                if(!(window->Flags&WFLG_GIMMEZEROZERO)) { paint_damage_invalidate(&paint_damage); dirty=1; }
             } else if (closing) continue;
             else if(event==IDCMP_INACTIVEWINDOW) {
                 unsigned button;
@@ -2887,6 +2920,9 @@ int main(int argc,char **argv)
                 resize_queue();
                 selection.active=selection.dragging=0;
                 dirty=1;
+                /* A pass under way at the old size can have drawn on the new
+                   border: without GimmeZeroZero no layer keeps it off. */
+                if(!(window->Flags&WFLG_GIMMEZEROZERO)) RefreshWindowFrame(window);
             } else if (event == IDCMP_RAWKEY && have_key) {
                 link_gesture_cancel(&link_gesture); link_hovered=0;
                 unsigned char bytes[AROS_INPUT_MAX_BYTES];
@@ -3125,6 +3161,7 @@ int main(int argc,char **argv)
     settle_close();
     tick_close();
     if(frame_pixels) { FreeVec(frame_pixels); frame_pixels=NULL; frame_size=0; }
+    frame_alpha_free();
     PERF_DO(perf_close());
     aros_session_dispose(&process_session);
 #ifdef XTERM_PKTWAIT_PROBE
