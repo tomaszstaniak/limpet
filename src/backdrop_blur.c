@@ -15,7 +15,7 @@ int backdrop_blur_supported(struct Screen *screen)
     IPTR blur = 0;
     if (!screen) return 0;
     if (!GetAttr(PROPOSED_SA_BackdropBlurSupport, (Object *)screen, &blur)) return 0;
-    return blur != 0;
+    return backdrop_blur_contract_known((unsigned long)blur);
 }
 
 void backdrop_blur_tag(struct TagItem *tag, int wanted)

@@ -45,7 +45,7 @@ static size_t session_length,kept_length;
 static char window_text[XSETTINGS_FILE_MAX+1],window_kept_text[XSETTINGS_FILE_MAX+1];
 static size_t window_length,window_kept_length;
 /* What this screen can show, asked of the running system. */
-static int can_alpha,can_blur;
+static int can_alpha,can_blur,asked_window;
 static XSettings loaded;
 static char status[160];
 static char line_text[600];
@@ -243,6 +243,41 @@ static void apply_to_window(void)
     if(port) request_out=1;
 }
 
+/* What the screen of the window Preferences came from can show. Limpet can
+   be on any public screen, so the default one says nothing about it. Before
+   the window opens, so no answer of a request can be waiting yet; the window
+   answers at once, and closing it answers too. */
+static int ask_window_background(void)
+{
+    struct MsgPort *port;
+    if(!port_name || !reply_port) return 0;
+    memset(&request,0,sizeof request);
+    request.message.mn_Node.ln_Type=NT_MESSAGE;
+    request.message.mn_Length=sizeof request;
+    request.message.mn_ReplyPort=reply_port;
+    request.magic=XPREFS_MAGIC; request.action=XPREFS_BACKGROUND; request.key=port_key;
+    Forbid();
+    port=FindPort((CONST_STRPTR)port_name);
+    if(port) PutMsg(port,&request.message);
+    Permit();
+    if(!port) return 0;
+    WaitPort(reply_port);
+    GetMsg(reply_port);
+    if(request.result!=XPREFS_RAN) return 0;
+    can_alpha=(request.background&XPREFS_CAN_ALPHA)!=0;
+    can_blur=can_alpha && (request.background&XPREFS_CAN_BLUR)!=0;
+    return 1;
+}
+
+/* Without a window: the screen a new window opens on. */
+static void ask_default_screen(void)
+{
+    struct Screen *screen=LockPubScreen(NULL);
+    can_alpha=window_alpha_supported(screen);
+    can_blur=can_alpha && backdrop_blur_supported(screen);
+    if(screen) UnlockPubScreen(NULL,screen);
+}
+
 static void run_answered(void)
 {
     static const char *const answers[]={
@@ -323,7 +358,6 @@ int main(int argc,char **argv)
         int in_kept=read_file(WINDOW_KEPT_FILE,window_kept_text,&window_kept_length);
         const char *text=in_window?window_text:window_kept_text;
         size_t length=in_window?window_length:window_kept_length;
-        struct Screen *screen=LockPubScreen(NULL);
         if(in_window<0) window_length=0;
         if(in_kept<0) window_kept_length=0;
         r=in_window?in_window:in_kept;
@@ -332,18 +366,19 @@ int main(int argc,char **argv)
             snprintf(status,sizeof status,"Window.conf line %d: %s; the background stays solid",r,why);
             loaded.background_opacity=XSETTINGS_BACKGROUND_OPACITY_DEFAULT;
             loaded.background_blur=0;
-        }
-        can_alpha=window_alpha_supported(screen);
-        can_blur=can_alpha && backdrop_blur_supported(screen);
-        if(screen) UnlockPubScreen(NULL,screen); }
+        } }
     reply_port=CreateMsgPort();
+    asked_window=ask_window_background();
+    if(!asked_window) ask_default_screen();
 
     groups_box=HGroup,End;
     blur=MUI_MakeObject(MUIO_Checkmark,(IPTR)"Blur");
     if(!can_alpha) copy_text(background_note_text,sizeof background_note_text,
-        "This screen cannot show transparent windows: the background stays solid.");
+        asked_window?"This window's screen cannot show transparent windows: the background stays solid."
+                    :"The default public screen cannot show transparent windows: the background stays solid.");
     else if(!can_blur) copy_text(background_note_text,sizeof background_note_text,
-        "Blur needs a system with backdrop blur; this one has none.");
+        asked_window?"Blur needs a system with backdrop blur; this window's screen has none."
+                    :"Blur needs a system with backdrop blur; the default public screen has none.");
     else copy_text(background_note_text,sizeof background_note_text,
         "Blur is experimental: it needs a system change that AROS does not have yet.");
     for(i=0;i<XFF_GROUPS;++i) {

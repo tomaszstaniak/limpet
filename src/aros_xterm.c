@@ -2327,9 +2327,15 @@ static int prefs_poll(int closing)
     while((m=GetMsg(prefs_port))) {
         XPrefsRequest *r=(XPrefsRequest *)m;
         if(m->mn_Length!=sizeof *r || r->magic!=XPREFS_MAGIC || r->key!=prefs_key ||
-           (r->action!=XPREFS_RUN && r->action!=XPREFS_APPLY_WINDOW) || !memchr(r->line,0,sizeof r->line))
+           r->action<XPREFS_RUN || r->action>XPREFS_BACKGROUND || !memchr(r->line,0,sizeof r->line))
             r->result=XPREFS_BAD;
-        else if(r->action==XPREFS_APPLY_WINDOW) {
+        else if(r->action==XPREFS_BACKGROUND) {
+            struct Window *w=background_window;
+            r->background=0;
+            if(w && window_alpha_supported(w->WScreen))
+                r->background=XPREFS_CAN_ALPHA|(backdrop_blur_supported(w->WScreen)?XPREFS_CAN_BLUR:0);
+            r->result=w?XPREFS_RAN:XPREFS_NO_SHELL;
+        } else if(r->action==XPREFS_APPLY_WINDOW) {
             settings_message[0]=0;
             if(background_reload()) clip_status="The window's background applies to new windows";
             if(settings_message[0]) clip_status=settings_message;

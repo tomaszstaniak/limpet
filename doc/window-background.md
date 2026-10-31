@@ -35,8 +35,10 @@ one.
 
 ## What it needs
 
-Preferences asks the screen and says when something is not available; the
-option is then disabled and your saved choice stays for a system that has it.
+Preferences asks the screen of the window you opened it from and says when
+something is not available; the option is then disabled and your saved choice
+stays for a screen that has it. Started on its own, Preferences asks the
+default public screen and says so.
 
 | The screen can show | Limpet |
 | --- | --- |
@@ -46,8 +48,8 @@ option is then disabled and your saved choice stays for a system that has it.
 
 Transparent windows need mainline AROS with the window compositor, built on
 2026-10-27 or later, on a 32-bit screen. ABIv11 systems such as AROS One do
-not have it. Blur needs a further system change that AROS does not include;
-Limpet does not bring it along.
+not have it. Blur needs a further system change that AROS does not include,
+in the version this Limpet was written for; Limpet does not bring it along.
 
 If the system runs short of memory for a window, the window opens solid, or
 turns solid when it is made larger, and says so in its title bar.
