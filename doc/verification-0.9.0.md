@@ -16,6 +16,14 @@ All runtime checks used QEMU. On each system Window.conf held
 | nightly of 2026-10-30, AArch64 ABIv1 Pi | Translucent background, Shell, Fastfetch, resize and Preferences work. Opacity changed to 32 applies at once with Use; `background_blur=on` is kept. Helix not run. |
 | mainline `87266168` (2026-10-26), x86_64 ABIv1 | Outside the supported range: on 32-bit VESA the window is translucent, but its frame is not drawn and a drag on the size gadget did nothing. On a 16-bit screen the window stays solid. |
 
+## Catalogue
+
+With published apkg 0.7.3 on AROS One, in a RAM package root: Limpet 0.8.0
+installed from the previous catalogue, then `apkg upgrade limpet` to 0.9.0 from
+the public catalogue. `apkg verify` matches the 20 package files, and a file
+added under `Themes` and `ENV:Limpet/Window.conf` stay as they were. The
+upgraded copy was not started; its files are those run above.
+
 ## Limits
 
 No physical hardware, SMP exec or Macaros test. The experimental handler
