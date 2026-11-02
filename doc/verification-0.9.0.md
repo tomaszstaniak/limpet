@@ -14,7 +14,7 @@ All runtime checks used QEMU. On each system Window.conf held
 | nightly 20261031, x86_64 ABIv1 | Translucent background and normal frame. Shell, Fastfetch, Helix, Preferences, Use and resize work. Blur stays disabled with its note; `background_blur=on` is kept. |
 | nightly 20261102, x86_64 ABIv1 (live ISO) | Translucent background, Shell, Fastfetch, Helix and resize work. Preferences not run here. |
 | nightly of 2026-10-30, AArch64 ABIv1 Pi | Translucent background, Shell, Fastfetch, resize and Preferences work. Opacity changed to 32 applies at once with Use; `background_blur=on` is kept. Helix not run. |
-| mainline `87266168` (2026-10-26), x86_64 ABIv1 | Outside the supported range: 32-bit VESA shows the window translucent, but without its frame or a working size gadget. On a 16-bit screen the window stays solid. |
+| mainline `87266168` (2026-10-26), x86_64 ABIv1 | Outside the supported range: on 32-bit VESA the window is translucent, but its frame is not drawn and a drag on the size gadget did nothing. On a 16-bit screen the window stays solid. |
 
 ## Limits
 

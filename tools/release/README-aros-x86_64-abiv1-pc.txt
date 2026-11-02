@@ -11,7 +11,8 @@ of X11 xterm). Drawn with Intuition and FreeType:
 - inline images through a documented subset of the Kitty graphics protocol.
 
 Built for mainline AROS (ABIv1, x86_64) with the mainline GCC 10.5
-toolchain; this version was tested on a mainline build of 2026-09-04.
+toolchain; this version was tested on nightly builds of 2026-10-31 and
+2026-11-02.
 Mainline binaries do not run on ABIv11 systems such as AROS One, and ABIv11
 binaries do not run here.
 
