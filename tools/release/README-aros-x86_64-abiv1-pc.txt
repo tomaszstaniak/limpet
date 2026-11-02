@@ -31,16 +31,14 @@ This build has the same features as Limpet @VERSION@ for ABIv11; the
 changes of each version are listed in doc/changes.md in the source
 (https://github.com/tomaszstaniak/limpet).
 
-New in 0.8.0
+New in 0.9.0
 ------------
 
-Project > Preferences opens Limpet Preferences. Choose Fastfetch or your own
-command to run when a new Shell window opens. Use applies the setting until
-restart; Save keeps it. Fastfetch is a separate download.
-
-Applications can query text support, terminal identity, image support and
-pixel geometry through SDK 0.6.0. Automatic line wrapping can be disabled.
-Inline images stay visible while you type the next command.
+Limpet's background can be transparent. Open Project > Preferences and set
+Background opacity under Window background. This is experimental and off
+until you choose it. It needs mainline AROS built on 2026-10-27 or later, on
+a 32-bit screen. Text, the cursor, pictures and colours set by programs stay
+solid.
 
 
 Requirements

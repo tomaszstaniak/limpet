@@ -18,7 +18,7 @@
 #define XPREFS_MAGIC 0x4c507232UL /* "LPr2" */
 #define XPREFS_LINE_MAX 512
 enum { XPREFS_RUN = 1, XPREFS_APPLY_WINDOW = 2, XPREFS_BACKGROUND = 3 };
-enum { XPREFS_CAN_ALPHA = 1, XPREFS_CAN_BLUR = 2 };
+enum { XPREFS_CAN_ALPHA = 1 };
 enum {
     XPREFS_RAN,          /* the line went to the Shell */
     XPREFS_BUSY_PROGRAM, /* a command or full-screen program has the window */

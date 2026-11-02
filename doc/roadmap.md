@@ -1,6 +1,6 @@
 # Roadmap
 
-Limpet 0.7.1 is available for AROS x86_64 ABIv11 and mainline x86_64
+Limpet 0.9.0 is available for AROS x86_64 ABIv11 and mainline x86_64
 ABIv1, with an AArch64 Raspberry Pi test build. The experimental `LIMPET:`
 handler is a separate download for all three targets. It does not replace
 `CON:`.

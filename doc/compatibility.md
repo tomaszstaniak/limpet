@@ -2,7 +2,7 @@
 
 ## Systems
 
-The current terminal release, **0.7.1**, has three builds:
+The current terminal release, **0.9.0**, has three builds:
 
 | Target | System | Checked on |
 | --- | --- | --- |
@@ -14,8 +14,8 @@ Up to 0.7.0 these were named `abiv11`, `v1-x86_64` and `v1-aarch64`.
 On mainline built before 2026-08-29 Limpet runs, but Ctrl-C does not reach
 the program: those systems lack the task notification it uses there.
 
-Build and runtime details: [0.7.1](verification-0.7.1.md),
-[0.7.0 ABIv11](verification-0.7.0.md), [0.7.0 ABIv1 builds](verification-0.7.0-v1.md). The prebuilt SDK **0.5.0** targets
+Build and runtime details: [0.9.0](verification-0.9.0.md), [0.7.1](verification-0.7.1.md),
+[0.7.0 ABIv11](verification-0.7.0.md), [0.7.0 ABIv1 builds](verification-0.7.0-v1.md). The prebuilt SDK **0.6.0** targets
 ABIv11 x86_64.
 
 The Pi build is meant for the native Pi system; it has not been checked on
@@ -52,7 +52,7 @@ following is claimed:
 
 The exact subsets are in the [protocol reference](protocols.md).
 
-## Limits in 0.7.1
+## Limits in 0.9.0
 
 | Item | Limit |
 | --- | --- |

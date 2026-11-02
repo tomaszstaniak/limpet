@@ -1,6 +1,5 @@
 #include "../src/background.h"
 #include "../src/screen_model.h"
-#include "../src/backdrop_blur.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,16 +15,6 @@ int main(void)
 {
     unsigned a, fg, bg, ba;
     unsigned char px[3], al, out[8];
-    /* What the system answers under the proposal's screen tag. Only the
-       contract this Limpet was written for may send the window tag: 1 is what
-       an attribute given that number later would say, and the first prototype. */
-    assert(backdrop_blur_contract_known(0x424c5201UL));
-    assert(!backdrop_blur_contract_known(0));
-    assert(!backdrop_blur_contract_known(1));
-    assert(!backdrop_blur_contract_known(0x424c5202UL));
-    assert(!backdrop_blur_contract_known(0x424c5200UL));
-    assert(!backdrop_blur_contract_known(0xffffffffUL));
-    assert(!backdrop_blur_contract_known(~0UL));
     /* Which path */
     assert(background_path(100, 1, 1) == XBACKGROUND_PATH_OPAQUE);
     assert(background_path(70, 1, 1) == XBACKGROUND_PATH_ALPHA);

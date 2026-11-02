@@ -36,8 +36,9 @@ enum { XFF_LOGO_LOOK, XFF_LOGO_TEXT, XFF_LOGO_NONE };  /* fastfetch_logo */
 enum { XFF_SYSTEM=1, XFF_HARDWARE=2, XFF_MEMORY=4, XFF_NETWORK=8 };
 #define XFF_GROUPS 4
 /* The window's background (Window.conf): how solid the terminal's default
- * background is, in percent, and whether what is behind it is blurred. Kept
- * as written on systems that cannot show them; see background.h. */
+ * background is, in percent, kept as written on systems that cannot show it;
+ * see background.h. background_blur is read and written back and does
+ * nothing in this version. */
 #define XSETTINGS_BACKGROUND_OPACITY_DEFAULT 100
 #define XSETTINGS_BACKGROUND_OPACITY_MIN 20
 #define XSETTINGS_BACKGROUND_OPACITY_MAX 100

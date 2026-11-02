@@ -11,7 +11,6 @@
 #include "session_command.h"
 #include "prefs_port.h"
 #include "window_alpha.h"
-#include "backdrop_blur.h"
 #include <exec/memory.h>
 #include <dos/dos.h>
 #include <libraries/mui.h>
@@ -45,7 +44,7 @@ static size_t session_length,kept_length;
 static char window_text[XSETTINGS_FILE_MAX+1],window_kept_text[XSETTINGS_FILE_MAX+1];
 static size_t window_length,window_kept_length;
 /* What this screen can show, asked of the running system. */
-static int can_alpha,can_blur,asked_window;
+static int can_alpha,asked_window;
 static XSettings loaded;
 static char status[160];
 static char line_text[600];
@@ -138,7 +137,6 @@ static void gather(XSettings *s)
     copy_text(s->session_command,sizeof s->session_command,string_of(command));
     /* Not offered here: stays as it was saved, for a system that can show it. */
     if(can_alpha) s->background_opacity=(unsigned)value_of(opacity,MUIA_Numeric_Value);
-    if(can_blur) s->background_blur=value_of(blur,MUIA_Selected)?1:0;
     absolute(s->fastfetch,sizeof s->fastfetch);
     absolute(s->fastfetch_config,sizeof s->fastfetch_config);
 }
@@ -164,7 +162,6 @@ static void refresh(void)
     else snprintf(line_text,sizeof line_text,"Not possible: %s",why);
     set(line_view,MUIA_Text_Contents,line_text);
     set(run,MUIA_Disabled,r<=0 || !port_name || !reply_port || request_out);
-    set(blur,MUIA_Disabled,!can_blur || s.background_opacity>=100);
 }
 
 static void say(const char *text)
@@ -265,7 +262,6 @@ static int ask_window_background(void)
     GetMsg(reply_port);
     if(request.result!=XPREFS_RAN) return 0;
     can_alpha=(request.background&XPREFS_CAN_ALPHA)!=0;
-    can_blur=can_alpha && (request.background&XPREFS_CAN_BLUR)!=0;
     return 1;
 }
 
@@ -274,7 +270,6 @@ static void ask_default_screen(void)
 {
     struct Screen *screen=LockPubScreen(NULL);
     can_alpha=window_alpha_supported(screen);
-    can_blur=can_alpha && backdrop_blur_supported(screen);
     if(screen) UnlockPubScreen(NULL,screen);
 }
 
@@ -376,11 +371,8 @@ int main(int argc,char **argv)
     if(!can_alpha) copy_text(background_note_text,sizeof background_note_text,
         asked_window?"This window's screen cannot show transparent windows: the background stays solid."
                     :"The default public screen cannot show transparent windows: the background stays solid.");
-    else if(!can_blur) copy_text(background_note_text,sizeof background_note_text,
-        asked_window?"Blur needs a system with backdrop blur; this window's screen has none."
-                    :"Blur needs a system with backdrop blur; the default public screen has none.");
     else copy_text(background_note_text,sizeof background_note_text,
-        "Blur is experimental: it needs a system change that AROS does not have yet.");
+        "Background blur is not available in this version of Limpet.");
     for(i=0;i<XFF_GROUPS;++i) {
         show[i]=MUI_MakeObject(MUIO_Checkmark,(IPTR)group_labels[i]);
         if(show[i]) {
@@ -498,6 +490,7 @@ int main(int argc,char **argv)
     set(opacity,MUIA_Numeric_Value,loaded.background_opacity);
     set(opacity,MUIA_Disabled,!can_alpha);
     set(blur,MUIA_Selected,loaded.background_blur!=0);
+    set(blur,MUIA_Disabled,TRUE);
     DoMethod(opacity,MUIM_Notify,MUIA_Numeric_Value,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
     for(i=0;i<XFF_GROUPS;++i)
         DoMethod(show[i],MUIM_Notify,MUIA_Selected,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);

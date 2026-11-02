@@ -20,7 +20,7 @@ CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
 CLUSTER_SRC = src/font_cache.c src/cluster_font.c
 THEME_SRC = src/theme.c src/settings.c src/session_start.c src/margin_fill.c
-WINDOW_SRC = src/window_alpha.c src/backdrop_blur.c
+WINDOW_SRC = src/window_alpha.c
 KITTY_SRC = src/kitty_graphics.c
 HYPERLINK_GUI_SRC = src/aros_hyperlink.c src/link_gesture.c
 

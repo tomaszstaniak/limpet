@@ -9,17 +9,17 @@ that cannot show it, Limpet looks and works as before.
 In a Limpet window, choose **Project > Preferences...**. Under **Window
 background**:
 
-- **Background opacity**: 100 % is a solid window, 20 % the most transparent.
-- **Background blur**: blurs what is behind the window, so that text stays
-  easy to read.
+**Background opacity**: 100 % is a solid window, 20 % the most transparent.
+
+**Background blur** is shown disabled: this version of Limpet has no blur.
 
 Press **Use** to keep the choice until the system restarts, **Save** to keep it
 for good, or **Cancel** to leave everything as it was.
 
 The window you opened Preferences from changes its opacity at once if it is
 transparent already; other transparent windows do on Project > Reload settings.
-A solid window, and a change of the blur, wait for the next window you open:
-a window is made transparent when it opens.
+A solid window waits for the next window you open: a window is made
+transparent when it opens.
 
 ## What changes
 
@@ -36,20 +36,13 @@ one.
 ## What it needs
 
 Preferences asks the screen of the window you opened it from and says when
-something is not available; the option is then disabled and your saved choice
-stays for a screen that has it. Started on its own, Preferences asks the
+transparency is not available; the option is then disabled and your saved
+choice stays for a screen that has it. Started on its own, Preferences asks the
 default public screen and says so.
 
-| The screen can show | Limpet |
-| --- | --- |
-| transparent windows and blur | everything above |
-| transparent windows | opacity; blur disabled |
-| neither | a solid background |
-
-Transparent windows need mainline AROS with the window compositor, built on
-2026-10-27 or later, on a 32-bit screen. ABIv11 systems such as AROS One do
-not have it. Blur needs a further system change that AROS does not include,
-in the version this Limpet was written for; Limpet does not bring it along.
+Transparent windows need mainline AROS built on 2026-10-27 or later, on a
+32-bit screen. ABIv11 systems such as AROS One do not have them: there the
+background stays solid and the saved setting is kept.
 
 If the system runs short of memory for a window, the window opens solid, or
 turns solid when it is made larger, and says so in its title bar.
@@ -61,9 +54,9 @@ Limpet Preferences writes `Window.conf` in `ENV:Limpet/` (Use) and
 
 ```
 background_opacity=70
-background_blur=on
 ```
 
-`background_opacity` takes 20 to 100 and `background_blur` takes `off` or `on`.
+`background_opacity` takes 20 to 100. A `background_blur` line, `off` or `on`,
+is accepted and kept, and has no effect.
 A file with any other line is not used as a whole, as with `Limpet.conf`, and
 the title bar says why.

@@ -33,7 +33,6 @@
 #include "prefs_port.h"
 #include "background.h"
 #include "window_alpha.h"
-#include "backdrop_blur.h"
 #include "console_name.h"
 #include "terminal_input.h"
 #include <dos/var.h>
@@ -863,10 +862,10 @@ static void frame_alpha_free(void)
 }
 /* A rectangle of one colour and alpha, in as many pieces as it takes:
    through frame_argb, or line by line when that could not be had. A
-   composited window always needs this. FillPixelArray() and RectFill() with
-   a colour map it on the screen's bitmap, which has no alpha, and leave the
-   area at alpha 0 (mainline 9802c8c0, 800x600x24): see-through, and not
-   taking clicks. */
+   composited window always takes this path. On mainline before a60f4627,
+   FillPixelArray() and RectFill() with a colour map it on the screen's
+   bitmap, which has no alpha, and leave the area at alpha 0: see-through,
+   and not taking clicks. Those systems are still in use. */
 static void argb_fill(struct RastPort *rp,unsigned x,unsigned y,unsigned width,unsigned height,
                       unsigned alpha,uint32_t rgb)
 {
@@ -2094,7 +2093,7 @@ static void window_settings_load(XSettings *into)
 /* What this window's background is: asked when it opens, after every size
    change, and when the setting changes. A window that has lost its surface
    is an ordinary one from then on and gets everything drawn again, solid. */
-static int window_translucent,window_blurred;
+static int window_translucent;
 static struct Window *background_window;
 static void background_update(void)
 {
@@ -2103,7 +2102,7 @@ static void background_update(void)
     unsigned next=background_path(settings.background_opacity,window_translucent,composited)==XBACKGROUND_PATH_ALPHA?
         background_alpha_byte(settings.background_opacity):255;
     if(window_translucent && !composited) {
-        window_translucent=window_blurred=0;
+        window_translucent=0;
         if(w) {
             RefreshWindowFrame(w);
             /* settings_message: a starting session clears clip_status. */
@@ -2124,9 +2123,7 @@ static int background_reload(void)
     struct Window *w=background_window;
     window_settings_load(&settings);
     background_update();
-    return w && settings.background_opacity<100 && window_alpha_supported(w->WScreen) &&
-           (!window_translucent ||
-            (backdrop_blur_supported(w->WScreen) && !!settings.background_blur!=window_blurred));
+    return w && settings.background_opacity<100 && window_alpha_supported(w->WScreen) && !window_translucent;
 }
 #endif
 
@@ -2331,9 +2328,7 @@ static int prefs_poll(int closing)
             r->result=XPREFS_BAD;
         else if(r->action==XPREFS_BACKGROUND) {
             struct Window *w=background_window;
-            r->background=0;
-            if(w && window_alpha_supported(w->WScreen))
-                r->background=XPREFS_CAN_ALPHA|(backdrop_blur_supported(w->WScreen)?XPREFS_CAN_BLUR:0);
+            r->background=w && window_alpha_supported(w->WScreen)?XPREFS_CAN_ALPHA:0;
             r->result=w?XPREFS_RAN:XPREFS_NO_SHELL;
         } else if(r->action==XPREFS_APPLY_WINDOW) {
             settings_message[0]=0;
@@ -2492,7 +2487,6 @@ int main(int argc,char **argv)
     if(diag_exit_stage==2) { xfont_close();return RETURN_OK; }
 #endif
     {
-        struct TagItem blur_tag;
         ULONG alpha_tag=TAG_IGNORE;
         ULONG flags=WFLG_CLOSEGADGET | WFLG_DRAGBAR | WFLG_DEPTHGADGET |
                   WFLG_SIZEGADGET | WFLG_SIZEBBOTTOM | WFLG_ACTIVATE |
@@ -2513,7 +2507,6 @@ int main(int argc,char **argv)
             if(!on) on=LockPubScreen(NULL);
             if(on) {
                 window_translucent=window_alpha_supported(on);
-                window_blurred=window_translucent && settings.background_blur && backdrop_blur_supported(on);
                 UnlockPubScreen(NULL,on);
             }
         }
@@ -2521,7 +2514,6 @@ int main(int argc,char **argv)
             flags&=~(WFLG_GIMMEZEROZERO|WFLG_SIMPLE_REFRESH);
             alpha_tag=window_alpha_tag();
         }
-        backdrop_blur_tag(&blur_tag,window_blurred);
     window = OpenWindowTags(NULL,
         WA_Title, (IPTR)(console_spec.title[0]?console_spec.title:"Limpet"),
         WA_Left, console_spec.left>=0?console_spec.left:40,
@@ -2539,7 +2531,6 @@ int main(int argc,char **argv)
                   IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE | IDCMP_INACTIVEWINDOW | IDCMP_MENUPICK,
         WA_Flags, flags,
         alpha_tag, (IPTR)TRUE,
-        blur_tag.ti_Tag, blur_tag.ti_Data,
         TAG_DONE);
     }
     if (!window) {
