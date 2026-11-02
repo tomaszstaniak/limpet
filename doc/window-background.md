@@ -41,7 +41,7 @@ choice stays for a screen that has it. Started on its own, Preferences asks the
 default public screen and says so.
 
 Transparent windows need mainline AROS built on 2026-10-27 or later, on a
-32-bit screen. ABIv11 systems such as AROS One do not have them: there the
+32-bit screen; that includes the Raspberry Pi system. ABIv11 systems such as AROS One do not have them: there the
 background stays solid and the saved setting is kept.
 
 If the system runs short of memory for a window, the window opens solid, or

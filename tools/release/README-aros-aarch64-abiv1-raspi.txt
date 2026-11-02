@@ -36,15 +36,17 @@ changes of each version are listed in doc/changes.md in the source
 New in 0.9.0
 ------------
 
-Preferences has a new Window background section. Transparent windows need a
-system that can show them. The Pi system this build was run on cannot, so
-there the option is disabled and the background stays solid.
+Limpet's background can be transparent. Open Project > Preferences and set
+Background opacity under Window background. This is experimental and off
+until you choose it. It needs a Pi system built on 2026-10-27 or later, on a
+32-bit screen. Text, the cursor, pictures and colours set by programs stay
+solid.
 
 Requirements
 ------------
 
-- AROS for the Raspberry Pi (ABIv1, AArch64). Run so far on the system of
-  2026-08-22, under QEMU only.
+- AROS for the Raspberry Pi (ABIv1, AArch64). Run so far on nightly systems
+  of 2026-08-22 and 2026-10-30, under QEMU only.
 - The system font FONTS:TrueType/OpenSans-Regular.ttf, and
   FONTS:TrueType/VeraMono.ttf when the bundled font is removed or another
   font is set (both installed with the system).
