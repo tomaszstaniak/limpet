@@ -176,5 +176,5 @@ reusable system fix came out of these two builds, so no mainline patch was
 prepared. The build differences above (task notification hook, C++ library)
 are SDK contents of the Pi system, not bugs to report.
 
-Evidence (local, not in git): `docs/evidence/limpet-070-v1-20261024/`
-(`x86_64/`, `pi/`, `abiv11-keys/`, payload hashes, screenshots, key drivers).
+The raw local evidence of these runs was removed on purpose on 2026-11-03;
+this record keeps the results.

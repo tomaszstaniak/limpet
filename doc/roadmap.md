@@ -61,6 +61,11 @@ Macaros work is parked; sharing AArch64 and ABIv1 does not establish binary
 compatibility. i386 and other architectures need their own dependency,
 build and runtime checks before a release is promised.
 
+Mainline builds of 2026-10-24 to 2026-10-26 report support for translucent
+windows but do not draw their frame, so Limpet cannot refuse them today. The
+next step is to find the revision and library version that fixed the frame
+and keep the solid background below it, rather than guessing from build dates.
+
 ## Graphics
 
 Extend Kitty graphics beyond the current subset where applications need

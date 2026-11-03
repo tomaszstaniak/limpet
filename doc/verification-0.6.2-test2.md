@@ -3,7 +3,8 @@
 Source: perf-down 3bff8a0 (v0.6.2-test1 9d7401d plus fd5f4f4 capabilities,
 31941e4 local file links, 1db92e6 font packaging, 3bff8a0 documentation).
 Built with GCC 10.5 and the ABIv11 2026.09 SDK, LIMPET_VERSION=0.6.2-test2,
-LIMPET_DATE=21.10.2026. Archives in dist/0.6.2-test2 (SHA256SUMS there).
+LIMPET_DATE=21.10.2026. The archives were never published and were removed
+on 2026-11-03; this record keeps the results.
 
 Host: `make test` (43 Python tests, fixture check), presentation, icon
 contract, SDK and hyperlink tests pass.
