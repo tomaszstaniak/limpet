@@ -4,7 +4,7 @@ LIMPET: console handler for Limpet @VERSION@ -- experimental, mainline AROS (ABI
 LIMPET: opens a Limpet window where a program would open CON:, for
 example NewShell WINDOW LIMPET:. It is an experiment: it does not replace
 CON:, programs that open CON: keep the system console, and some things
-CON: does are missing (below). Tested on a mainline build of 2026-09-04 under QEMU only.
+CON: does are missing (below). Tested on a mainline build of 2026-09-23 under QEMU only.
 
 Install
 -------

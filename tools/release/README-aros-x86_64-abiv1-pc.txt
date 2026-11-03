@@ -47,8 +47,8 @@ Requirements
 
 - Mainline AROS (ABIv1), x86_64, built on 2026-08-29 or later: Ctrl-C
   reaches the program in the window through the system's task
-  notification, which older builds lack. This version was tested on a
-  mainline build of 2026-09-04, under QEMU.
+  notification, which older builds lack. This version was tested on
+  mainline nightlies of 2026-10-31 and 2026-11-02, under QEMU.
 - The system font FONTS:TrueType/OpenSans-Regular.ttf, and
   FONTS:TrueType/VeraMono.ttf when the bundled font is removed or another
   font is set (both installed with the system).

@@ -21,12 +21,30 @@ All runtime checks used QEMU. On each system Window.conf held
 With published apkg 0.7.3 on AROS One, in a RAM package root: Limpet 0.8.0
 installed from the previous catalogue, then `apkg upgrade limpet` to 0.9.0 from
 the public catalogue. `apkg verify` matches the 20 package files, and a file
-added under `Themes` and `ENV:Limpet/Window.conf` stay as they were. The
-upgraded copy was not started; its files are those run above.
+added under `Themes` and `ENV:Limpet/Window.conf` stay as they were.
+
+On 2026-11-03 the upgrade was repeated in a new boot and the upgraded copy
+started from `RAM:LP/Limpet`: it reports 0.9.0, opens a Shell with the solid
+background, its Preferences open with both options disabled, and
+`Window.conf` still holds 70 and on. After EndCLI the window stays open with
+"Session ended" until closed, as designed.
+
+## Experimental handler
+
+2026-11-03, the archives of the release unpacked over the main archive in
+`RAM:H/Limpet`: `Install-Handler`, `NewShell WINDOW LIMPET:`, commands,
+resize by the size gadget (the text reflows), `EndCLI`, `Remove-Handler`.
+After removal neither `LIMPET:` nor `LimpetHandler:` is assigned.
+
+| System | Result |
+| --- | --- |
+| AROS One 1.3, x86_64 ABIv11 (pool v11-2) | all steps pass |
+| mainline baseline of 2026-09-23, x86_64 ABIv1 (pool v1-2) | all steps pass |
+
+Pi handler not run.
 
 ## Limits
 
-No physical hardware, SMP exec or Macaros test. The experimental handler
-archives were built and checked for the correct ABI, but not run. Mainline
+No physical hardware, SMP exec or Macaros test. Mainline
 built between 2026-10-24 and 2026-10-26 reports the screen capability, so
 Limpet cannot tell it from a newer system; opacity stays off unless chosen.
