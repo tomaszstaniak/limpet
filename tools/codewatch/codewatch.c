@@ -10,7 +10,16 @@
  *       SYMBOL, watch it, and copy every .text section of that command; the
  *       copies are compared every two ticks and the first difference is logged
  *       (section, offset, old and new bytes, the new words decoded), after
- *       which the watchpoints move to the changed place
+ *       which the watchpoints move to the changed place. A task roster is
+ *       kept from the same poll: every task (ready, waiting, codewatch itself)
+ *       with its declared stack range tc_SPLower..tc_SPUpper and, for a Shell
+ *       process, the command it runs; LOG gets a START line for each new task,
+ *       new stack range (RunCommand gives a command a new stack) or new
+ *       command, and an END line when one is no longer seen. A change is
+ *       followed by every roster range that contains the changed bytes,
+ *       marked CURRENT or ENDED. Tasks that live less than two ticks are
+ *       missed; tc_SPLower/Upper are what the task declares, not where its
+ *       stack pointer is.
  *
  * Watching: x86 write watchpoints on 16 bytes (DR0/DR1 through Supervisor(), a
  * kernel.resource handler for vector 1; one CPU) and an exec FreeMem patch
@@ -412,6 +421,168 @@ static void log_difference(const char *log, int i, ULONG o, ULONG ticks)
     Close(fh);
 }
 
+/* Task roster: every task seen with its declared stack range (tc_SPLower to
+   tc_SPUpper) and, for Shell processes, the command it runs. A process that
+   changes its range (RunCommand runs a command on a new stack) or its command
+   gets a new entry; an entry not seen in a poll is marked ended. */
+#define ROSTER_MAX 3072
+#define CUR_MAX 512
+struct rtask {
+    struct Task *t;
+    IPTR lo, hi;
+    BPTR module;
+    char name[28], cmd[28];
+    ULONG first, last;
+    int gone;
+};
+static struct rtask roster[ROSTER_MAX];
+static int nroster, roster_full;
+static struct rtask cur[CUR_MAX];
+static int ncur;
+static IPTR text_lo = ~(IPTR)0, text_hi;
+
+static void cur_add(struct Task *t)
+{
+    struct rtask *r;
+    if (ncur >= CUR_MAX)
+        return;
+    r = &cur[ncur++];
+    r->t = t;
+    r->lo = (IPTR)t->tc_SPLower;
+    r->hi = (IPTR)t->tc_SPUpper;
+    r->module = 0;
+    r->cmd[0] = 0;
+    {
+        const char *n = t->tc_Node.ln_Name ? t->tc_Node.ln_Name : "?";
+        int i;
+        for (i = 0; i < 27 && n[i]; i++)
+            r->name[i] = n[i];
+        r->name[i] = 0;
+    }
+    if (t->tc_Node.ln_Type == NT_PROCESS && ((struct Process *)t)->pr_CLI) {
+        struct CommandLineInterface *cli = BADDR(((struct Process *)t)->pr_CLI);
+        r->module = cli->cli_Module;
+        if (r->module && cli->cli_CommandName) {
+            CONST_STRPTR b = AROS_BSTR_ADDR(cli->cli_CommandName);
+#ifdef AROS_FAST_BSTR
+            int i, n = (int)strlen((const char *)b);
+#else
+            int i, n = AROS_BSTR_strlen(cli->cli_CommandName);
+#endif
+            for (i = 0; i < n && i < 27; i++)
+                r->cmd[i] = b[i];
+            r->cmd[i] = 0;
+        }
+    }
+}
+
+static void cur_list(struct List *l)
+{
+    struct Node *n;
+    for (n = l->lh_Head; n->ln_Succ; n = n->ln_Succ)
+        cur_add((struct Task *)n);
+}
+
+static int same(const struct rtask *a, const struct rtask *b)
+{
+    return a->t == b->t && a->lo == b->lo && a->hi == b->hi && a->module == b->module;
+}
+
+static int overlaps_text(IPTR lo, IPTR hi)
+{
+    int i;
+    if (hi <= text_lo || lo >= text_hi)
+        return 0;
+    for (i = 0; i < nsnaps; i++)
+        if (lo < snaps[i].start + snaps[i].size && snaps[i].start < hi)
+            return 1;
+    return 0;
+}
+
+static void roster_line(BPTR fh, const char *what, const struct rtask *r, ULONG ticks)
+{
+    FPrintf(fh, (CONST_STRPTR)"t=%lu %s task %lx '%s' stack %lx-%lx", ticks, (IPTR)what, (IPTR)r->t, (IPTR)r->name,
+            r->lo, r->hi);
+    if (r->module)
+        FPrintf(fh, (CONST_STRPTR)" command '%s' seglist %lx", (IPTR)r->cmd, (IPTR)r->module);
+    if (overlaps_text(r->lo, r->hi))
+        FPrintf(fh, (CONST_STRPTR)" STACK-OVERLAPS-WATCHED-CODE");
+    FPrintf(fh, (CONST_STRPTR)"\n");
+}
+
+static void roster_poll(const char *log, ULONG ticks)
+{
+    BPTR fh = 0;
+    int i, j;
+    ncur = 0;
+    Forbid();
+    cur_add(FindTask(NULL));
+    cur_list(&SysBase->TaskReady);
+    cur_list(&SysBase->TaskWait);
+    Permit();
+    for (i = 0; i < nroster; i++) {
+        struct rtask *r = &roster[i];
+        int seen = 0;
+        if (r->gone)
+            continue;
+        for (j = 0; j < ncur && !seen; j++)
+            seen = same(r, &cur[j]);
+        if (seen) {
+            r->last = ticks;
+            continue;
+        }
+        r->gone = 1;
+        if (!fh && (fh = Open((CONST_STRPTR)log, MODE_READWRITE)))
+            Seek(fh, 0, OFFSET_END);
+        if (fh)
+            roster_line(fh, "END", r, ticks);
+    }
+    for (j = 0; j < ncur; j++) {
+        int known = 0;
+        for (i = 0; i < nroster && !known; i++)
+            known = !roster[i].gone && same(&roster[i], &cur[j]);
+        if (known)
+            continue;
+        if (nroster >= ROSTER_MAX) {
+            if (!roster_full && (fh || (fh = Open((CONST_STRPTR)log, MODE_READWRITE)))) {
+                Seek(fh, 0, OFFSET_END);
+                FPrintf(fh, (CONST_STRPTR)"t=%lu roster full\n", ticks);
+            }
+            roster_full = 1;
+            continue;
+        }
+        roster[nroster] = cur[j];
+        roster[nroster].first = roster[nroster].last = ticks;
+        roster[nroster].gone = 0;
+        if (!fh && (fh = Open((CONST_STRPTR)log, MODE_READWRITE)))
+            Seek(fh, 0, OFFSET_END);
+        if (fh)
+            roster_line(fh, nroster ? "START" : "SELF", &roster[nroster], ticks);
+        nroster++;
+    }
+    if (fh)
+        Close(fh);
+}
+
+/* Every roster entry whose declared stack range contains [a, a + n). */
+static void roster_report(BPTR fh, IPTR a, ULONG n, ULONG ticks)
+{
+    int i, hits = 0;
+    FPrintf(fh, (CONST_STRPTR)"t=%lu stack ranges containing %lx-%lx (%ld tasks in the roster):\n", ticks, a, a + n,
+            (LONG)nroster);
+    for (i = 0; i < nroster; i++) {
+        struct rtask *r = &roster[i];
+        if (a < r->hi && r->lo < a + n) {
+            FPrintf(fh, (CONST_STRPTR)"  %s task %lx '%s' stack %lx-%lx command '%s' seen t=%lu..%lu\n",
+                    (IPTR)(r->gone ? "ENDED" : "CURRENT"), (IPTR)r->t, (IPTR)r->name, r->lo, r->hi, (IPTR)r->cmd,
+                    r->first, r->last);
+            hits++;
+        }
+    }
+    if (!hits)
+        FPrintf(fh, (CONST_STRPTR)"  none\n");
+}
+
 int main(int argc, char **argv)
 {
     const char *log;
@@ -474,12 +645,22 @@ int main(int argc, char **argv)
     Supervisor((ULONG_FUNC)dr_load);
 
     if (module) {
+        int i;
         take_snapshots();
+        for (i = 0; i < nsnaps; i++) {
+            if (snaps[i].start < text_lo)
+                text_lo = snaps[i].start;
+            if (snaps[i].start + snaps[i].size > text_hi)
+                text_hi = snaps[i].start + snaps[i].size;
+        }
     }
     fh = Open((CONST_STRPTR)log, MODE_READWRITE);
     if (fh) {
         Seek(fh, 0, OFFSET_END);
-        FPrintf(fh, (CONST_STRPTR)"%ld .text segments copied\n", (LONG)nsnaps);
+        struct DateStamp ds;
+        DateStamp(&ds);
+        FPrintf(fh, (CONST_STRPTR)"%ld .text segments copied, %lx-%lx; armed at day %ld min %ld tick %ld; t= counts ticks (1/50 s) from here\n",
+                (LONG)nsnaps, text_lo, text_hi, ds.ds_Days, ds.ds_Minute, ds.ds_Tick);
         Close(fh);
     }
     {
@@ -489,6 +670,7 @@ int main(int argc, char **argv)
             Delay(2);
             ticks += 2;
             SetSignal(0, SIGBREAKF_CTRL_F);
+            roster_poll(log, ticks);
             while (done < nevents) {
                 write_event(log, &events[done], done);
                 done++;
@@ -498,6 +680,12 @@ int main(int argc, char **argv)
                 int i = compare_snapshots(&o);
                 if (i >= 0) {
                     log_difference(log, i, o, ticks);
+                    fh = Open((CONST_STRPTR)log, MODE_READWRITE);
+                    if (fh) {
+                        Seek(fh, 0, OFFSET_END);
+                        roster_report(fh, snaps[i].start + o, 32, ticks);
+                        Close(fh);
+                    }
                     reported = 1;
                     /* The same place is likely written again (a stack frame):
                        watch it to name the writer. */
