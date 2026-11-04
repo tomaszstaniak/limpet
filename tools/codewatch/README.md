@@ -16,11 +16,18 @@ Found (2026-11-04, AROS One 1.3 on v11-1, Limpet 0.9.0, Helix candidate 6):
 - In one of six boots the copy check found another of Limpet's code sections
   changed (HarfBuzz `OTL::match_class_cached2`, offset 0x15C): 32 bytes became
   `0x0178A95B, 0x01002950, 0, 0x4AA02EE0`. debug.library decodes 0x0178A95B as
-  exec `Permit+0x2B`: the words are a stack frame. Some task ran with its stack
-  pointer inside memory that holds Limpet's code.
+  exec `Permit+0x2B`. The words look like a stack frame; whether a task ran
+  with its stack pointer in that memory is a hypothesis, not shown.
 - No task's stack range (`tc_SPLower`..`tc_SPUpper`) overlapped Limpet's hunks
   when checked, and no task's saved stack pointer lay outside its range (that
   field may not be kept current on this kernel). Neither Limpet nor rust-aros
   std switches stacks.
 - The writing task is not identified yet. The fault is not in Limpet's font
   code: that code was the victim.
+- Task roster (3c8d86c), one bounded run of 27.4 min over two boots: no
+  change reproduced. The roster saw no hx or pthread task in about 40 hx
+  sessions, at priority 0 or 3, and its tick count fell behind wall time by
+  about the time hx ran. The guest has two CPUs; a task running on the other
+  CPU is on exec's private TaskRunning list, which the roster does not read,
+  and the poll itself did not keep up while hx ran. Treat a quiet roster or
+  copy check during hx sessions as unobserved, not as clean.
