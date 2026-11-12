@@ -232,6 +232,37 @@ static void iterm(void)
     puts("theme file PASS: iTerm2 presets, keys in any order, no colour space, light and dark sets skipped, P3, cut-off files");
 }
 
+static unsigned apart(uint32_t a,uint32_t b)
+{ int d=(int)theme_luma(a)-(int)theme_luma(b); return (unsigned)(d<0?-d:d); }
+static void bundled(void)
+{
+    static const char *const files[]={"themes/dark.theme","themes/light.theme","themes/high-contrast.theme",
+                                      "themes/magicwb.theme","themes/amigaos31.theme"};
+    static const uint32_t magicwb[8]={0x959595,0x000000,0xffffff,0x3b67a2,0x7b7b7b,0xafafaf,0xaa907c,0xffa997};
+    XTheme t;
+    unsigned f,i;
+    for(f=0;f<5;++f) {
+        theme_default(&t);
+        assert(!theme_file_load(&t,files[f],&r) && r.format==XTHEME_FORMAT_NATIVE);
+        /* Every colour a program is likely to print text in reads on the background. */
+        for(i=1;i<16;++i) if(i!=7 && i!=8 && i!=15) {
+            if(apart(t.ansi[i],t.background)<60) { printf("%s: ansi%u too close to the background\n",files[f],i); abort(); }
+        }
+        assert(apart(t.foreground,t.background)>=100);
+        assert(apart(t.selection_fg,t.selection_bg)>=90);
+        /* The Shell's prompt: text on pen 2, pen 2 on the accent. */
+        assert(apart(theme_pen(&t,1),theme_pen(&t,2))>=100 || apart(theme_pen(&t,1),theme_pen(&t,0))>=100);
+        assert(apart(theme_pen(&t,2),theme_pen(&t,3))>=48);
+    }
+    theme_default(&t);
+    assert(!theme_file_load(&t,"themes/magicwb.theme",&r));
+    for(i=0;i<8;++i) assert(theme_pen(&t,i)==magicwb[i]);
+    theme_default(&t);
+    assert(!theme_file_load(&t,"themes/amigaos31.theme",&r));
+    assert(theme_pen(&t,0)==0xaaaaaa && theme_pen(&t,1)==0x000000 && theme_pen(&t,2)==0xffffff && theme_pen(&t,3)==0x6688bb);
+    puts("theme file PASS: bundled themes load and read on their backgrounds; MagicWB and AmigaOS 3.1 pens");
+}
+
 static const char *present[8];
 static int exists(const char *path)
 {
@@ -268,6 +299,7 @@ int main(void)
     refusals();
     native_as_before();
     iterm();
+    bundled();
     locate();
     return 0;
 }

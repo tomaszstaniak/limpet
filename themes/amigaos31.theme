@@ -1,0 +1,26 @@
+# AmigaOS 3.1: the four default Workbench colours (grey, black, white,
+# blue) as pens 0 to 3, black text on grey. The ANSI colours are chosen to
+# read on that grey.
+background=#AAAAAA
+foreground=#000000
+cursor=#000000
+selection_bg=#6688BB
+selection_fg=#000000
+pen2=#ffffff
+pen3=#6688BB
+ansi0=#000000
+ansi1=#8c1a1a
+ansi2=#1a5c1a
+ansi3=#6b4a00
+ansi4=#1a2f80
+ansi5=#6e1a6e
+ansi6=#0a5a5e
+ansi7=#ffffff
+ansi8=#3a3a3a
+ansi9=#c00000
+ansi10=#007000
+ansi11=#fff08a
+ansi12=#0033cc
+ansi13=#a000a0
+ansi14=#007a80
+ansi15=#ffffff
