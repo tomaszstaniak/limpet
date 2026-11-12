@@ -2,8 +2,7 @@
 
 Limpet 0.4.0 adds one feature: icons dropped from Workbench put their paths
 on the Shell's command line. The protocol and the SDK are unchanged
-(SDK 0.3.0). Published 2026-10-13 as tag `v0.4.0`. Design notes:
-`docs/history/file-drop.md` in a working checkout (not published).
+(SDK 0.3.0). Published 2026-10-13 as tag `v0.4.0`.
 
 ## Build
 
