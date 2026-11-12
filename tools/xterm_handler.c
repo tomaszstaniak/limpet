@@ -131,7 +131,10 @@ static int fall_back(struct Message *startup_message,struct ExecBase *SysBase,st
             struct DosPacket *p=(struct DosPacket *)m->mn_Node.ln_Name;
             for(i=0;i<XPROXY_SLOTS && slots[i].packet!=p;++i) {}
             if(i==XPROXY_SLOTS) continue;   /* not one of ours: cannot be */
-            if(p->dp_Type==ACTION_END) { if(p->dp_Res1!=DOSFALSE) --handles; }
+            /* A close ends the handle whatever it answers: DOS frees the
+               handle either way, and ABIv11's CON: answers its last close
+               with DOSFALSE (rom/filesys/console_handler, "end:"). */
+            if(p->dp_Type==ACTION_END) --handles;
             else if(p->dp_Res1!=DOSFALSE) {
                 /* An open that succeeded. Read the handle before the
                    answer goes back: its owner may free it then. */
