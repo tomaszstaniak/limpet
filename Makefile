@@ -19,7 +19,7 @@ SESSION_HEADERS = src/aros_session.h src/console_geometry.h src/session_queue.h 
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
 CLIP_GUI_HEADERS = src/selection.h src/paste.h src/clipboard_text.h src/aros_clipboard.h src/aros_clip_job.h
 CLUSTER_SRC = src/font_cache.c src/cluster_font.c
-THEME_SRC = src/theme.c src/settings.c src/session_start.c src/margin_fill.c
+THEME_SRC = src/theme.c src/theme_file.c src/theme_iterm.c src/settings.c src/session_start.c src/margin_fill.c
 WINDOW_SRC = src/window_alpha.c
 KITTY_SRC = src/kitty_graphics.c
 HYPERLINK_GUI_SRC = src/aros_hyperlink.c src/link_gesture.c
@@ -439,6 +439,14 @@ build/test_margin_fill: tests/test_margin_fill.c src/margin_fill.c src/margin_fi
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) $< src/margin_fill.c src/theme.c src/settings.c src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
 	./$@
+
+THEME_FILE_SRC = src/theme.c src/theme_file.c src/theme_iterm.c
+build/test_theme_file: tests/test_theme_file.c $(THEME_FILE_SRC) src/theme.h src/theme_file.h src/theme_iterm.h src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(wildcard tests/themes/*) $(wildcard themes/*)
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) $< $(THEME_FILE_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -lm -o $@
+	./$@
+
+test: build/test_theme_file
 
 build/test_theme_model: tests/test_theme_model.c src/theme.c src/theme.h src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
 	@mkdir -p build

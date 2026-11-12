@@ -1,0 +1,22 @@
+# The same scheme in Limpet's own format.
+ansi0=#101112
+ansi1=#c01020
+ansi2=#20a030
+ansi3=#b09010
+ansi4=#2050c0
+ansi5=#a030b0
+ansi6=#10a0a8
+ansi7=#c8c9ca
+ansi8=#505152
+ansi9=#f04050
+ansi10=#50d060
+ansi11=#e0c040
+ansi12=#5080f0
+ansi13=#d060e0
+ansi14=#40d0d8
+ansi15=#f8f9fa
+background=#181a1c
+foreground=#e0e2e4
+cursor=#ffcc00
+selection_bg=#304060
+selection_fg=#ffffff
