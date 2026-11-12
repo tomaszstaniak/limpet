@@ -40,6 +40,7 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Bracketed paste](#bracketed-paste) | mode 2004; presentation input bit | 0.2.0 |
 | [Resize reports](#resize-reports) | mode 2048; presentation input bit | 0.2.0 |
 | [Synchronized output](#synchronized-output) | mode 2026 | 0.7.0 |
+| [Colour queries](themes.md#programs-that-ask-for-the-colours) | OSC 10, 11, 12, 4 with `?`; `CSI ? 996 n`; mode 2031 | on `main`, not released |
 | [Wheel reports](#wheel-reports) | Limpet mode 2100; presentation input bit | 0.2.0 |
 | [Shift+Enter](#shiftenter) | `CSI > 4 ; 1 m`; presentation input bit | 0.6.0 |
 | [Window title](#window-title) | OSC 0/2; presentation feature bit | 0.3.0 |

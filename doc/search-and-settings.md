@@ -74,7 +74,7 @@ An example:
     # Limpet settings: one key=value per line.
     font=FONTS:TrueType/DejaVuSansMono.ttf
     font_size=15
-    theme=SYS:Utilities/Limpet/Themes/light.theme
+    theme=light
     scrollback=500
     history=100
 
@@ -82,7 +82,7 @@ An example:
 | --- | --- | --- | --- |
 | `font` | path of a monospace TrueType or OpenType font | DejaVu Sans Mono Nerd Font (`PROGDIR:Fonts/DejaVuSansMNerdFontMono-Regular.ttf`) when present, else Vera Mono (`FONTS:TrueType/VeraMono.ttf`) | in new windows |
 | `font_size` | 8 to 20 pixels | 13 | in new windows |
-| `theme` | path of a theme file (see the Themes drawer) | the built-in dark theme | at once with Project > Reload settings, and in new windows |
+| `theme` | a theme's name or the path of a colour file; see [Themes](themes.md) | the built-in dark theme | at once with Project > Reload settings, and in new windows |
 | `scrollback` | 100 to 1000 lines | 256 | in new windows |
 | `history` | 1 to 500 commands | 32 | in new windows |
 
@@ -97,6 +97,10 @@ An example:
   it lacks still come from the fonts in Limpet's drawer. The cell must stay
   within 32 by 32 pixels.
 - **`theme`**: the `--theme` option on the command line wins over the file.
+
+Limpet Preferences (Project > Preferences) sets all of these and writes the
+file for you, keeping lines of your own. Up to 0.9.0 `theme` took only a
+path, and only Limpet's own theme format.
 
 Configuration is validated as a whole. An unknown key, a duplicate key, a
 number out of range or a line without `=` makes Limpet ignore the file and
@@ -118,7 +122,9 @@ apply to windows opened after that. A file that is wrong is ignored, the
 window keeps what it has, and the title bar names the line and says
 `nothing changed`.
 
-What a new Shell window runs is kept in `Session.conf` beside this file;
+Whether bold text uses the bright colours is `bold_bright=on` or `off` in
+`Colours.conf` beside this file ([Themes](themes.md#bold-text)). What a new
+Shell window runs is kept in `Session.conf` beside this file;
 see [A command for every new Shell window](session-start.md).
 
 Windows of the experimental `LIMPET:` handler read the same file when they

@@ -72,12 +72,22 @@ From a Shell:
         the same, without the start-up script
 
     SYS:Utilities/Limpet/Limpet --theme SYS:Utilities/Limpet/Themes/light.theme --shell
-        a different colour theme (dark is built in; light and high-contrast
-        are included)
+        a different colour theme, by path or by name (--theme magicwb)
 
 End the Shell with EndCLI, then close the window, or choose
 Project > Close window.
 
+
+Themes
+------
+
+Project > Preferences, Appearance, lists the themes and shows the chosen
+one in the terminal at once. Included: dark (built in), light,
+high-contrast, magicwb and amigaos31. Colour files made for Ghostty, Kitty
+and iTerm2 (.itermcolors) work as they are: press "Open themes drawer" in
+Preferences, put the downloaded file into the drawer that opens
+(ENVARC:Limpet/Themes), and choose it from the list. Only colours are read
+from such a file. Programs that set colours of their own keep them.
 
 Settings
 --------
@@ -90,13 +100,14 @@ before. One key=value per line, # starts a comment:
                                        without it, Fonts/DejaVuSansMNerd-
                                        FontMono-Regular.ttf from the drawer
     font_size=13                       8 to 20 pixels
-    theme=SYS:Utilities/Limpet/Themes/light.theme
+    theme=light                        a theme by name, or a file's path
     scrollback=256                     100 to 1000 lines at 160 columns
     history=32                         1 to 500 commands
 
 A line Limpet does not understand makes it ignore the whole file; the
 title bar names the line. Each 100 lines of scrollback take about 2.7 MB.
-The theme changes at once with Project > Reload settings; font, size,
+Preferences sets all of these too. The theme changes at once with
+Project > Reload settings; font, size,
 scrollback and history apply to windows opened afterwards. --theme on the
 command line wins over the file.
 

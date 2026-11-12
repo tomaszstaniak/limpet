@@ -6,6 +6,7 @@ For users:
   tested comparison with `CON:`.
 - [Compatibility and limits](compatibility.md).
 - [Search and settings](search-and-settings.md) (0.5.0).
+- [Themes](themes.md): choosing one, colour files of other terminals, writing one.
 - [Window background](window-background.md): transparency (experimental,
   0.9.0).
 - [A command for every new Shell window](session-start.md): Fastfetch or

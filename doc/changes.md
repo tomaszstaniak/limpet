@@ -5,6 +5,38 @@ Changes of the terminal. The SDK has its own list in
 
 ## Unreleased
 
+New:
+
+- **Colour files of other terminals.** Limpet reads Ghostty and Kitty
+  theme files and iTerm2 colour presets (`.itermcolors`) as they are. Put
+  a downloaded file into the themes drawer, `ENVARC:Limpet/Themes`, and
+  choose it in Preferences. Only colours are read from such a file. See
+  [Themes](themes.md).
+- **Limpet Preferences has three pages.** Appearance lists the themes,
+  shows the chosen one's colours and has the terminal window show it at
+  once; it opens the themes drawer and sets the font, its size and the
+  window background. Shell is the command for a new Shell window, as
+  before. Terminal sets scrollback and command history.
+- **MagicWB and AmigaOS 3.1 themes**, with their palettes as the Workbench
+  pens. A theme in Limpet's own format may now give pens 2 to 7
+  (`pen2=` to `pen7=`).
+- `theme=` and `--theme` take a theme's name as well as a path.
+- "Bold text uses the bright colours" can be turned off, for schemes whose
+  bright colours are not brighter versions of the normal ones.
+
+Changed:
+
+- The Shell prompt's colours stay readable with any palette: the accent
+  pen is never the text colour, and a pen too close to the background is
+  shown in the text colour. The themes that came with Limpet look as before.
+- A theme that cannot be used says why in the title bar; on Reload
+  settings the window then keeps the theme it shows.
+
+New for programs:
+
+- Colour queries: `OSC 10`, `11`, `12` and `OSC 4` with `?`, `CSI ? 996 n`
+  and mode 2031 (dark or light). See [Themes](themes.md#programs-that-ask-for-the-colours).
+
 Experimental `LIMPET:` handler (separate archive):
 
 - `AUTO` works as in `CON:`: the console opens without a window, and the

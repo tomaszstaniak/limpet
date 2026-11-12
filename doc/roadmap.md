@@ -7,6 +7,10 @@ replace `CON:`.
 
 ## On main, not yet released
 
+- Colour files made for Ghostty, Kitty and iTerm2 work as themes; a themes
+  drawer, and Preferences with pages for appearance, the Shell and the
+  terminal. MagicWB and AmigaOS 3.1 themes. See [Themes](themes.md).
+- Programs can ask for the terminal's colours.
 - `AUTO` consoles open their window at the first read or write, as in
   `CON:`.
 - A console in the caller's own window (`WINDOW`) is opened by the system's
