@@ -1,25 +1,13 @@
 # Roadmap
 
-Limpet 0.9.0 is available for AROS x86_64 ABIv11 and mainline x86_64
+Limpet 0.10.0 is available for AROS x86_64 ABIv11 and mainline x86_64
 ABIv1, with an AArch64 Raspberry Pi test build. The experimental `LIMPET:`
-handler is a separate download for all three targets. In 0.9.0 it does not
-replace `CON:`.
+handler is a separate download for all three targets; with `LimpetCON ON`
+it can stand in for `CON:` until the system restarts.
 
-## On main, not yet released
-
-- Colour files made for Ghostty, Kitty and iTerm2 work as themes; a themes
-  drawer, and Preferences with pages for appearance, the Shell and the
-  terminal. MagicWB and AmigaOS 3.1 themes. See [Themes](themes.md).
-- Programs can ask for the terminal's colours.
-- `AUTO` consoles open their window at the first read or write, as in
-  `CON:`.
-- A console in the caller's own window (`WINDOW`) is opened by the system's
-  `CON:` handler.
-- Experimental `LimpetCON ON` and `OFF`: `CON:` opens Limpet windows until
-  it is turned off or the system restarts. See
-  [the handler guide](limpet-handler.md#optional-con-replacement-experimental).
-
-The [changelog](changes.md) separates these changes from released features.
+New in 0.10.0: colour files made for Ghostty, Kitty and iTerm2 work as
+themes, fifteen themes come with Limpet, and Preferences has pages for
+appearance, the Shell and the terminal. See the [changelog](changes.md).
 
 ## Console compatibility
 

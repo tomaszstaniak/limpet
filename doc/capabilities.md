@@ -5,7 +5,7 @@ x86_64; the 0.7.1 builds for mainline x86_64 and the Raspberry Pi have the
 same features ([systems](compatibility.md#systems)). It covers terminal features, application interfaces and the separate
 experimental `LIMPET:` console handler.
 
-Changes after 0.7.1 are listed under [Unreleased changes](#unreleased-changes).
+Changes after 0.7.1 are listed in the [changelog](changes.md).
 For installation and platform requirements, see [compatibility](compatibility.md).
 
 ## Feature detection
@@ -40,7 +40,7 @@ supported by a released Shell session. See [control operations](protocols.md#con
 | [Bracketed paste](#bracketed-paste) | mode 2004; presentation input bit | 0.2.0 |
 | [Resize reports](#resize-reports) | mode 2048; presentation input bit | 0.2.0 |
 | [Synchronized output](#synchronized-output) | mode 2026 | 0.7.0 |
-| [Colour queries](themes.md#programs-that-ask-for-the-colours) | OSC 10, 11, 12, 4 with `?`; `CSI ? 996 n`; mode 2031 | on `main`, not released |
+| [Colour queries](themes.md#programs-that-ask-for-the-colours) | OSC 10, 11, 12, 4 with `?`; `CSI ? 996 n`; mode 2031 | 0.10.0 |
 | [Wheel reports](#wheel-reports) | Limpet mode 2100; presentation input bit | 0.2.0 |
 | [Shift+Enter](#shiftenter) | `CSI > 4 ; 1 m`; presentation input bit | 0.6.0 |
 | [Window title](#window-title) | OSC 0/2; presentation feature bit | 0.3.0 |
@@ -780,7 +780,7 @@ It is distributed as `Limpet-handler-experimental-0.7.1-aros-x86_64-abiv11-pc.zi
 (and one archive per system), not
 installed by the main archive or apkg. Installation lasts until reboot and
 does not replace `CON:`. Programs opening `CON:` still get the system console.
-On `main`, not yet released: `LimpetCON ON` makes `CON:` itself open Limpet
+Since 0.10.0 `LimpetCON ON` makes `CON:` itself open Limpet
 windows until `LimpetCON OFF` or the next reboot
 ([experimental](limpet-handler.md#optional-con-replacement-experimental)).
 
@@ -790,7 +790,7 @@ and raw input, Shell scripts, redirection and multiple writers, and, since
 0.7.0, several readers and waiters at once, line feed mode and the console
 geometry packet. Important limits in **the 0.7.1 handler**:
 
-- `AUTO` opens the window immediately; `WINDOW` is rejected (on `main`:
+- `AUTO` opens the window immediately; `WINDOW` is rejected (since 0.10.0
   `AUTO` waits for the first read or write as in `CON:`, and the system
   console serves `WINDOW`);
 - the console information exposes dimensions, but is not a working
@@ -819,29 +819,3 @@ for the preview APIs.
 
 An SSH client preview exists for mainline AROS (`examples/ssh/`). It is not
 part of the ABIv11 release and has not been built for ABIv11.
-
-## Unreleased changes
-
-For the next release (Limpet 0.8.0, SDK 0.6.0):
-
-- The presentation query reports how text is shown: UTF-8 decoding, wide
-  characters in two cells, combining clusters in one
-  (`XTY_PRESENT_KNOWN_TEXT`, `limpet_text_utf8` and the others). A program
-  can tell a terminal that shows Unicode from one that says it does not.
-  `CON:` answers nothing and draws bytes from a Latin-1 font; a terminal
-  that answers without the text bit (Limpet before 0.8.0) does not say,
-  which is not the same as "no UTF-8".
-- Terminal identity (operation 14, `limpet_query_identity`): the
-  terminal's name and, for a release build, its version; for display only.
-- Automatic wrap can be turned off (`CSI ? 7 l`). It comes back with
-  `CSI ? 7 h`, and also when the next command line is entered, so a program
-  that ends without restoring it does not leave the Shell on one row.
-
-See [presentation](presentation.md) and the [SDK API](sdk/api.md).
-
-## References
-
-- [Protocol reference](protocols.md) and [SDK API](sdk/api.md)
-- [Changes by release](changes.md)
-- [0.7.0 verification record](verification-0.7.0.md), with earlier records
-  linked from the corresponding releases

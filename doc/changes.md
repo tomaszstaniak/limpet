@@ -3,7 +3,7 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## Unreleased
+## 0.10.0 (2026-11-13)
 
 New:
 

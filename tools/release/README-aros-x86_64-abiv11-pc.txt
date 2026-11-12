@@ -23,6 +23,15 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in 0.10.0
+-------------
+
+Colour files made for Ghostty, Kitty and iTerm2 work as themes, and
+fifteen themes come with Limpet (see Themes below). Preferences has three
+pages: Appearance (themes with a preview in the terminal, font, window
+background), Shell and Terminal (scrollback, history).
+
+
 New in 0.9.0
 ------------
 

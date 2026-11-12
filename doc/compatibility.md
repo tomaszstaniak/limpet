@@ -2,13 +2,13 @@
 
 ## Systems
 
-The current terminal release, **0.9.0**, has three builds:
+The current terminal release, **0.10.0**, has three builds:
 
 | Target | System | Checked on |
 | --- | --- | --- |
 | `aros-x86_64-abiv11-pc` | AROS ABIv11 x86_64 (AROS One and similar) | AROS One 1.3, under QEMU |
-| `aros-x86_64-abiv1-pc` | mainline AROS (ABIv1) x86_64, built 2026-08-29 or later | official nightlies 20261031 and 20261102, under QEMU |
-| `aros-aarch64-abiv1-raspi` (test build) | AROS for the Raspberry Pi (AArch64, ABIv1) | the 2026-10-30 Pi system under QEMU's Pi 3 model; not yet on a Raspberry Pi |
+| `aros-x86_64-abiv1-pc` | mainline AROS (ABIv1) x86_64, built 2026-08-29 or later | official nightly 20261110, under QEMU (0.9.0: 20261031 and 20261102) |
+| `aros-aarch64-abiv1-raspi` (test build) | AROS for the Raspberry Pi (AArch64, ABIv1) | 0.10.0 was built and not run; 0.9.0 ran on the 2026-10-30 Pi system under QEMU's Pi 3 model. Not yet on a Raspberry Pi |
 
 Up to 0.7.0 these were named `abiv11`, `v1-x86_64` and `v1-aarch64`.
 On mainline built before 2026-08-29 Limpet runs, but Ctrl-C does not reach
@@ -52,7 +52,7 @@ following is claimed:
 
 The exact subsets are in the [protocol reference](protocols.md).
 
-## Limits in 0.9.0
+## Limits in 0.10.0
 
 | Item | Limit |
 | --- | --- |

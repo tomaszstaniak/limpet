@@ -18,10 +18,9 @@ system, both under QEMU ([0.7.0](verification-0.7.0-v1.md),
 [0.7.1](verification-0.7.1.md)). Not run on ABIv11 2026.09 or real
 hardware.
 
-The table describes the handler on `main`. `AUTO` as `CON:` has it, the
-hand-over of `WINDOW` to the system console and `LimpetCON` came after
-0.9.0 and are not in a released archive yet
-([run of 2026-11-12](#the-run-of-2026-11-12)). For a short list of the
+The table describes the handler of the 0.10.0 archive. `AUTO` as `CON:`
+has it, the hand-over of `WINDOW` to the system console and `LimpetCON`
+are new in 0.10.0 ([run of 2026-11-12](#the-run-of-2026-11-12)). For a short list of the
 handler's limits, see the [capability reference](capabilities.md#limpet-console-handler).
 
 ## Install and remove

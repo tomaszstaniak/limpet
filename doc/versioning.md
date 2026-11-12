@@ -4,7 +4,7 @@ Limpet and the SDK have separate version numbers and separate tags.
 
 | | Version | Archive | Git tag |
 | --- | --- | --- | --- |
-| Limpet (the terminal) | 0.9.0 | `Limpet-0.9.0-aros-x86_64-abiv11-pc.zip` (and one per system) | `v0.9.0` |
+| Limpet (the terminal) | 0.10.0 | `Limpet-0.10.0-aros-x86_64-abiv11-pc.zip` (and one per system) | `v0.10.0` |
 | Limpet SDK | 0.6.0 | `limpet-sdk-0.6.0.zip` | `sdk-v0.6.0` |
 | Control protocol | 1 | (`XtyControl.version`) | |
 
