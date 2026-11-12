@@ -100,7 +100,9 @@ int aros_session_start_shell_profile(ArosSession *,const char *profile);
    line: after the startup file, in this session's Shell, before its first
    prompt. Ctrl-C ends it as any command; if it fails the Shell carries on.
    Sub-Shells (NewShell, Execute) read their own startup and never see it.
-   NULL or "" runs nothing. At most XSESSION_TAIL_MAX-3 bytes, no line end. */
+   NULL or "" runs nothing. At most XSESSION_TAIL_MAX-3 bytes. It may be
+   several lines of script (LF between them, none at the end; no CR): the
+   Shell reads them as it reads the startup file, If and EndIf included. */
 int aros_session_start_shell_run(ArosSession *,const char *profile,const char *line);
 int aros_session_interrupt(ArosSession *);
 /* Ctrl-D, Ctrl-E, Ctrl-F in cooked mode, as CON: does them: the break

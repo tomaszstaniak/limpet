@@ -2706,7 +2706,10 @@ int main(int argc,char **argv)
         }
 #else
         if(pty_mode?aros_session_start(&process_session,process_command):start_shell()) {
-            PrintFault(IoErr(),(CONST_STRPTR)(pty_mode?"Cannot start PTY executable":"Cannot start Shell/profile"));
+            LONG error=IoErr();
+            /* Never without a word: PrintFault says nothing for error 0. */
+            if(error) PrintFault(error,(CONST_STRPTR)(pty_mode?"Cannot start PTY executable":"Cannot start Shell/profile"));
+            else puts(pty_mode?"Cannot start PTY executable":"Cannot start the Shell");
             close_main_window(window); xfont_close(); return RETURN_FAIL;
         }
 #endif

@@ -187,7 +187,10 @@ static int start_session(ArosSession *s,const char *command,int console,int shel
     size_t tail_length=tail && *tail?strlen(tail)+2:0;
     if(!s || s->port || s->task_id || !command || (!*command && !shell) ||
        strlen(command)>=sizeof s->command || tail_length>=XSESSION_TAIL_MAX ||
-       (tail && strpbrk(tail,"\r\n"))) return -1;
+       (tail && strchr(tail,'\r'))) {
+        /* A reason, so that the caller's message says something. */
+        SetIoErr(ERROR_LINE_TOO_LONG); return -1;
+    }
     memset(s,0,sizeof *s);
     s->console=console; s->shell=shell;
     s->startup_file=startup;
