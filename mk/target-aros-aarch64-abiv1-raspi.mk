@@ -12,7 +12,8 @@ T_ARCH_LDFLAGS =
 # The SDK has no C++ standard library. HarfBuzz needs only the libc++
 # headers (templates); built without exceptions and RTTI it calls nothing
 # but C functions, so nothing C++ is linked. Headers: the AROS libc++ of
-# the Macaros cross tools (.../crosstools/include/c++/v1); set T_CXX_INCLUDE.
+# the AROS clang 20.1 toolchain, copied into the raspi toolchain at
+# libexec/llvm/include/c++/v1 (Macaros, its first home, is removed); set T_CXX_INCLUDE.
 T_CXX_INCLUDE ?=
 T_NEED_VARS = T_CXX_INCLUDE
 T_CXX_FLAGS = -fno-exceptions -fno-rtti -nostdinc++ -isystem $(T_CXX_INCLUDE)
