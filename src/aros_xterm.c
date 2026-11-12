@@ -2399,6 +2399,7 @@ int main(int argc,char **argv)
     input_order_init(&input_order,&paste);
 #ifdef XTERM_DOS_HANDLER
     XHandlerContext *handler=aros_handler_context();
+    int auto_accepted=0;
     (void)argc; (void)argv;
     if(!handler) return RETURN_FAIL;
     shell_session=1;
@@ -2486,6 +2487,34 @@ int main(int argc,char **argv)
 #ifdef XTERM_PTY_DIAG
     if(diag_exit_stage==2) { xfont_close();return RETURN_OK; }
 #endif
+#ifdef XTERM_DOS_HANDLER
+    /* AUTO, as CON: has it: the open succeeds without a window, and the
+       window comes with the first Read, Write or WaitForChar. A program
+       that opens an AUTO console and never uses it shows nothing. The
+       settings and fonts are read above: once the open is answered this
+       process may make no DOS call (aros_session.h), and opening a window
+       makes none. */
+    if(console_spec.options&XCON_AUTO) {
+        if(aros_session_start_endpoint(&process_session) ||
+           aros_handler_accept(handler,&process_session)) {
+            LONG error=IoErr();
+            aros_session_stop(&process_session);
+            aros_session_dispose(&process_session);
+            xfont_close(); SetIoErr(error); return RETURN_FAIL;
+        }
+        auto_accepted=1;
+        while(!process_session.touched && !process_session.exited) {
+            Wait(aros_session_signals(&process_session));
+            aros_session_poll(&process_session);
+        }
+        if(!process_session.touched) {
+            /* Every handle is closed again and nothing was read or written. */
+            aros_session_stop(&process_session);
+            aros_session_dispose(&process_session);
+            xfont_close(); return RETURN_OK;
+        }
+    }
+#endif
     {
         ULONG alpha_tag=TAG_IGNORE;
         ULONG flags=WFLG_CLOSEGADGET | WFLG_DRAGBAR | WFLG_DEPTHGADGET |
@@ -2534,6 +2563,18 @@ int main(int argc,char **argv)
         TAG_DONE);
     }
     if (!window) {
+#ifdef XTERM_DOS_HANDLER
+        if(auto_accepted) {
+            /* The open was answered long ago: the programs holding the
+               console get end of input and failed writes until they close. */
+            aros_session_stop(&process_session);
+            while(aros_session_active(&process_session)) {
+                Wait(aros_session_signals(&process_session));
+                aros_session_poll(&process_session);
+            }
+            aros_session_dispose(&process_session);
+        }
+#endif
         xfont_close();
         if(handler_mode) SetIoErr(ERROR_NO_FREE_STORE);
         return RETURN_FAIL;
@@ -2552,8 +2593,8 @@ int main(int argc,char **argv)
 #endif
     if(shell_session || pty_mode) {
 #ifdef XTERM_DOS_HANDLER
-        if(aros_session_start_endpoint(&process_session) ||
-           aros_handler_accept(handler,&process_session)) {
+        if(!auto_accepted && (aros_session_start_endpoint(&process_session) ||
+           aros_handler_accept(handler,&process_session))) {
             LONG error=IoErr();
             aros_session_stop(&process_session);
             aros_session_dispose(&process_session);

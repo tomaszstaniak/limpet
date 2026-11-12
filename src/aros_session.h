@@ -70,6 +70,9 @@ typedef struct {
     LONG result;
     LONG unsupported_action;
     int eof,stopping,exited;
+    /* A client has read, written or waited for a key: what makes CON: open
+       an AUTO window (rom/filesys/console_handler, MakeSureWinIsOpen). */
+    int touched;
     /* Ctrl-\ in cooked mode: the next Read returns 0 once, then reads wait
        again, as CON: does. eof (F5, close) stays for good. */
     int eof_once;

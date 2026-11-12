@@ -48,6 +48,19 @@ int main(void)
     assert(!console_name_parse(&c,"X:////t/WINDOW0x1F00"));
     assert(c.options==XCON_WINDOW && c.window==0x1f00);
     assert(!console_name_parse(&c,"X:////t/window1234")); assert(c.window==1234);
+    /* The launcher's own test for WINDOW agrees with the parser. */
+    assert(console_name_has_window("X:////t/WINDOW0x1F00"));
+    assert(console_name_has_window("CON:0/0/640/200/Title/CLOSE/window1234/WAIT"));
+    assert(console_name_has_window("////t/WINDOW"));
+    assert(!console_name_has_window("X:////WINDOW0x1F00"));      /* the title */
+    assert(!console_name_has_window("X:////t/W"));               /* WAIT */
+    assert(!console_name_has_window("X:////t/WINDO"));
+    assert(!console_name_has_window("WINDOW:0/0/640/200/t/CLOSE"));
+    assert(!console_name_has_window("X:"));
+    assert(!console_name_has_window(""));
+    { static const char *names[]={"X:////t/WINDOW0x10","X:////t/w","X:1/2/3/4/WINDOW9/c","X:////t/a/b/WiNdOw7"};
+      unsigned i; for(i=0;i<4;++i) { assert(!console_name_parse(&c,names[i]));
+        assert(!!(c.options&XCON_WINDOW)==console_name_has_window(names[i])); } }
     /* Unknown options are ignored; a longer word is not a prefix. */
     assert(!console_name_parse(&c,"X:////t/CLOSEX/FOO/"));
     assert(!c.options);

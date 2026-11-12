@@ -33,8 +33,24 @@ As with CON:: LIMPET:left/top/width/height/title/options, for example
 
 Options CLOSE, NOCLOSE, WAIT, INACTIVE, NODEPTH, NOSIZE, NODRAG, NOBORDER,
 BACKDROP and SCREEN<name> are read (NOBORDER, BACKDROP, INACTIVE and SCREEN
-were not tried on AROS); AUTO opens the window at once; WINDOW0x... is
-refused.
+were not tried on AROS). With AUTO the window opens at the first read or
+write, as in CON:. WINDOW0x... (a console in the caller's own window) is
+opened by the system's CON: handler instead.
+
+CON: itself (experimental)
+--------------------------
+
+    SYS:Utilities/Limpet/LimpetCON ON
+
+makes CON: open Limpet windows, so NewShell and programs that open CON:
+get one. LimpetCON OFF gives CON: back to the system; LimpetCON STATUS
+says which it is. Nothing is written to disk: a reboot always restores
+the system's CON:. Windows that are open keep the console that opened
+them. RAW: and the boot console are not changed. What Limpet cannot serve
+(WINDOW0x..., a console that does not come up) the system's handler opens
+instead. Every Limpet window loads its own fonts, so many small console
+windows cost much more memory and time than with the system's CON:.
+LimpetCON was not run on the Raspberry Pi.
 
 Missing compared with CON:
 --------------------------

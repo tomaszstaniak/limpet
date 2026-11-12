@@ -537,6 +537,7 @@ void aros_session_poll(ArosSession *s)
             break;
         }
         case ACTION_WAIT_CHAR:
+            s->touched=1;
             /* DOS sends the timeout in Arg1, not a filehandle identifier.
              * Any number of clients may wait, each with its own timeout,
              * also while reads are out (CON: keeps one and loses others). */
@@ -551,6 +552,7 @@ void aros_session_poll(ArosSession *s)
                 ReplyPkt(p,DOSFALSE,s->wait_count==XSESSION_WAITERS?ERROR_OBJECT_IN_USE:ERROR_NO_FREE_STORE);
             break;
         case ACTION_READ:
+            s->touched=1;
             /* A console reads from any of its handles, as CON: does: a
                program that opens CON:... with MODE_NEWFILE reads its keys
                through that same handle. */
@@ -570,6 +572,7 @@ void aros_session_poll(ArosSession *s)
             }
             break;
         case ACTION_WRITE:
+            s->touched=1;
             if((id!=2 && id!=3 && !(s->console && id==1)) || !(s->handles&(1UL<<(id-1))) ||
                p->dp_Arg3<0 || (p->dp_Arg3 && !p->dp_Arg2))
                 ReplyPkt(p,-1,ERROR_BAD_NUMBER);

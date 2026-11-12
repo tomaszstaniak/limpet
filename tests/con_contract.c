@@ -6,12 +6,19 @@
  *   con-contract NAME LOG            checks that need no keys
  *   con-contract NAME LOG keys       then the ones that need someone typing
  *   con-contract NAME LOG shared     several readers and waiters at once (keys)
+ *   con-contract NAME LOG auto       NAME carries AUTO and the title AutoProbe:
+ *                                    no window before the first write
+ *   con-contract DEVICE: LOG window  a console in this program's own window
+ *                                    (DEVICE:////t/WINDOW0x...)
  *
  * Every line of LOG is "PASS id ...", "FAIL id ..." or "OBS id ..." (an
  * observation where the two consoles are allowed to differ). Pointers the
  * handler returns are printed, never dereferenced. */
 #include <proto/exec.h>
 #include <proto/dos.h>
+#include <proto/intuition.h>
+#include <intuition/intuitionbase.h>
+#include <intuition/screens.h>
 #include <dos/dosextens.h>
 #include <dos/dostags.h>
 #include <exec/tasks.h>
@@ -407,6 +414,114 @@ static void key_checks(BPTR h)
     CHECK("eof.once", o == 2 && buf[0] == 'z', "third Read=%ld", (long)o);
 }
 
+/* Windows on the default public screen: how many, whether one has this
+   title, whether this very window is still among them. Nothing is kept. */
+static int windows(const char *title, struct Window *which, int *titled, int *present)
+{
+    struct Screen *screen = LockPubScreen(NULL);
+    struct Window *w;
+    ULONG lock;
+    int count = 0;
+    *titled = *present = 0;
+    if (!screen) return -1;
+    lock = LockIBase(0);
+    for (w = screen->FirstWindow; w; w = w->NextWindow) {
+        ++count;
+        if (w == which) *present = 1;
+        /* Anywhere in the title: Limpet puts what runs in the window before it. */
+        if (title && w->Title && strstr((const char *)w->Title, title)) ++*titled;
+    }
+    UnlockIBase(lock);
+    UnlockPubScreen(NULL, screen);
+    return count;
+}
+
+/* AUTO: the open succeeds without a window; the first write brings it. */
+static int auto_checks(const char *name)
+{
+    int titled, present, before, after;
+    BPTR h;
+    LONG n;
+    before = windows("AutoProbe", NULL, &titled, &present);
+    CHECK("auto.clean", before >= 0 && !titled, "windows=%d titled AutoProbe=%d before the open", before, titled);
+    h = Open((CONST_STRPTR)name, MODE_NEWFILE);
+    CHECK("auto.open", h != 0, "Open=%s err=%ld", h ? "fh" : "0", (long)IoErr());
+    if (!h) return 0;
+    Delay(150);
+    after = windows("AutoProbe", NULL, &titled, &present);
+    CHECK("auto.deferred", after == before && !titled, "3 s after the open: windows %d -> %d, titled=%d", before, after, titled);
+    CHECK("auto.interactive", IsInteractive(h) != 0, "IsInteractive=%ld", (long)IsInteractive(h));
+    Delay(50);
+    after = windows("AutoProbe", NULL, &titled, &present);
+    CHECK("auto.still", after == before && !titled, "after IsInteractive: windows %d -> %d, titled=%d", before, after, titled);
+    n = Write(h, "AUTO: first write\n", 18);
+    Delay(150);
+    after = windows("AutoProbe", NULL, &titled, &present);
+    CHECK("auto.opens", n == 18 && titled == 1, "Write=%ld; windows %d -> %d, titled=%d", (long)n, before, after, titled);
+    Close(h);
+    Delay(150);
+    after = windows("AutoProbe", NULL, &titled, &present);
+    CHECK("auto.closed", !titled, "after Close: windows=%d titled=%d", after, titled);
+    /* Opened and closed without a read or write: never a window. */
+    h = Open((CONST_STRPTR)name, MODE_NEWFILE);
+    if (h) {
+        Delay(100); Close(h); Delay(100);
+        after = windows("AutoProbe", NULL, &titled, &present);
+        CHECK("auto.unused", !titled, "opened and closed unused: windows=%d titled=%d", after, titled);
+    } else CHECK("auto.unused", 0, "second Open failed err=%ld", (long)IoErr());
+    return 0;
+}
+
+/* WINDOW: the console lives in a window this program opened. */
+static int window_checks(const char *device)
+{
+    struct Window *mine;
+    char name[160];
+    int titled, present, before, during, after;
+    BPTR h;
+    LONG n;
+    mine = OpenWindowTags(NULL, WA_Title, (IPTR)"WindowProbe", WA_Left, 60, WA_Top, 80,
+                          WA_Width, 420, WA_Height, 160, WA_DragBar, TRUE, WA_DepthGadget, TRUE,
+                          WA_SizeGadget, TRUE, WA_Activate, TRUE,
+                          /* A port for the console handler: mainline's CON: reads the
+                             window's UserPort and fails on a window without one
+                             (seen 2026-11-12 on nightly 20261110). */
+                          WA_IDCMP, IDCMP_CLOSEWINDOW, TAG_DONE);
+    CHECK("window.own", mine != NULL, "own window %s", mine ? "open" : "failed");
+    if (!mine) return 0;
+    before = windows("WindowProbe", mine, &titled, &present);
+    snprintf(name, sizeof name, "%s////t/WINDOW0x%lx", device, (unsigned long)(IPTR)mine);
+    FPrintf(logfile, (CONST_STRPTR)"OBS window.name %s\n", (IPTR)name);
+    h = Open((CONST_STRPTR)name, MODE_NEWFILE);
+    CHECK("window.open", h != 0, "Open=%s err=%ld", h ? "fh" : "0", (long)IoErr());
+    if (!h) { CloseWindow(mine); return 0; }
+    CHECK("window.interactive", IsInteractive(h) != 0, "IsInteractive=%ld", (long)IsInteractive(h));
+    n = Write(h, "WINDOW: text in the caller's window\n", 36);
+    Delay(100);
+    during = windows("WindowProbe", mine, &titled, &present);
+    CHECK("window.write", n == 36, "Write=%ld", (long)n);
+    CHECK("window.same", during == before && present, "windows %d -> %d, own window present=%d", before, during, present);
+    {
+        /* A second handle on the same console, and the console task's "*". */
+        BPTR lock = DupLockFromFH(h), second = lock ? OpenFromLock(lock) : 0;
+        if (lock && !second) UnLock(lock);
+        CHECK("window.dup", second != 0, "OpenFromLock=%s err=%ld", second ? "fh" : "0", (long)IoErr());
+        if (second) {
+            n = Write(second, "second handle\n", 14);
+            CHECK("window.dup.write", n == 14, "Write=%ld", (long)n);
+            Close(second);
+        }
+    }
+    Delay(200);   /* long enough for a screenshot */
+    Close(h);
+    say("PASS", "window.close", "Close returned");
+    Delay(100);
+    after = windows("WindowProbe", mine, &titled, &present);
+    say("OBS", "window.after", "after Close: windows=%d own window present=%d", after, present);
+    if (present) CloseWindow(mine);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     BPTR h;
@@ -414,6 +529,12 @@ int main(int argc, char **argv)
     logfile = Open((CONST_STRPTR)argv[2], MODE_NEWFILE);
     if (!logfile) return 20;
     FPrintf(logfile, (CONST_STRPTR)"con-contract format=1 name=%s\n", (IPTR)argv[1]);
+    if (argc > 3 && (!strcmp(argv[3], "auto") || !strcmp(argv[3], "window"))) {
+        if (argv[3][0] == 'a') auto_checks(argv[1]); else window_checks(argv[1]);
+        FPrintf(logfile, (CONST_STRPTR)"END failures=%ld\n", (long)failures);
+        Close(logfile);
+        return failures ? 5 : 0;
+    }
     h = Open((CONST_STRPTR)argv[1], MODE_NEWFILE);
     CHECK("open", h != 0, "Open=%s err=%ld", h ? "fh" : "0", (long)IoErr());
     if (h) {

@@ -29,6 +29,7 @@ target: target-check
 	$(T_CC) $(T_CFLAGS) -o $(TD)/LimpetPrefs $(PREFS_SRC) $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) $(UNICODE_FLAGS) -nostartfiles -DXHANDLER_WORKER='"limpet-console"' tools/xterm_handler.c $(T_LDFLAGS) -o $(TD)/limpet-handler
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/limpet-handler-remove tools/xterm-console/xterm_remove.c $(T_LDFLAGS)
+	$(T_CC) $(T_PROBE_CFLAGS) $(VERSION_FLAGS) -o $(TD)/LimpetCON tools/xterm-console/limpet_con.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/con-contract tests/con_contract.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/read-cancel tests/read_cancel.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -Wno-error -o $(TD)/probes/tty-winsize tests/tty_winsize_probe.c $(T_LDFLAGS)
@@ -39,8 +40,8 @@ target: target-check
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/openurl-set-browser tests/openurl_set_browser.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/openurl-probe tools/openurl_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_CFLAGS) $(T_FRONT_FLAGS) -o $(TD)/probes/test_aros_endpoint tests/test_aros_endpoint.c $(SESSION_SRC) $(T_LDFLAGS)
-	$(if $(T_STRIP),$(T_STRIP) --strip-debug $(TD)/Limpet $(TD)/LimpetPrefs $(TD)/limpet-console $(TD)/limpet-handler $(TD)/limpet-handler-remove)
+	$(if $(T_STRIP),$(T_STRIP) --strip-debug $(TD)/Limpet $(TD)/LimpetPrefs $(TD)/limpet-console $(TD)/limpet-handler $(TD)/limpet-handler-remove $(TD)/LimpetCON)
 	@# Provenance for make-packages.sh: which target these files were built
 	@# for, and their bytes. The handler has no C library marker to check.
-	@(echo "target $(TARGET)"; cd $(TD) && shasum -a 256 Limpet LimpetPrefs limpet-console limpet-handler limpet-handler-remove) > $(TD)/build-record
+	@(echo "target $(TARGET)"; cd $(TD) && shasum -a 256 Limpet LimpetPrefs limpet-console limpet-handler limpet-handler-remove LimpetCON) > $(TD)/build-record
 	@echo "$(TARGET): built in $(TD)"

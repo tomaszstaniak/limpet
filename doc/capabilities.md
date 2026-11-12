@@ -779,6 +779,9 @@ It is distributed as `Limpet-handler-experimental-0.7.1-aros-x86_64-abiv11-pc.zi
 (and one archive per system), not
 installed by the main archive or apkg. Installation lasts until reboot and
 does not replace `CON:`. Programs opening `CON:` still get the system console.
+On `main`, not yet released: `LimpetCON ON` makes `CON:` itself open Limpet
+windows until `LimpetCON OFF` or the next reboot
+([experimental](limpet-handler.md#optional-con-replacement-experimental)).
 
 The handler supports console names with geometry and title, cooked
 and raw input, Shell scripts, redirection and multiple writers, and, since
@@ -786,7 +789,9 @@ and raw input, Shell scripts, redirection and multiple writers, and, since
 0.7.0, several readers and waiters at once, line feed mode and the console
 geometry packet. Important limits in **the 0.7.1 handler**:
 
-- `AUTO` opens the window immediately; `WINDOW` is rejected;
+- `AUTO` opens the window immediately; `WINDOW` is rejected (on `main`:
+  `AUTO` waits for the first read or write as in `CON:`, and the system
+  console serves `WINDOW`);
 - the console information exposes dimensions, but is not a working
   `console.device` endpoint for direct device I/O;
 - startup is slow and each window uses about 32.5 MiB. Memory recovery over

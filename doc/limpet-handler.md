@@ -2,8 +2,9 @@
 
 `LIMPET:` is a DOS console handler. It opens a Limpet window for
 `NewShell WINDOW LIMPET:` or an application calling
-`Open("LIMPET:0/0/640/200/Title", ...)`. It is **experimental** and does not replace
-`CON:`. Programs must request `LIMPET:` explicitly.
+`Open("LIMPET:0/0/640/200/Title", ...)`. It is **experimental**. Programs
+request `LIMPET:` explicitly; `CON:` stays the system's unless
+[`LimpetCON ON`](#optional-con-replacement-experimental) is run.
 
 Released separately from Limpet, as `Limpet-handler-experimental-<version>-<target>.zip`
 (`aros-x86_64-abiv11-pc`, `aros-x86_64-abiv1-pc`, `aros-aarch64-abiv1-raspi`;
@@ -17,8 +18,11 @@ system, both under QEMU ([0.7.0](verification-0.7.0-v1.md),
 [0.7.1](verification-0.7.1.md)). Not run on ABIv11 2026.09 or real
 hardware.
 
-The table describes the handler of the 0.7.1 archive. For a short list of
-its limits, see the [capability reference](capabilities.md#limpet-console-handler).
+The table describes the handler on `main`. `AUTO` as `CON:` has it, the
+hand-over of `WINDOW` to the system console and `LimpetCON` came after
+0.9.0 and are not in a released archive yet
+([run of 2026-11-12](#the-run-of-2026-11-12)). For a short list of the
+handler's limits, see the [capability reference](capabilities.md#limpet-console-handler).
 
 ## Install and remove
 
@@ -58,9 +62,9 @@ handler, which opens a window.)
 | `INACTIVE`, `NODEPTH`, `NOSIZE`, `NODRAG`, `NOBORDER`, `BACKDROP` | as `CON:` |
 | `SCREEN`name | opens on that public screen, else on the default one |
 | `WAIT` | after the program closes its last handle, the window stays until you close it (the title may show another message than "Ended (WAIT)" then) |
-| `AUTO` | accepted; the window opens at once (CON: waits for the first read or write) |
+| `AUTO` | the open succeeds without a window; the window comes with the first read, write or `WaitForChar`, as in `CON:`. A console opened and closed unused never shows one. Up to 0.9.0 the window opened at once |
 | `SIMPLE`, `SMART`, `ALT`, `BOOT` | accepted and ignored, as `CON:` does with the first three |
-| `WINDOW`0x... | refused (`ERROR_BAD_STREAM_NAME`): LIMPET: draws its own window |
+| `WINDOW`0x... | the system's `CON:` handler opens this console in the caller's window; LIMPET: draws only windows of its own. Up to 0.9.0 the name was refused (`ERROR_BAD_STREAM_NAME`) |
 
 Options match by prefix in `CON:`'s order, so `C` is `CLOSE` and `S` is
 `SIMPLE`, as in `CON:`.
@@ -91,7 +95,9 @@ records](verification-0.5.0.md#limpet-handler-experimental) and
 | --- | --- | --- | --- |
 | One window per open; `*` and `CONSOLE:` reach it | supported | DOS starts a handler per open; `aros_session.c` FIND | `open_star`, `open_console` |
 | Name: geometry and title | supported | `console_name.c`, `aros_xterm.c` | `test_console_name`; NewShell at 300/200 700x420 |
-| Name: window options | supported, `AUTO` partly, `WINDOW` not | as above | `test_console_name`; NOSIZE/NODEPTH/NODRAG and WAIT seen; `SCREEN`, `NOBORDER`, `BACKDROP`, `INACTIVE` not run |
+| Name: window options | supported; `WINDOW` by the system console | as above | `test_console_name`; NOSIZE/NODEPTH/NODRAG and WAIT seen; `SCREEN`, `NOBORDER`, `BACKDROP`, `INACTIVE` not run |
+| `AUTO`: no window before the first read or write | supported | `aros_xterm.c` (the open is answered first), `aros_session.c` | `con-contract ... auto`: `auto.deferred`, `auto.opens`, `auto.unused` |
+| `WINDOW`: a console in the caller's window | by the system's `CON:` | `tools/xterm_handler.c` (`fall_back`) | `con-contract DEVICE: ... window`: the same results for `CON:` and `LIMPET:` |
 | `IsInteractive` on every handle | supported | FIND sets `fh_Interactive` | `interactive`, `dup.interactive` |
 | `DupLockFromFH`, `OpenFromLock`, `UnLock` (Run, System) | supported; at most 16 locks out | `ACTION_COPY_DIR_FH`, `FH_FROM_LOCK`, `FREE_LOCK` | `dup_lock`, `open_from_lock`; `Run >*` jobs |
 | `Read` cooked: a line with Return | supported, with Limpet's editor instead of CON:'s | `console_input.c`, `line_editor.c` | `cooked.read`; Shell, `Ask`, `Copy ?` |
@@ -129,7 +135,8 @@ compatibility with the Amiga console interface.
   console. It assumes cooked mode and reads byte by byte from the DOS
   buffer; all editing is the console's.
 - **The handler and DOS packets**: `tools/xterm_handler.c` (the launcher
-  DOS starts per open), `src/aros_handler.c` (startup), `src/aros_session.c`
+  DOS starts per open, and the hand-over to the system console),
+  `tools/xterm-console/limpet_con.c` (`LimpetCON`), `src/aros_handler.c` (startup), `src/aros_session.c`
   (the packets above), `src/console_name.c` (the name).
 - **console.device**: not used. `CON:` draws through a console.device unit;
   Limpet draws itself, so a program that reaches for the unit gets the
@@ -142,9 +149,14 @@ compatibility with the Amiga console interface.
 1. **Reports are one-based, ABIv11's CON: is one lower.** LIMPET: follows
    AmigaOS and mainline; a program tuned to ABIv11's CON: sees one row and
    column more than it expects there. This is an intentional compatibility difference.
-2. **`AUTO` opens the window at once**, so a program started from
-   Workbench with an `AUTO` console shows an empty window it never uses.
-3. **`WINDOW` is refused.** Programs that hand the console their own window
+2. **An `AUTO` window does not come back.** `CON:` closes an `AUTO`
+   window at its close gadget and opens it again at the next read or
+   write. A Limpet window that is closed ends the console: reads see the
+   end of input and writes fail. The fonts and the scrollback are loaded
+   when the console is opened, not with the window, so an unused `AUTO`
+   console still costs the memory of gap 5.
+3. **`WINDOW` is not Limpet's.** The system console serves it, so such a
+   console has none of Limpet's features. Up to 0.9.0: refused; programs that hand the console their own window
    get an error.
 4. **No console.device behind `ACTION_DISK_INFO`.** Only reading the
    `ConUnit` works.
@@ -156,30 +168,63 @@ compatibility with the Amiga console interface.
    requesters on the console's window. The contract tests above pass there
    (0.7.0, mainline `74a2d80b` under QEMU); requesters were not checked.
 
-## Proposed optional CON: replacement
+## Optional CON: replacement (experimental)
 
-This design is not implemented.
+    SYS:Utilities/Limpet/LimpetCON ON
+    SYS:Utilities/Limpet/LimpetCON OFF
+    SYS:Utilities/Limpet/LimpetCON STATUS
 
-- **Opt-in, after boot only.** A command (`LimpetCON ON`) swaps the
-  handler of the `CON` device node for `limpet-handler` under the DOS list
-  lock, after saving the original handler, segment, startup value and
-  stack. `LimpetCON OFF` puts the saved values back. Windows already open
-  keep running on the handler that opened them; neither segment is
-  unloaded while windows of it may run. Nothing goes into the startup in
-  this stage; a later one may offer a line in `S:User-Startup`, never
+`LimpetCON` is in the handler archive, beside `limpet-handler`. It needs
+no `Install-Handler` and no `LIMPET:` device.
+
+- **ON** puts Limpet's launcher into the `CON` device node under the DOS
+  list lock, after saving the node's handler, segment, stack and priority.
+  From then on `NewShell`, `Run` with a console window and every program
+  that opens `CON:` get a Limpet window.
+- **OFF** puts the saved values back. **STATUS** says which console
+  `CON:` is (return code 0 for Limpet, 5 for the system's).
+- **After boot only, nothing on disk.** Nothing is written to `S:`,
+  `DEVS:` or `ENVARC:`, so a reboot always restores the system's `CON:`.
+  `RAW:` and the boot console are not changed.
+- **Open windows stay as they are.** A window keeps the console that
+  opened it, across ON and OFF. Neither handler's segment is unloaded;
+  the launcher's segment and the saved state (a few KB) stay until the
+  reboot.
+- **The system console as the fallback.** A name with `WINDOW`, and any
+  console Limpet does not bring up (a missing `limpet-console`, no fonts,
+  no memory, a name it refuses), goes to the saved system handler: the
+  launcher starts it as DOS would and gives it the open. Where DOS sends
+  a handle's packets to the port the open went to (ABIv11), the launcher
+  stays and passes them on until the handle is closed; where the handler
+  names its own port in the handle (mainline), it ends after the open.
+  The same hand-over serves `LIMPET:...WINDOW`.
+
+Not done yet, and the reason this stays experimental:
+
+- **Every window loads its own fonts and scrollback** (gap 5). Programs
+  that open many small console windows cost much more memory and start
+  slower than with the system's `CON:`. One font load shared by all
+  windows is the next step.
+- **No round of programs started from Workbench** with console windows,
+  and requesters on a Limpet console window were not checked (gap 6).
+- **No line for the startup.** `LimpetCON ON` is typed after every boot.
+  A later stage may offer a line in `S:User-Startup`, never
   `S:Startup-Sequence`.
-- **Fallback to the original handler.** When `LIMPET:` cannot
-  serve a name (`WINDOW`, `BOOT`, a screen it cannot open, no memory for
-  fonts), its launcher passes the startup packet to the saved `CON:`
-  handler instead of failing, so that program gets the system console.
-  `RAW:` stays the system's until raw-first opens are covered.
-- **Recovery.** `ECON:` and the boot console are
-  never touched. `LimpetCON OFF` works from any Shell, and a reboot
-  always restores `CON:`, because nothing is written to disk.
-- **Prerequisites:** gaps 2 and 3 closed, gap 5 reduced (one font
-  load shared by all windows), and the contract probe passing the same on
-  both consoles, plus a round of programs started from Workbench with
-  console windows.
+- **`RAW:`** stays the system's until raw-first opens are covered.
+
+### The run of 2026-11-12
+
+`con-contract` (the quiet checks, `auto` and `window`) against `LIMPET:`,
+against `CON:` with `LimpetCON ON`, and against the system's `CON:`
+before and after, under QEMU:
+
+| System | Result |
+| --- | --- |
+| mainline x86_64, nightly of 2026-11-10 | no failed check; `NewShell` opened a Limpet window with ON and the system console after OFF |
+| AROS One 1.3 (ABIv11) | the same |
+
+Not run: the Raspberry Pi build, ABIv11 2026.09, real hardware, keys
+through a console in the caller's window, programs started from Workbench.
 
 ## Building
 

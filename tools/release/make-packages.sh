@@ -54,7 +54,7 @@ package_target() {  # $1 = target
         *-abiv1-*) libset=__aros_libset_StdCBase helperset=__aros_libset_StdCBase;;
     esac
     [[ -f $root/tools/release/README-$t.txt ]] || { print -u2 "unknown target $t"; exit 1; }
-    for f in $b/Limpet $b/LimpetPrefs $b/limpet-console $b/limpet-handler $b/limpet-handler-remove; do
+    for f in $b/Limpet $b/LimpetPrefs $b/limpet-console $b/limpet-handler $b/limpet-handler-remove $b/LimpetCON; do
         file -b $f | grep -q "ELF 64-bit.*$want" ||
             { print -u2 "$f is not an ELF for $t: $(file -b $f)"; exit 1; }
     done
@@ -63,7 +63,7 @@ package_target() {  # $1 = target
     for f in $b/Limpet $b/limpet-console; do
         nm $f | grep " $libset\$" >/dev/null || { print -u2 "$f has no $libset: not built for $t"; exit 1; }
     done
-    for f in $b/limpet-handler-remove $b/LimpetPrefs; do
+    for f in $b/limpet-handler-remove $b/LimpetCON $b/LimpetPrefs; do
         nm $f | grep " $helperset\$" >/dev/null || { print -u2 "$f has no $helperset: not built for $t"; exit 1; }
     done
     # Every binary must be the one make target built for this target: this
@@ -88,13 +88,14 @@ package_target() {  # $1 = target
     # The experimental LIMPET: console handler: a separate archive that
     # unpacks into the same drawer. The main archive must never carry it.
     local x=$out/stage-handler-$t/Limpet; mkdir -p $x
-    cp $b/limpet-handler $b/limpet-console $b/limpet-handler-remove $x/
+    cp $b/limpet-handler $b/limpet-console $b/limpet-handler-remove $b/LimpetCON $x/
     check_version $x/limpet-console
+    check_version $x/LimpetCON LimpetCON
     strings $x/limpet-handler | grep -qx limpet-console || { print -u2 "limpet-handler does not look for limpet-console"; exit 1; }
     cp $root/tools/xterm-console/{LIMPET.mountlist,Install-Handler,Remove-Handler} $x/
     sed "s/@VERSION@/$ver/g" $root/tools/xterm-console/README-Handler-$t.txt > $x/README-Handler.txt
     (cd $out/stage-handler-$t && zip -qrX $out/Limpet-handler-experimental-$ver-$t.zip Limpet)
-    unzip -Z1 $out/Limpet-$ver-$t.zip | grep -qi 'handler\|limpet-console\|mountlist\|xterm' && { print -u2 "main archive carries handler files"; exit 1; }
+    unzip -Z1 $out/Limpet-$ver-$t.zip | grep -qi 'handler\|limpet-console\|limpetcon\|mountlist\|xterm' && { print -u2 "main archive carries handler files"; exit 1; }
     (cd $out/stage-$t && find Limpet -type f | sort | xargs shasum -a 256 > ../contents-$t.sha256)
     (cd $out/stage-handler-$t && find Limpet -type f | sort | xargs shasum -a 256 > ../contents-handler-$t.sha256)
 }

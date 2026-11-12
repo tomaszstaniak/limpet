@@ -2,16 +2,18 @@
 
 Limpet 0.9.0 is available for AROS x86_64 ABIv11 and mainline x86_64
 ABIv1, with an AArch64 Raspberry Pi test build. The experimental `LIMPET:`
-handler is a separate download for all three targets. It does not replace
-`CON:`.
+handler is a separate download for all three targets. In 0.9.0 it does not
+replace `CON:`.
 
 ## On main, not yet released
 
-- Preferences for a command to run when a new Shell opens, including
-  Fastfetch presets. See [session startup](session-start.md).
-- SDK 0.6.0 queries for text support, terminal identity, Kitty graphics and
-  pixel geometry.
-- DEC mode 7 to turn automatic line wrapping on and off.
+- `AUTO` consoles open their window at the first read or write, as in
+  `CON:`.
+- A console in the caller's own window (`WINDOW`) is opened by the system's
+  `CON:` handler.
+- Experimental `LimpetCON ON` and `OFF`: `CON:` opens Limpet windows until
+  it is turned off or the system restarts. See
+  [the handler guide](limpet-handler.md#optional-con-replacement-experimental).
 
 The [changelog](changes.md) separates these changes from released features.
 
@@ -20,11 +22,13 @@ The [changelog](changes.md) separates these changes from released features.
 The handler already supports queued reads and timed waiters, cancellation,
 Amiga cursor and window reports, Ctrl-C/D/E/F and Ctrl-\, and raw/cooked
 line-feed behaviour. [The compatibility table](limpet-handler.md) records
-what works and the remaining differences, including `AUTO` and `WINDOW`.
+what works and the remaining differences.
 
-The next step is to close those differences before offering optional,
-reversible replacement of `CON:`. Native Shell behaviour remains part of
-that work, alongside full-screen terminal applications.
+The optional, reversible replacement of `CON:` exists as an experiment.
+Before it is offered for daily use: one font load shared by all console
+windows, a round of programs started from Workbench with console windows,
+and an optional line for `S:User-Startup`. Native Shell behaviour remains
+part of that work, alongside full-screen terminal applications.
 
 Shared interfaces are being proposed upstream:
 

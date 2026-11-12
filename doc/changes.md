@@ -3,6 +3,19 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## Unreleased
+
+Experimental `LIMPET:` handler (separate archive):
+
+- `AUTO` works as in `CON:`: the console opens without a window, and the
+  window appears with the first read or write. A console that is never
+  used shows nothing.
+- `WINDOW0x...` (a console in the caller's own window) is no longer
+  refused: the system's `CON:` handler opens that console.
+- New, experimental: `LimpetCON ON` makes `CON:` open Limpet windows until
+  `LimpetCON OFF` or the next reboot. Nothing is written to disk. See
+  [Optional CON: replacement](limpet-handler.md#optional-con-replacement-experimental).
+
 ## 0.9.0 (2026-11-02)
 
 New, experimental, off until chosen in Limpet Preferences:

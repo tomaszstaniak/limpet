@@ -32,4 +32,30 @@ typedef struct {
 /* 0, or -1 for a bad name (a non-digit in fields 1-4, a title or screen name
  * too long). name may be the whole "XTERM:..." or what follows the colon. */
 int console_name_parse(XConsoleName *, const char *name);
+/* Whether the name carries WINDOW (fields from the sixth on, six letters
+ * without case and then the value), by the same rule as the parser. For
+ * the handler's launcher, which has no C library: nothing is called. */
+static inline int console_name_has_window(const char *name)
+{
+    const char *p = name, *field;
+    unsigned id = 1;
+    while (*p && *p != ':') ++p;
+    field = *p ? p + 1 : name;
+    for (;;) {
+        const char *end = field;
+        while (*end && *end != '/') ++end;
+        if (id > 5 && end - field >= 6) {
+            static const char word[] = "window";
+            unsigned i;
+            for (i = 0; i < 6; ++i) {
+                int c = (unsigned char)field[i];
+                if (c >= 'A' && c <= 'Z') c += 32;
+                if (c != word[i]) break;
+            }
+            if (i == 6) return 1;
+        }
+        if (!*end) return 0;
+        field = end + 1; ++id;
+    }
+}
 #endif
