@@ -12,7 +12,7 @@ T_WORKER_ALL_SRC ?= $(T_GUI_SRC) src/aros_handler.c $(T_WORKER_SRC)
 T_GUI_SRC = src/aros_xterm.c $(WINDOW_SRC) $(HYPERLINK_GUI_SRC) $(THEME_SRC) $(KITTY_SRC) src/aros_font.c $(CLUSTER_SRC) src/screen_model.c src/hyperlink.c $(UNICODE_SRC) $(INPUT_SRC) $(EDITOR_SRC) src/aros_drop.c $(COMPLETION_SRC) src/aros_input.c $(CLIP_GUI_SRC) $(SESSION_SRC)
 
 # Limpet Preferences (Zune), a program of its own.
-PREFS_SRC = src/limpet_prefs.c src/settings.c src/settings_edit.c src/session_start.c src/session_command.c $(WINDOW_SRC)
+PREFS_SRC = src/limpet_prefs.c src/settings.c src/settings_edit.c src/session_start.c src/session_command.c src/theme.c src/theme_file.c src/theme_iterm.c src/theme_list.c $(WINDOW_SRC)
 
 .PHONY: target target-check
 target-check:
@@ -26,7 +26,7 @@ target: target-check
 	$(T_CXX) $(HB_FLAGS) $(T_CXX_FLAGS) -DHB_NO_GETENV --sysroot=$(T_SDK) $(T_ARCH_FLAGS) -c $(HB_SRC) -o $(TD)/harfbuzz-handler.o
 	$(T_CC) $(T_CFLAGS) $(T_FRONT_FLAGS) -o $(TD)/Limpet $(T_GUI_SRC) $(TD)/harfbuzz.o $(T_LDFLAGS) $(T_LIBS)
 	$(T_CC) $(T_CFLAGS) -DXTERM_DOS_HANDLER $(T_WORKER_FLAGS) -o $(TD)/limpet-console $(T_WORKER_ALL_SRC) $(TD)/harfbuzz-handler.o $(T_LDFLAGS) $(T_LIBS)
-	$(T_CC) $(T_CFLAGS) -o $(TD)/LimpetPrefs $(PREFS_SRC) $(T_LDFLAGS)
+	$(T_CC) $(T_CFLAGS) -o $(TD)/LimpetPrefs $(PREFS_SRC) $(T_LDFLAGS) -lm
 	$(T_CC) $(T_PROBE_CFLAGS) $(UNICODE_FLAGS) -nostartfiles -DXHANDLER_WORKER='"limpet-console"' tools/xterm_handler.c $(T_LDFLAGS) -o $(TD)/limpet-handler
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/limpet-handler-remove tools/xterm-console/xterm_remove.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) $(VERSION_FLAGS) -o $(TD)/LimpetCON tools/xterm-console/limpet_con.c $(T_LDFLAGS)

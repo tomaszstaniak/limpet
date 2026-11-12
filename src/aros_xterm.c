@@ -2384,6 +2384,11 @@ static int run_now(const char *line,int closing)
     }
     return XPREFS_RAN;
 }
+/* A theme shown for Preferences to look at; the window's own theme waits
+   in theme_before until Preferences is done. */
+static XTheme theme_before;
+static int theme_previewed;
+
 static int prefs_poll(int closing)
 {
     struct Message *m;
@@ -2392,7 +2397,7 @@ static int prefs_poll(int closing)
     while((m=GetMsg(prefs_port))) {
         XPrefsRequest *r=(XPrefsRequest *)m;
         if(m->mn_Length!=sizeof *r || r->magic!=XPREFS_MAGIC || r->key!=prefs_key ||
-           r->action<XPREFS_RUN || r->action>XPREFS_BACKGROUND || !memchr(r->line,0,sizeof r->line))
+           r->action<XPREFS_RUN || r->action>XPREFS_PREVIEW_THEME || !memchr(r->line,0,sizeof r->line))
             r->result=XPREFS_BAD;
         else if(r->action==XPREFS_BACKGROUND) {
             struct Window *w=background_window;
@@ -2402,6 +2407,23 @@ static int prefs_poll(int closing)
             settings_message[0]=0;
             if(background_reload()) clip_status="The window's background applies to new windows";
             if(settings_message[0]) clip_status=settings_message;
+            r->result=XPREFS_RAN; ran=1;
+        } else if(r->action==XPREFS_APPLY_SETTINGS) {
+            /* What was shown for a look is no longer the question. */
+            if(theme_previewed) { theme=theme_before; theme_previewed=0; }
+            settings_reload();
+            r->result=XPREFS_RAN; ran=1;
+        } else if(r->action==XPREFS_PREVIEW_THEME) {
+            if(!theme_previewed) theme_before=theme;
+            settings_message[0]=0;
+            if(!r->line[0]) { theme=theme_before; theme_previewed=0; }
+            else if(!strcmp(r->line,"*")) {
+                /* The built-in dark theme has no file to name. */
+                theme_default(&theme); theme.bold_bright=theme_before.bold_bright; theme_previewed=1;
+            }
+            else if(!theme_by_value(&theme,r->line,"nothing changed")) theme_previewed=1;
+            if(settings_message[0]) clip_status=settings_message;
+            paint_damage_invalidate(&paint_damage);
             r->result=XPREFS_RAN; ran=1;
         } else if((r->result=run_now(r->line,closing))==XPREFS_RAN) ran=1;
         ReplyMsg(m);
