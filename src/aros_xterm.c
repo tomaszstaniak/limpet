@@ -1,6 +1,7 @@
 #include "eza_icon_contract.h"
 #include "screen_model.h"
 #include "theme.h"
+#include "theme_file.h"
 #include "margin_fill.h"
 #include "aros_font.h"
 #include "cluster_font.h"
@@ -2127,14 +2128,80 @@ static int background_reload(void)
 }
 #endif
 
-static void settings_theme(void)
+/* Colours.conf: bold as bright. On any error it stays on, as before there
+   was a setting, and the title says why. */
+static void colour_settings_load(XSettings *into)
 {
+    static char text[XSETTINGS_FILE_MAX+1];
+    XSettings next;
+    size_t length=0; const char *why=NULL; int line;
+    settings_default(&next);
+    switch(settings_read("Colours.conf",text,&length)) {
+    case -1:
+        snprintf(settings_message,sizeof settings_message,"Colours.conf is over 4096 bytes; not used");
+        break;
+    case 1:
+        if((line=settings_parse_colours(&next,text,length,&why))) {
+            snprintf(settings_message,sizeof settings_message,"Colours.conf line %d: %s; not used",line,why);
+            settings_default(&next);
+        }
+        break;
+    }
+    into->bold_bright=next.bold_bright;
+}
+
+static int theme_exists(const char *path)
+{
+    struct Process *self=(struct Process *)FindTask(NULL);
+    APTR window=self->pr_WindowPtr;
+    BPTR lock;
+    /* A drawer that is not there is no reason for a requester. */
+    self->pr_WindowPtr=(APTR)-1;
+    lock=Lock((CONST_STRPTR)path,SHARED_LOCK);
+    self->pr_WindowPtr=window;
+    if(lock) UnLock(lock);
+    return lock!=0;
+}
+
+/* A theme by its theme= value: a path, or a name looked for in the user's
+   and the program's Themes drawers (theme_file.h). The file may be
+   Limpet's, Ghostty's, Kitty's or iTerm2's. 0 and the theme in *into, or
+   -1 with *into as it was and the reason in settings_message, ending with
+   what happens instead. */
+static int theme_by_value(XTheme *into,const char *value,const char *instead)
+{
+    char path[XSETTINGS_PATH_MAX+32];
+    XThemeReport report;
+    struct Process *self=(struct Process *)FindTask(NULL);
+    APTR window=self->pr_WindowPtr;
+    int result;
+    if(theme_locate(path,sizeof path,value,theme_exists)) {
+        memset(&report,0,sizeof report); report.error=XTHEME_CANNOT_READ;
+        theme_file_message(settings_message,sizeof settings_message,value,&report,instead);
+        return -1;
+    }
+    self->pr_WindowPtr=(APTR)-1;
+    result=theme_file_load(into,path,&report);
+    self->pr_WindowPtr=window;
+    /* Also after a clean load: how many settings in the file are not colours. */
+    theme_file_message(settings_message,sizeof settings_message,value,&report,instead);
+    return result;
+}
+
+/* The settings' theme. At start a theme that cannot be used means the
+   built-in dark one; on a reload the window keeps what it shows. */
+static void settings_theme(int reload)
+{
+    theme.bold_bright=(unsigned char)settings.bold_bright;
     if(theme_from_command_line) return;
-    theme_default(&theme);
-    if(settings.theme[0] && theme_load(&theme,settings.theme)) {
+    if(!settings.theme[0]) {
         theme_default(&theme);
-        snprintf(settings_message,sizeof settings_message,
-                 "Settings: theme %.80s cannot be read; built-in dark theme",settings.theme);
+        theme.bold_bright=(unsigned char)settings.bold_bright;
+        return;
+    }
+    if(theme_by_value(&theme,settings.theme,reload?"nothing changed":"built-in dark theme") && !reload) {
+        theme_default(&theme);
+        theme.bold_bright=(unsigned char)settings.bold_bright;
     }
 }
 
@@ -2204,7 +2271,8 @@ static void settings_reload(void)
     strcpy(settings.theme,next.theme);
     /* What a new session runs: for the next one in this window (F4). */
     session_settings_load(&settings);
-    settings_theme();
+    colour_settings_load(&settings);
+    settings_theme(1);
     paint_damage_invalidate(&paint_damage);
     background_later=background_reload();
     if(settings_message[0]) clip_status=settings_message;
@@ -2419,8 +2487,10 @@ int main(int argc,char **argv)
         if(argc<3 || !*argv[2]) {
             puts("--theme requires a file path"); return RETURN_ERROR;
         }
-        if(theme_load(&theme,argv[2]))
-            puts("Cannot load theme; using built-in dark theme");
+        if(theme_by_value(&theme,argv[2],"built-in dark theme")) {
+            puts(settings_message); settings_message[0]=0;
+            theme_default(&theme);
+        }
         theme_from_command_line=1;
         for(i=1;i<argc-2;++i) argv[i]=argv[i+2];
         argc-=2;
@@ -2469,7 +2539,8 @@ int main(int argc,char **argv)
 #ifndef XTERM_DOS_HANDLER
     session_settings_load(&settings);
 #endif
-    settings_theme();
+    colour_settings_load(&settings);
+    settings_theme(0);
     if(settings_buffers()) {
         if(handler_mode) SetIoErr(ERROR_NO_FREE_STORE);
         else puts("Not enough memory for the scrollback");

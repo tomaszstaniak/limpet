@@ -90,6 +90,24 @@ int main(void)
     { char line[500]="session_command="; memset(line+16,'a',400); line[416]=0; rejects(line,1,"399"); }
     { char line[500]="session_command="; memset(line+16,'a',399); line[415]=0;
       settings_default(&s); assert(!parse(line,&why) && strlen(s.session_command)==399); }
-    puts("settings PASS: defaults, all keys, CR LF, spaces, bounds, whole-file rejection with line, session start");
+    /* Colours.conf: bold as bright, on unless the file turns it off. A new
+       key never goes into the older files: a Limpet up to 0.9.0 would
+       refuse the whole file. */
+    {
+        const char *reason=NULL;
+        XSettings c;
+        settings_default(&c);
+        assert(c.bold_bright==1);
+        assert(!settings_parse_colours(&c,"# colours\nbold_bright=off\n",strlen("# colours\nbold_bright=off\n"),&reason) && c.bold_bright==0);
+        assert(c.given==XSET_BOLD_BRIGHT);
+        assert(!settings_parse_colours(&c,"bold_bright = on\r\n",strlen("bold_bright = on\r\n"),&reason) && c.bold_bright==1);
+        assert(!settings_parse_colours(&c,"",strlen(""),&reason) && c.bold_bright==1 && !c.given);
+        assert(settings_parse_colours(&c,"bold_bright=yes\n",strlen("bold_bright=yes\n"),&reason)==1 && strstr(reason,"off or on"));
+        assert(settings_parse_colours(&c,"theme=x\n",strlen("theme=x\n"),&reason)==1 && strstr(reason,"unknown key"));
+        assert(settings_parse(&c,"bold_bright=off\n",strlen("bold_bright=off\n"),&reason)==1 && strstr(reason,"unknown key"));
+        assert(settings_parse_window(&c,"bold_bright=off\n",strlen("bold_bright=off\n"),&reason)==1);
+        assert(settings_parse_session(&c,"bold_bright=off\n",strlen("bold_bright=off\n"),&reason)==1);
+    }
+    puts("settings PASS: defaults, all keys, CR LF, spaces, bounds, whole-file rejection with line, session start, Colours.conf");
     return 0;
 }

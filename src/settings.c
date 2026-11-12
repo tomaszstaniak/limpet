@@ -8,6 +8,7 @@ void settings_default(XSettings *s)
     s->scrollback = XSETTINGS_SCROLLBACK_DEFAULT;
     s->history = XSETTINGS_HISTORY_DEFAULT;
     s->background_opacity = XSETTINGS_BACKGROUND_OPACITY_DEFAULT;
+    s->bold_bright = 1;
 }
 
 static int number(const char *v, size_t n, unsigned low, unsigned high, unsigned *out)
@@ -76,16 +77,21 @@ enum { SESSION_KEYS = XSET_SESSION_START|XSET_SESSION_COMMAND|XSET_FASTFETCH|XSE
 
 enum { WINDOW_KEYS = XSET_BACKGROUND_OPACITY|XSET_BACKGROUND_BLUR };
 
+enum { COLOUR_KEYS = XSET_BOLD_BRIGHT };
+
 static int parse(XSettings *out, const char *text, size_t length, const char **why, unsigned allowed);
 
 int settings_parse(XSettings *out, const char *text, size_t length, const char **why)
-{ return parse(out, text, length, why, ~(unsigned)(SESSION_KEYS|WINDOW_KEYS)); }
+{ return parse(out, text, length, why, ~(unsigned)(SESSION_KEYS|WINDOW_KEYS|COLOUR_KEYS)); }
 
 int settings_parse_session(XSettings *out, const char *text, size_t length, const char **why)
 { return parse(out, text, length, why, SESSION_KEYS); }
 
 int settings_parse_window(XSettings *out, const char *text, size_t length, const char **why)
 { return parse(out, text, length, why, WINDOW_KEYS); }
+
+int settings_parse_colours(XSettings *out, const char *text, size_t length, const char **why)
+{ return parse(out, text, length, why, COLOUR_KEYS); }
 
 static int parse(XSettings *out, const char *text, size_t length, const char **why, unsigned allowed)
 {
@@ -185,6 +191,12 @@ static int parse(XSettings *out, const char *text, size_t length, const char **w
             bit = XSET_BACKGROUND_BLUR;
             if (v < 0) { *why = "background_blur takes off or on"; return line; }
             s.background_blur = (unsigned)v;
+        } else if (KEY("bold_bright")) {
+            static const char *const w[] = { "off", "on" };
+            int v = word(text + vs, ve - vs, w, 2);
+            bit = XSET_BOLD_BRIGHT;
+            if (v < 0) { *why = "bold_bright takes off or on"; return line; }
+            s.bold_bright = (unsigned)v;
         } else { *why = "unknown key"; return line; }
 #undef KEY
         if (!(bit & allowed)) { *why = "unknown key"; return line; }

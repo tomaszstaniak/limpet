@@ -47,7 +47,8 @@ extern const char *const settings_group_names[XFF_GROUPS];
 enum { XSET_FONT=1, XSET_FONT_SIZE=2, XSET_THEME=4, XSET_SCROLLBACK=8, XSET_HISTORY=16,
        XSET_SESSION_START=32, XSET_SESSION_COMMAND=64, XSET_FASTFETCH=128,
        XSET_FASTFETCH_LOOK=256, XSET_FASTFETCH_CONFIG=512, XSET_FASTFETCH_HIDE=1024,
-       XSET_FASTFETCH_LOGO=2048, XSET_BACKGROUND_OPACITY=4096, XSET_BACKGROUND_BLUR=8192 };
+       XSET_FASTFETCH_LOGO=2048, XSET_BACKGROUND_OPACITY=4096, XSET_BACKGROUND_BLUR=8192,
+       XSET_BOLD_BRIGHT=16384 };
 typedef struct {
     char font[XSETTINGS_PATH_MAX];   /* empty: the built-in Vera Mono */
     char theme[XSETTINGS_PATH_MAX];  /* empty: the built-in dark theme */
@@ -61,6 +62,7 @@ typedef struct {
     unsigned fastfetch_logo;         /* XFF_LOGO_* */
     unsigned background_opacity;     /* percent */
     unsigned background_blur;        /* 0 or 1 */
+    unsigned bold_bright;            /* 0 or 1: bold palette colours 0..7 shown as 8..15 */
     unsigned given;                  /* XSET_* the file set */
 } XSettings;
 
@@ -78,4 +80,8 @@ int settings_parse_session(XSettings *s, const char *text, size_t length, const 
 /* The same for Window.conf beside them: the background keys. A file of its
  * own for the same reason; written by Limpet Preferences too. */
 int settings_parse_window(XSettings *s, const char *text, size_t length, const char **why);
+/* And for Colours.conf: bold_bright=on|off (on when absent). New keys get a
+ * file of their own, because a Limpet up to 0.9.0 refuses a Limpet.conf or
+ * Window.conf with a key it does not know. */
+int settings_parse_colours(XSettings *s, const char *text, size_t length, const char **why);
 #endif
