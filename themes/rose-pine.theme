@@ -1,0 +1,25 @@
+# Rose Pine
+# Colours by Rose Pine. Licence: MIT; see Licenses/Themes-LICENSES.txt.
+# Source: https://github.com/rose-pine/rose-pine-theme
+# Converted to Limpet's theme format; the colours are unchanged.
+background=#191724
+foreground=#e0def4
+cursor=#e0def4
+selection_bg=#403d52
+selection_fg=#e0def4
+ansi0=#26233a
+ansi1=#eb6f92
+ansi2=#31748f
+ansi3=#f6c177
+ansi4=#9ccfd8
+ansi5=#c4a7e7
+ansi6=#ebbcba
+ansi7=#e0def4
+ansi8=#6e6a86
+ansi9=#eb6f92
+ansi10=#31748f
+ansi11=#f6c177
+ansi12=#9ccfd8
+ansi13=#c4a7e7
+ansi14=#ebbcba
+ansi15=#e0def4

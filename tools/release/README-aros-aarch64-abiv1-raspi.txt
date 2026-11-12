@@ -93,8 +93,10 @@ Themes
 
 Project > Preferences, Appearance, lists the themes and shows the chosen
 one in the terminal at once. Included: dark (built in), light,
-high-contrast, magicwb and amigaos31. Colour files made for Ghostty, Kitty
-and iTerm2 (.itermcolors) work as they are: press "Open themes drawer" in
+high-contrast, magicwb and amigaos31, and ten popular schemes (Dracula,
+Solarized, Catppuccin, Nord, Gruvbox, Tokyo Night, One Dark, Rose Pine;
+their licences are in Licenses/Themes-LICENSES.txt). Colour files of other schemes, made
+for Ghostty, Kitty or iTerm2 (.itermcolors), work as they are: press "Open themes drawer" in
 Preferences, put the downloaded file into the drawer that opens
 (ENVARC:Limpet/Themes), and choose it from the list. Only colours are read
 from such a file. Programs that set colours of their own keep them.

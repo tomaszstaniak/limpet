@@ -1,5 +1,6 @@
 #include "session_start.h"
 #include "session_command.h"
+#include <stdio.h>
 #include <string.h>
 
 static int append(char *out, size_t capacity, size_t *n, const char *text)
@@ -76,4 +77,29 @@ long_line:
     *why = "the command is too long";
     out[0] = 0;
     return -1;
+}
+
+int session_start_script(const XSettings *s, char *out, size_t capacity, const char **why)
+{
+    char line[XSETTINGS_COMMAND_MAX + 2 * XSETTINGS_PATH_MAX + 64], quoted[2 * XSETTINGS_PATH_MAX + 3];
+    int r = session_start_line(s, line, sizeof line, why), n;
+    if (!capacity) { *why = "no room for the command"; return -1; }
+    out[0] = 0;
+    if (r <= 0) return r;
+    if (s->session_start != XSTART_FASTFETCH) n = snprintf(out, capacity, "%s", line);
+    else if (s->fastfetch[0]) {
+        /* The program chosen in Preferences: there, or not. */
+        if (session_quote_path(s->fastfetch, quoted, sizeof quoted)) {
+            *why = "the Fastfetch program's name cannot be used in a Shell line"; return -1;
+        }
+        n = snprintf(out, capacity, "If EXISTS %s\n%s\nElse\nEcho \"Fastfetch is not at the place set in Limpet Preferences (Shell).\"\nEndIf",
+                     quoted, line);
+    } else
+        /* By name: wherever this Shell's path finds it. */
+        n = snprintf(out, capacity, "Which >NIL: fastfetch\nIf NOT WARN\n%s\nElse\nEcho \"Fastfetch is not installed: Limpet Preferences (Shell) is set to run it.\"\nEndIf",
+                     line);
+    /* A line that leaves no room for the check is run as it is. */
+    if (n < 0 || (size_t)n >= capacity) n = snprintf(out, capacity, "%s", line);
+    if (n < 0 || (size_t)n >= capacity) { out[0] = 0; *why = "the command is too long"; return -1; }
+    return 1;
 }

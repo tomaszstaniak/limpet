@@ -17,6 +17,9 @@ New:
   once; it opens the themes drawer and sets the font, its size and the
   window background. Shell is the command for a new Shell window, as
   before. Terminal sets scrollback and command history.
+- **Ten popular schemes come with Limpet**: Dracula, Solarized Dark and
+  Light, Catppuccin Mocha and Latte, Nord, Gruvbox Dark, Tokyo Night, One
+  Dark and Rose Pine, each under its author's licence.
 - **MagicWB and AmigaOS 3.1 themes**, with their palettes as the Workbench
   pens. A theme in Limpet's own format may now give pens 2 to 7
   (`pen2=` to `pen7=`).
@@ -26,6 +29,9 @@ New:
 
 Changed:
 
+- A new Shell window set to run Fastfetch no longer shows the Shell's
+  "object not found" when Fastfetch is not installed or not where it was
+  chosen: it says so in one plain line and the Shell starts as usual.
 - The Shell prompt's colours stay readable with any palette: the accent
   pen is never the text colour, and a pen too close to the background is
   shown in the text colour. The themes that came with Limpet look as before.

@@ -260,7 +260,25 @@ static void bundled(void)
     theme_default(&t);
     assert(!theme_file_load(&t,"themes/amigaos31.theme",&r));
     assert(theme_pen(&t,0)==0xaaaaaa && theme_pen(&t,1)==0x000000 && theme_pen(&t,2)==0xffffff && theme_pen(&t,3)==0x6688bb);
-    puts("theme file PASS: bundled themes load and read on their backgrounds; MagicWB and AmigaOS 3.1 pens");
+    /* The popular schemes that come with Limpet: each loads, has its
+       published background, and gives a readable Shell prompt. */
+    {
+        static const struct { const char *file; uint32_t background; } others[]={
+            {"themes/dracula.theme",0x282a36},{"themes/solarized-dark.theme",0x002b36},
+            {"themes/solarized-light.theme",0xfdf6e3},{"themes/catppuccin-mocha.theme",0x1e1e2e},
+            {"themes/catppuccin-latte.theme",0xeff1f5},{"themes/nord.theme",0x2e3440},
+            {"themes/gruvbox-dark.theme",0x282828},{"themes/tokyo-night.theme",0x1a1b26},
+            {"themes/one-dark.theme",0x21252b},{"themes/rose-pine.theme",0x191724}};
+        for(f=0;f<sizeof others/sizeof *others;++f) {
+            theme_default(&t);
+            if(theme_file_load(&t,others[f].file,&r)) { printf("%s does not load\n",others[f].file); abort(); }
+            assert(r.format==XTHEME_FORMAT_NATIVE && t.background==others[f].background);
+            assert(apart(t.foreground,t.background)>=60);
+            assert(apart(theme_pen(&t,2),theme_pen(&t,3))>=48 && theme_pen(&t,3)!=t.foreground);
+            for(i=4;i<8;++i) assert(theme_pen(&t,i)==t.foreground || apart(theme_pen(&t,i),t.background)>=40);
+        }
+    }
+    puts("theme file PASS: bundled themes load and read on their backgrounds; MagicWB and AmigaOS 3.1 pens; ten popular schemes");
 }
 
 static const char *present[8];

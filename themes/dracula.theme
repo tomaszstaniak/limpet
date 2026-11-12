@@ -1,0 +1,26 @@
+# Dracula
+# Colours by Dracula Theme (Zeno Rocha and contributors). Licence: MIT; see
+# Licenses/Themes-LICENSES.txt.
+# Source: https://github.com/dracula/kitty
+# Converted to Limpet's theme format; the colours are unchanged.
+background=#282a36
+foreground=#f8f8f2
+cursor=#f8f8f2
+selection_bg=#44475a
+selection_fg=#ffffff
+ansi0=#21222c
+ansi1=#ff5555
+ansi2=#50fa7b
+ansi3=#f1fa8c
+ansi4=#bd93f9
+ansi5=#ff79c6
+ansi6=#8be9fd
+ansi7=#f8f8f2
+ansi8=#6272a4
+ansi9=#ff6e6e
+ansi10=#69ff94
+ansi11=#ffffa5
+ansi12=#d6acff
+ansi13=#ff92df
+ansi14=#a4ffff
+ansi15=#ffffff

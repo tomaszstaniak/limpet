@@ -1,0 +1,25 @@
+# Catppuccin Mocha
+# Colours by Catppuccin. Licence: MIT; see Licenses/Themes-LICENSES.txt.
+# Source: https://github.com/catppuccin/palette
+# Converted to Limpet's theme format; the colours are unchanged.
+background=#1e1e2e
+foreground=#cdd6f4
+cursor=#f5e0dc
+selection_bg=#f5e0dc
+selection_fg=#1e1e2e
+ansi0=#45475a
+ansi1=#f38ba8
+ansi2=#a6e3a1
+ansi3=#f9e2af
+ansi4=#89b4fa
+ansi5=#f5c2e7
+ansi6=#94e2d5
+ansi7=#bac2de
+ansi8=#585b70
+ansi9=#f7aec2
+ansi10=#c2ecbf
+ansi11=#fcd682
+ansi12=#aeccfc
+ansi13=#f398da
+ansi14=#b1eae1
+ansi15=#a6adc8

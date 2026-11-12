@@ -1,0 +1,25 @@
+# One Dark (Atom)
+# Colours by GitHub Inc. (Atom). Licence: MIT; see Licenses/Themes-LICENSES.txt.
+# Source: https://github.com/atom/atom/tree/master/packages/one-dark-ui
+# Converted to Limpet's theme format; the colours are unchanged.
+background=#21252b
+foreground=#abb2bf
+cursor=#abb2bf
+selection_bg=#323844
+selection_fg=#abb2bf
+ansi0=#21252b
+ansi1=#e06c75
+ansi2=#98c379
+ansi3=#e5c07b
+ansi4=#61afef
+ansi5=#c678dd
+ansi6=#56b6c2
+ansi7=#abb2bf
+ansi8=#767676
+ansi9=#e06c75
+ansi10=#98c379
+ansi11=#e5c07b
+ansi12=#61afef
+ansi13=#c678dd
+ansi14=#56b6c2
+ansi15=#abb2bf

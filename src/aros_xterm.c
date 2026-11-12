@@ -2452,7 +2452,7 @@ static int start_shell(void)
 #ifndef XTERM_DOS_HANDLER
     const char *why=NULL;
     if(!shell_profile) {
-        run=session_start_line(&settings,line,sizeof line-2,&why);
+        run=session_start_script(&settings,line,sizeof line-2,&why);
         if(run<0) {
             snprintf(settings_message,sizeof settings_message,"Session start: %s; not run",why);
             clip_status=settings_message;

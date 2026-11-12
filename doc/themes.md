@@ -14,9 +14,18 @@ in Preferences and, at once, in the terminal window Preferences was opened
 from. **Use** keeps it until the next restart of the system, **Save** for
 good, **Cancel** returns the window to the theme it had.
 
-Themes that come with Limpet: the built-in dark theme, `dark`, `light`,
-`high-contrast`, `magicwb` (the MagicWB palette) and `amigaos31` (the four
-default colours of Workbench 3.1).
+Themes that come with Limpet:
+
+- Limpet's own: the built-in dark theme, `dark`, `light`, `high-contrast`,
+  `magicwb` (the MagicWB palette) and `amigaos31` (the four default
+  colours of Workbench 3.1).
+- Popular schemes: `dracula`, `solarized-dark`, `solarized-light`,
+  `catppuccin-mocha`, `catppuccin-latte`, `nord`, `gruvbox-dark`,
+  `tokyo-night`, `one-dark` and `rose-pine`. Their colours are their
+  authors', used under their licences (`Licenses/Themes-LICENSES.txt` in
+  Limpet's drawer); each file names its source.
+
+For any other scheme, see the next section.
 
 ## Using a colour file made for another terminal
 

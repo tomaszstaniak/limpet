@@ -30,6 +30,7 @@ common() {  # $1 = drawer
     cp $root/assets/fonts/DejaVu-NerdFont-LICENSE.txt $1/Licenses/DejaVuSansM-NerdFont-LICENSE.txt
     cp $root/assets/fonts/NerdFonts-LICENSE.md $1/Licenses/NerdFonts-LICENSE.md
     cp $root/themes/*.theme $1/Themes/
+    cp $root/themes/THEME-LICENSES.txt $1/Licenses/Themes-LICENSES.txt
     cp $root/vendor/harfbuzz/COPYING $1/Licenses/HarfBuzz-COPYING.txt
     cp $root/vendor/utf8proc/LICENSE.md $1/Licenses/utf8proc-LICENSE.md
     cp $root/assets/fonts/COPYING $1/Licenses/Unifont-COPYING.txt

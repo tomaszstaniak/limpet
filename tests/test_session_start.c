@@ -42,6 +42,27 @@ int main(void)
     {   XSettings s; char small[20];
         settings_default(&s); s.session_start = XSTART_FASTFETCH; s.fastfetch_hide = 15;
         assert(session_start_line(&s, small, sizeof small, &why) == -1 && !small[0] && strstr(why, "too long")); }
-    puts("session start PASS: off, presets, groups, logo, quoted requester paths, own command, limits");
+    /* As lines of the startup script: Fastfetch only where it is found. */
+    {   XSettings s; char script[700], one[700];
+        settings_default(&s);
+        assert(session_start_script(&s, script, sizeof script, &why) == 0 && !script[0]);
+        s.session_start = XSTART_FASTFETCH;
+        assert(session_start_line(&s, one, sizeof one, &why) == 1);
+        assert(session_start_script(&s, script, sizeof script, &why) == 1);
+        assert(!strncmp(script, "Which >NIL: fastfetch\nIf NOT WARN\n", 34));
+        assert(strstr(script, one) && strstr(script, "\nElse\nEcho \"Fastfetch is not installed"));
+        assert(!strcmp(script + strlen(script) - 6, "\nEndIf"));
+        strcpy(s.fastfetch, "Work:My Tools/fastfetch");
+        assert(session_start_line(&s, one, sizeof one, &why) == 1);
+        assert(session_start_script(&s, script, sizeof script, &why) == 1);
+        assert(!strncmp(script, "If EXISTS \"Work:My Tools/fastfetch\"\n", 36));
+        assert(strstr(script, one) && strstr(script, "Fastfetch is not at the place set"));
+        /* No room for the check: the line alone, as before. */
+        assert(session_start_script(&s, script, strlen(one) + 1, &why) == 1 && !strcmp(script, one));
+        assert(session_start_script(&s, script, strlen(one), &why) == -1 && !script[0]);
+        /* An own command is the user's business: as written. */
+        settings_default(&s); s.session_start = XSTART_COMMAND; strcpy(s.session_command, "Echo hello");
+        assert(session_start_script(&s, script, sizeof script, &why) == 1 && !strcmp(script, "Echo hello")); }
+    puts("session start PASS: off, presets, groups, logo, quoted requester paths, own command, limits, script with a check");
     return 0;
 }

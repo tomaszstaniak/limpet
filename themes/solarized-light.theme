@@ -1,0 +1,27 @@
+# Solarized Light
+# Colours by Ethan Schoonover. Licence: MIT; see Licenses/Themes-LICENSES.txt.
+# Source: https://github.com/altercation/solarized (the sRGB values and the
+# terminal colour mapping of its README).
+# The bright colours of Solarized are not brighter versions of the normal
+# ones: turn off "Bold text uses the bright colours" in Preferences.
+background=#fdf6e3
+foreground=#657b83
+cursor=#586e75
+selection_bg=#eee8d5
+selection_fg=#586e75
+ansi0=#073642
+ansi1=#dc322f
+ansi2=#859900
+ansi3=#b58900
+ansi4=#268bd2
+ansi5=#d33682
+ansi6=#2aa198
+ansi7=#eee8d5
+ansi8=#002b36
+ansi9=#cb4b16
+ansi10=#586e75
+ansi11=#657b83
+ansi12=#839496
+ansi13=#6c71c4
+ansi14=#93a1a1
+ansi15=#fdf6e3
