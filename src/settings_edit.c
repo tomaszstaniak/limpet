@@ -2,11 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 
-enum { SESSION_KEYS = 7, KEYS = 9 };
+enum { SESSION_KEYS = 7, WINDOW_KEYS = 9, MAIN_KEYS = 14, KEYS = 15 };
 static const char *const keys[KEYS] = {
     "session_start", "session_command", "fastfetch", "fastfetch_look",
     "fastfetch_config", "fastfetch_hide", "fastfetch_logo",
-    "background_opacity", "background_blur"
+    "background_opacity", "background_blur",
+    "font", "font_size", "theme", "scrollback", "history",
+    "bold_bright"
 };
 
 /* The value of key k, or NULL when it is at its default. */
@@ -35,6 +37,21 @@ static const char *value(const XSettings *s, int k, char *buffer, size_t size)
         snprintf(buffer, size, "%u", s->background_opacity);
         return buffer;
     case 8: return s->background_blur ? "on" : NULL;
+    case 9: return s->font[0] ? s->font : NULL;
+    case 10:
+        if (s->font_size == XSETTINGS_FONT_SIZE_DEFAULT) return NULL;
+        snprintf(buffer, size, "%u", s->font_size);
+        return buffer;
+    case 11: return s->theme[0] ? s->theme : NULL;
+    case 12:
+        if (s->scrollback == XSETTINGS_SCROLLBACK_DEFAULT) return NULL;
+        snprintf(buffer, size, "%u", s->scrollback);
+        return buffer;
+    case 13:
+        if (s->history == XSETTINGS_HISTORY_DEFAULT) return NULL;
+        snprintf(buffer, size, "%u", s->history);
+        return buffer;
+    case 14: return s->bold_bright ? NULL : "off";
     default: return s->fastfetch_logo != XFF_LOGO_LOOK && s->fastfetch_logo <= XFF_LOGO_NONE ? logo[s->fastfetch_logo] : NULL;
     }
 }
@@ -110,4 +127,12 @@ int settings_edit_session(const char *old, size_t old_length, const XSettings *s
 
 int settings_edit_window(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
                          size_t *length)
-{ return edit(old, old_length, s, out, capacity, length, SESSION_KEYS, KEYS); }
+{ return edit(old, old_length, s, out, capacity, length, SESSION_KEYS, WINDOW_KEYS); }
+
+int settings_edit_main(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
+                       size_t *length)
+{ return edit(old, old_length, s, out, capacity, length, WINDOW_KEYS, MAIN_KEYS); }
+
+int settings_edit_colours(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
+                          size_t *length)
+{ return edit(old, old_length, s, out, capacity, length, MAIN_KEYS, KEYS); }

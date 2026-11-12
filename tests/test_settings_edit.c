@@ -67,6 +67,44 @@ int main(void)
         memset(big, '#', sizeof big - 10); big[sizeof big - 10] = '\n'; big[sizeof big - 9] = 0;
         settings_default(&s); s.session_start = XSTART_COMMAND; strcpy(s.session_command, "Echo a long enough line");
         assert(!settings_edit_session(big, strlen(big), &s, out, sizeof out, &n)); }
+    /* Limpet.conf: the user's own lines stay where they are. */
+    {
+        static const char old[]="# my settings\nfont=FONTS:TrueType/DejaVuSansMono.ttf\n\n# colours\ntheme=Old\nscrollback=500\n";
+        XSettings m, back;
+        const char *why=NULL;
+        char text[XSETTINGS_FILE_MAX+1];
+        size_t length;
+        settings_default(&m);
+        assert(!settings_parse(&m,old,strlen(old),&why));
+        strcpy(m.theme,"Dracula"); m.font_size=15; m.scrollback=XSETTINGS_SCROLLBACK_DEFAULT;
+        assert(settings_edit_main(old,strlen(old),&m,text,sizeof text,&length));
+        assert(!strcmp(text,"# my settings\nfont=FONTS:TrueType/DejaVuSansMono.ttf\n\n# colours\ntheme=Dracula\nfont_size=15\n"));
+        settings_default(&back);
+        assert(!settings_parse(&back,text,length,&why));
+        assert(!strcmp(back.theme,"Dracula") && back.font_size==15 && back.scrollback==XSETTINGS_SCROLLBACK_DEFAULT);
+        /* No theme chosen: the built-in one, the line goes. A path with spaces stays whole. */
+        m.theme[0]=0; strcpy(m.font,"Work:My Fonts/Mono.ttf");
+        assert(settings_edit_main(text,length,&m,text+2048,2048,&length));
+        assert(!strcmp(text+2048,"# my settings\nfont=Work:My Fonts/Mono.ttf\n\n# colours\nfont_size=15\n"));
+        /* From nothing; and nothing chosen leaves an empty file. */
+        settings_default(&m); strcpy(m.theme,"magicwb"); m.history=100;
+        assert(settings_edit_main("",0,&m,text,sizeof text,&length));
+        assert(!strcmp(text,"theme=magicwb\nhistory=100\n"));
+        settings_default(&m);
+        assert(settings_edit_main("theme=x\n",8,&m,text,sizeof text,&length) && !length);
+        /* The session and window keys are not this file's: left alone as unknown lines. */
+        assert(settings_edit_main("bold_bright=off\ntheme=x\n",24,&m,text,sizeof text,&length));
+        assert(!strcmp(text,"bold_bright=off\n"));
+        /* Colours.conf. */
+        settings_default(&m);
+        assert(settings_edit_colours("# c\n",4,&m,text,sizeof text,&length) && !strcmp(text,"# c\n"));
+        m.bold_bright=0;
+        assert(settings_edit_colours("# c\n",4,&m,text,sizeof text,&length) && !strcmp(text,"# c\nbold_bright=off\n"));
+        settings_default(&back);
+        assert(!settings_parse_colours(&back,text,length,&why) && back.bold_bright==0);
+        m.bold_bright=1;
+        assert(settings_edit_colours(text,length,&m,text+2048,2048,&length) && !strcmp(text+2048,"# c\n"));
+    }
     puts("settings edit PASS: other lines kept in place, keys replaced or appended, defaults left out, round trip, size");
     return 0;
 }

@@ -14,4 +14,12 @@ int settings_edit_session(const char *old, size_t old_length, const XSettings *,
 /* The same for the background keys in Window.conf. */
 int settings_edit_window(const char *old, size_t old_length, const XSettings *, char *out, size_t capacity,
                          size_t *length);
+/* The same for Limpet.conf: font, font_size, theme, scrollback, history.
+ * These are the keys Limpet.conf always had, so an older Limpet reads the
+ * result. */
+int settings_edit_main(const char *old, size_t old_length, const XSettings *, char *out, size_t capacity,
+                       size_t *length);
+/* And for Colours.conf: bold_bright. */
+int settings_edit_colours(const char *old, size_t old_length, const XSettings *, char *out, size_t capacity,
+                          size_t *length);
 #endif
