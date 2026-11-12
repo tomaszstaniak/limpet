@@ -43,6 +43,26 @@ static void erase_range(XTermScreen *s, size_t first, size_t end)
     fill(s->cells + first, end - first, s->style);
 }
 
+static int dark_background(const XTermScreen *s)
+{
+    uint32_t b=s->colours[17];
+    return ((b>>16&255)*299+(b>>8&255)*587+(b&255)*114)/1000<128;
+}
+/* CSI ? 997 ; 1 n for a dark background, ; 2 n for a light one. */
+static void scheme_report(XTermScreen *s)
+{
+    if(s->reply) s->reply(s->reply_context,(const unsigned char *)(dark_background(s)?"\033[?997;1n":"\033[?997;2n"),9);
+}
+void screen_set_colours(XTermScreen *s,const uint32_t ansi[16],uint32_t foreground,uint32_t background,
+                        uint32_t cursor)
+{
+    int was_known=(int)s->colours_known,was_dark=was_known && dark_background(s);
+    memcpy(s->colours,ansi,16*sizeof *ansi);
+    s->colours[16]=foreground; s->colours[17]=background; s->colours[18]=cursor;
+    s->colours_known=1;
+    if(was_known && s->colour_scheme_report && was_dark!=dark_background(s)) scheme_report(s);
+}
+
 int screen_init(XTermScreen *s, XTermCell *cells, size_t count,
                 unsigned rows, unsigned columns)
 {
@@ -496,6 +516,10 @@ static void execute_csi(XTermScreen *s, unsigned char command)
         if(s->reply && s->csi_reply_enabled) {
             if(mode==5 && !s->csi_private)
                 s->reply(s->reply_context,(const unsigned char *)"\033[0n",4);
+            else if(mode==996 && s->csi_private) {
+                /* Dark or light, for programs that pick their colours by it. */
+                if(s->colours_known) scheme_report(s);
+            }
             else if(mode==6) {
                 char response[XSCREEN_REPLY_CAPACITY];
                 int length=snprintf(response,sizeof response,"%s%s%u;%uR",
@@ -558,6 +582,7 @@ static void execute_csi(XTermScreen *s, unsigned char command)
                     if(command=='l' && s->sync_update) ++s->sync_ends;
                     s->sync_update=command=='h';
                 }
+                else if(s->params[i]==2031) s->colour_scheme_report=command=='h';
                 else if(s->params[i]==2100) s->wheel_report=command=='h';
             }
         }
@@ -833,12 +858,20 @@ static void put_scalar(XTermScreen *s, uint32_t scalar)
 
 /* Only OSC 8 (links) and OSC 0/2 (title) are interpreted. Every other OSC
  * is discarded through its terminator, including malformed and overflowing
- * payloads. Phases: 0 command, 1-3 link, 4 discard, 5 title ';', 6 title. */
+ * payloads. Phases: 0 command, 1-3 link, 4 discard, 5 title ';', 6 title,
+ * 7 a command starting with 1 or 4, kept whole: a colour query if it is one. */
 static void osc_byte(XTermScreen *s,unsigned char ch)
 {
     /* A title is UTF-8, checked whole when it ends; a link is ASCII. */
     if(ch<32 || ch==127 || (ch>=128 && s->osc_phase!=6)) s->osc_invalid=1;
-    if(s->osc_phase==0) s->osc_phase=ch=='8'?1:ch=='0' || ch=='2'?5:4;
+    if(s->osc_phase==0) {
+        s->osc_phase=ch=='8'?1:ch=='0' || ch=='2'?5:ch=='1' || ch=='4'?7:4;
+        if(s->osc_phase==7) { s->osc_colour[0]=(char)ch; s->osc_length=1; }
+    }
+    else if(s->osc_phase==7) {
+        if(s->osc_length<sizeof s->osc_colour-1) s->osc_colour[s->osc_length++]=(char)ch;
+        else s->osc_invalid=1;
+    }
     else if(s->osc_phase==5) s->osc_phase=ch==';'?6:4;
     else if(s->osc_phase==6) {
         if(s->osc_length<XSCREEN_TITLE_MAX) s->osc_title[s->osc_length++]=(char)ch;
@@ -880,8 +913,47 @@ static int title_valid(const unsigned char *t,size_t n)
     return 1;
 }
 
-static void osc_end(XTermScreen *s)
+/* OSC 10;? 11;? 12;? and 4;N;? : the colour asked for, as
+   rgb:RRRR/GGGG/BBBB, ended the way the query was. Anything else that
+   starts with 1 or 4 (setting a colour, OSC 104, 110...) is not offered. */
+static void colour_query(XTermScreen *s,int bel)
 {
+    char response[XSCREEN_REPLY_CAPACITY];
+    const char *q=s->osc_colour;
+    unsigned index=19;
+    int length;
+    uint32_t rgb;
+    s->osc_colour[s->osc_length]=0;
+    if(!s->colours_known || !s->reply || !s->escape_reply_enabled) return;
+    if(!strcmp(q,"10;?")) index=16;
+    else if(!strcmp(q,"11;?")) index=17;
+    else if(!strcmp(q,"12;?")) index=18;
+    else if(q[0]=='4' && q[1]==';' && q[2]>='0' && q[2]<='9') {
+        unsigned n=0;
+        const char *p=q+2;
+        while(*p>='0' && *p<='9' && n<1000) n=n*10+(unsigned)(*p++-'0');
+        if(strcmp(p,";?") || n>15) return;
+        index=n;
+        rgb=s->colours[index];
+        length=snprintf(response,sizeof response,"\033]4;%u;rgb:%02x%02x/%02x%02x/%02x%02x%s",n,
+            (unsigned)(rgb>>16&255),(unsigned)(rgb>>16&255),(unsigned)(rgb>>8&255),(unsigned)(rgb>>8&255),
+            (unsigned)(rgb&255),(unsigned)(rgb&255),bel?"\007":"\033\\");
+        if(length>0 && (size_t)length<sizeof response)
+            s->reply(s->reply_context,(const unsigned char *)response,(size_t)length);
+        return;
+    }
+    if(index==19) return;
+    rgb=s->colours[index];
+    length=snprintf(response,sizeof response,"\033]%u;rgb:%02x%02x/%02x%02x/%02x%02x%s",index-6,
+        (unsigned)(rgb>>16&255),(unsigned)(rgb>>16&255),(unsigned)(rgb>>8&255),(unsigned)(rgb>>8&255),
+        (unsigned)(rgb&255),(unsigned)(rgb&255),bel?"\007":"\033\\");
+    if(length>0 && (size_t)length<sizeof response)
+        s->reply(s->reply_context,(const unsigned char *)response,(size_t)length);
+}
+
+static void osc_end(XTermScreen *s,int bel)
+{
+    if(s->osc_phase==7 && !s->osc_invalid) colour_query(s,bel);
     if(s->osc_phase==6 && !s->osc_invalid &&
        title_valid((const unsigned char *)s->osc_title,s->osc_length)) {
         memcpy(s->title,s->osc_title,s->osc_length);
@@ -993,7 +1065,7 @@ void screen_write(XTermScreen *s, const unsigned char *bytes, size_t count)
         if (s->parser == OSC || s->parser == OSC_ESCAPE) {
             if (ch == 7 || (s->parser == OSC_ESCAPE && ch == '\\')) {
                 if(ch==7 && s->parser==OSC_ESCAPE) s->osc_invalid=1;
-                osc_end(s);
+                osc_end(s,ch==7);
             }
             else {
                 if(s->parser==OSC_ESCAPE) s->osc_invalid=1;

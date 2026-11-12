@@ -448,6 +448,13 @@ build/test_theme_file: tests/test_theme_file.c $(THEME_FILE_SRC) src/theme.h src
 
 test: build/test_theme_file
 
+build/test_colour_queries: tests/test_colour_queries.c src/screen_model.c src/hyperlink.c src/screen_model.h src/hyperlink.h $(UNICODE_SRC)
+	@mkdir -p build
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $(UNICODE_FLAGS) $< src/screen_model.c src/hyperlink.c $(UNICODE_SRC) -o $@
+	./$@
+
+test: build/test_colour_queries
+
 build/test_theme_list: tests/test_theme_list.c src/theme_list.c src/theme_list.h
 	@mkdir -p build
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror -g -fsanitize=address,undefined $< src/theme_list.c -o $@

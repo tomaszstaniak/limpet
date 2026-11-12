@@ -74,6 +74,15 @@ typedef struct XTermScreen {
      * arrives in one read is still seen as complete. */
     unsigned sync_update;
     unsigned long sync_ends;
+    /* DEC 2031: the client wants to hear when the colours change between a
+     * dark and a light background (answered as CSI ? 997 ; 1 or 2 n). */
+    unsigned colour_scheme_report;
+    /* What the frontend draws with, for programs that ask (OSC 10, 11, 12,
+     * 4 with "?", CSI ? 996 n): palette 0..15, then foreground, background
+     * and cursor. Unknown until screen_set_colours: no answers before. */
+    uint32_t colours[19];
+    unsigned colours_known;
+    char osc_colour[16];
     unsigned wheel_report;      /* private 2100: wheel steps as SGR reports, buttons not taken (hardcode L5) */
     unsigned modify_enter;      /* CSI > 4 ; 1 m: Shift+Enter as CSI 27;2;13~ in raw mode (Bishop) */
     /* Optional synchronous reply sink; must copy bytes and not reenter this
@@ -197,4 +206,9 @@ XTermCell screen_line_cell(const XTermScreen *, unsigned, unsigned);
 /* The same logical row's cells (columns of them), or NULL past the end.
  * Valid until the next write, resize or attach. */
 const XTermCell *screen_line_row(const XTermScreen *, unsigned);
+/* The frontend's colours, after every change of theme (and after
+ * screen_init, which forgets them). With DEC 2031 set, a change between a
+ * dark and a light background is reported through the reply sink. */
+void screen_set_colours(XTermScreen *, const uint32_t ansi[16], uint32_t foreground, uint32_t background,
+                        uint32_t cursor);
 #endif

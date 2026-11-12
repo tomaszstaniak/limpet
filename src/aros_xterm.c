@@ -2188,6 +2188,17 @@ static int theme_by_value(XTheme *into,const char *value,const char *instead)
     return result;
 }
 
+/* Programs may ask the screen model what the colours are (OSC 10, 11, 12,
+   4; dark or light). It is told whenever the theme in use differs from
+   what it knows, which also covers a model that was set up again. */
+static void colours_sync(void)
+{
+    if(screen.colours_known && !memcmp(screen.colours,theme.ansi,sizeof theme.ansi) &&
+       screen.colours[16]==theme.foreground && screen.colours[17]==theme.background &&
+       screen.colours[18]==theme.cursor) return;
+    screen_set_colours(&screen,theme.ansi,theme.foreground,theme.background,theme.cursor);
+}
+
 /* The settings' theme. At start a theme that cannot be used means the
    built-in dark one; on a reload the window keeps what it shows. */
 static void settings_theme(int reload)
@@ -2735,6 +2746,7 @@ int main(int argc,char **argv)
         uint64_t loop_started;
 #endif
         replies_sync();
+        colours_sync();
         int paste_ready=paste.length && !paste.confirmation &&
             !reply_flow.length &&
             (echo_mode!=2 || (!process_session.eof &&
