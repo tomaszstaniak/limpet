@@ -24,8 +24,7 @@ Image: NASA, ESA, CSA, STScI.
   for AROS ABIv11, x86_64 (AROS One and similar), and for mainline AROS,
   x86_64.
 - A test build of 0.10.0 for AROS on the Raspberry Pi (AArch64) in the same
-  release. This build was not run; 0.9.0 ran under QEMU's Pi model, none yet
-  on a Raspberry Pi.
+  release. It was run under QEMU's Pi model, not yet on a Raspberry Pi.
 - [SDK 0.6.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.6.0)
   for application developers.
 - The separate `LIMPET:` console handler is an experimental download in the
@@ -101,7 +100,7 @@ Each system has its own archive on the
 | --- | --- | --- |
 | AROS One and other ABIv11 systems, x86_64 | `Limpet-0.10.0-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
 | mainline AROS (ABIv1), x86_64 | `Limpet-0.10.0-aros-x86_64-abiv1-pc.zip` | listed in the catalogue; the [apkg build for mainline](https://github.com/tomaszstaniak/arospkg) is experimental |
-| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.10.0-aros-aarch64-abiv1-raspi.zip` | not listed |
+| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.10.0-aros-aarch64-abiv1-raspi.zip` | `apkg install limpet` |
 
 Releases up to 0.7.0 named the same archives `-abiv11`, `-v1-x86_64` and
 `-v1-aarch64`.

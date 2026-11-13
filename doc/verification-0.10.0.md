@@ -12,7 +12,7 @@ guest.
 | --- | --- |
 | AROS One 1.3, x86_64 ABIv11 | Preferences lists the themes that come with Limpet. Handler archive: `con-contract` without keys, its `auto` and `window` checks against `LIMPET:`, and without keys against `CON:` with `LimpetCON ON`: no failed check; `NewShell` with `LimpetCON ON` opens a Limpet window. A window set to run Fastfetch on a system without it shows "Fastfetch is not installed: ..." and a prompt; with a program chosen that exists, the program runs. |
 | official nightly 20261110, x86_64 ABIv1 | A window with `font_size=16`, `theme=dracula` (by name) and Fastfetch set but not installed: the larger font, Dracula's colours, the one-line note and a prompt. Handler archive: `con-contract` without keys and `auto` against `LIMPET:`, `auto` against the system's `CON:` and against `CON:` with `LimpetCON ON`: no failed check; `NewShell` with `LimpetCON ON` opens a Limpet window; `LimpetCON OFF` returns the system's console. |
-| Raspberry Pi, AArch64 ABIv1 | Built; not run for this release. |
+| official nightly 20261110, AArch64 ABIv1 Pi (QEMU raspi3b), run on 2026-11-13 after the release | A window with `theme=dracula` and Fastfetch set to a place where it is not: Dracula's colours, the one-line note and a prompt. Preferences from the window: the theme list, MagicWB shown in the terminal at once, Cancel returns to Dracula. Handler archive: `con-contract` without keys, `auto` and `window` against `LIMPET:`, and without keys against `CON:` with `LimpetCON ON`: no failed check; `NewShell` with `LimpetCON ON` opens a Limpet window; `LimpetCON OFF` returns the system's console. |
 
 Checked on a build of the same source made earlier that day, before the last
 correction (below): "Add file..." through the requester copied a colour file
@@ -47,7 +47,7 @@ the table above.
 - A themes drawer with several hundred files. Programs started from
   Workbench with console windows under `LimpetCON ON`. Keys typed into a
   `WINDOW` console.
-- The Pi build, physical hardware, ABIv11 2026.09.
+- Physical hardware (also for the Pi build), ABIv11 2026.09.
 
 ## Catalogue
 
@@ -65,4 +65,12 @@ was run from the unpacked release archive (table above).
 
 The published archives were downloaded again and match the tested ones
 byte for byte; the public catalogue lists 0.10.0 for x86_64 ABIv11 and
-ABIv1. The Raspberry Pi build stays outside the catalogue.
+ABIv1.
+
+The Raspberry Pi build was added to the catalogue on 2026-11-13, after the
+release: the catalogue lists AArch64 builds for the Pi, and leaving Limpet
+out was an oversight. With published apkg 0.7.8 on the Pi system under
+QEMU, `apkg update` and `apkg install limpet` from the public catalogue
+into a RAM package root: the archive is fetched and verified, `apkg
+verify` finds all 33 files as installed, and the installed copy reports
+0.10.0 and opens a Shell. Removal with apkg was not exercised.
