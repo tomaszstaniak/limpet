@@ -14,7 +14,7 @@ Built for AROS on the Raspberry Pi (ABIv1, AArch64) with the Developer SDK
 of the raspi-aarch64 system of 2026-08-22. This is a test build: it was run
 under QEMU's Raspberry Pi 3 model, not yet on a real Raspberry Pi. Reports
 from a real Pi are welcome. It is a build for the native Pi system; it
-has not been checked on hosted AArch64 AROS (Macaros). x86_64 AROS needs
+has not been checked on hosted AArch64 AROS. x86_64 AROS needs
 a build of its own.
 
 Limpet does not replace the system console (CON:): programs that open

@@ -53,8 +53,8 @@ that every POSIX terminal application will run unchanged.
 Continue building for mainline x86_64 and Raspberry Pi alongside ABIv11.
 Use mainline facilities where available while retaining compatible paths
 for older systems. The Pi build still needs testing on physical hardware.
-Macaros work is parked; sharing AArch64 and ABIv1 does not establish binary
-compatibility. i386 and other architectures need their own dependency,
+Sharing AArch64 and ABIv1 with a hosted AArch64 AROS does not establish binary
+compatibility: the Pi build is for the native Pi system. i386 and other architectures need their own dependency,
 build and runtime checks before a release is promised.
 
 Mainline builds of 2026-10-24 to 2026-10-26 report support for translucent

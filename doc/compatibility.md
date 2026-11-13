@@ -19,7 +19,7 @@ Build and runtime details: [0.10.0](verification-0.10.0.md), [0.9.0](verificatio
 ABIv11 x86_64.
 
 The Pi build is meant for the native Pi system; it has not been checked on
-Macaros (hosted AArch64), which has no Limpet build of its own. Other
+hosted AArch64 AROS, which has no Limpet build of its own. Other
 architectures and other Amiga-family systems have no published Limpet build.
 Each system needs its own binaries built with its SDK. An ABI match alone
 does not establish compatibility with a particular system.
