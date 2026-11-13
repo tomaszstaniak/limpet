@@ -449,11 +449,13 @@ static int auto_checks(const char *name)
     if (!h) return 0;
     Delay(150);
     after = windows("AutoProbe", NULL, &titled, &present);
-    CHECK("auto.deferred", after == before && !titled, "3 s after the open: windows %d -> %d, titled=%d", before, after, titled);
+    /* Only the console's own window counts: another window on the screen
+       may open or close meanwhile (a console of an earlier check closing). */
+    CHECK("auto.deferred", !titled, "3 s after the open: windows %d -> %d, titled=%d", before, after, titled);
     CHECK("auto.interactive", IsInteractive(h) != 0, "IsInteractive=%ld", (long)IsInteractive(h));
     Delay(50);
     after = windows("AutoProbe", NULL, &titled, &present);
-    CHECK("auto.still", after == before && !titled, "after IsInteractive: windows %d -> %d, titled=%d", before, after, titled);
+    CHECK("auto.still", !titled, "after IsInteractive: windows %d -> %d, titled=%d", before, after, titled);
     n = Write(h, "AUTO: first write\n", 18);
     Delay(150);
     after = windows("AutoProbe", NULL, &titled, &present);
