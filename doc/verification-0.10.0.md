@@ -51,4 +51,18 @@ the table above.
 
 ## Catalogue
 
-See the end of this record, added after publication.
+After publication, 2026-11-13. With published apkg 0.7.7 on AROS One, in a
+RAM package root: Limpet 0.9.0 installed from the previous catalogue, a
+file of the user's added under `Themes`, then `apkg upgrade limpet` to
+0.10.0 from the public release. The plan was 13 files added, 3 replaced,
+the user's file kept, 17 unchanged. `apkg verify` finds 33 files as
+installed and the user's file apart from the package. The upgraded copy
+reports 0.10.0 and opens a Shell.
+
+On the mainline nightly the same was not possible: the test machine had no
+name resolution, so apkg could not fetch the archive. The mainline archive
+was run from the unpacked release archive (table above).
+
+The published archives were downloaded again and match the tested ones
+byte for byte; the public catalogue lists 0.10.0 for x86_64 ABIv11 and
+ABIv1. The Raspberry Pi build stays outside the catalogue.
