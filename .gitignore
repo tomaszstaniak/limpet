@@ -18,6 +18,7 @@
 !/sdk/
 !/.github/
 !/CONTRIBUTING.md
+!/website/
 /sdk/build/
 /sdk/lib/
 /vendor/doomgeneric/

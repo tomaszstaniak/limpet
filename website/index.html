@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Limpet — A modern terminal for AROS</title>
+<meta name="description" content="Limpet runs the AROS Shell with UTF-8, 24-bit colour, scrollback, search, clickable links, inline images and themes. Downloads for PC and Raspberry Pi.">
+<meta name="theme-color" content="#f5f4ef"><meta property="og:title" content="Limpet"><meta property="og:description" content="A modern terminal for AROS: UTF-8, 24-bit colour, scrollback, links, images and themes."><meta property="og:type" content="website"><meta property="og:image" content="https://tomaszstaniak.github.io/limpet/assets/fastfetch.png">
+<link rel="icon" href="assets/icon.png" type="image/png"><link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header wrap"><a href="#" class="brand" aria-label="Limpet home"><img src="assets/icon.png" width="30" height="30" alt="">Limpet</a><nav aria-label="Main navigation"><a href="#why">Why Limpet</a><a href="#programs">Programs</a><a href="#themes">Themes</a><a href="#con">CON: replacement</a><a href="https://github.com/tomaszstaniak/limpet">Source ↗</a><a class="nav-download" href="#download">Download ↓</a></nav></header>
+<main id="main">
+
+<section class="hero wrap">
+<div><p class="eyebrow"><span class="status-dot"></span> For the AROS Shell</p><h1>A modern terminal<br>for <em>AROS.</em></h1><p class="intro">Limpet runs the native AROS Shell in a window with UTF-8 text, 24-bit colour, scrollback, search, copy and paste, clickable links and inline images. Your commands, scripts and assigns stay as they are.</p><div class="hero-actions"><a class="button" href="#download">Get Limpet <span aria-hidden="true">↓</span></a><a class="text-link" href="#why">Why Limpet <span aria-hidden="true">↘</span></a></div><p class="fine">Open source (MIT) · PC &amp; Raspberry Pi · Version 0.10.1</p></div>
+<figure class="shot"><img src="assets/fastfetch.png" width="990" height="678" alt="Limpet window on AROS One showing Fastfetch output: the AROS logo as a picture, system details and coloured memory bars"><figcaption>Fastfetch in Limpet 0.10.1 on AROS One, Tokyo Night theme. The logo is a picture drawn in the terminal.</figcaption></figure>
+</section>
+
+<nav class="section-index wrap" aria-label="Sections"><a href="#why">Why Limpet ↗</a><a href="#shell">Shell features ↗</a><a href="#programs">Fastfetch, eza, Helix ↗</a><a href="#themes">Themes &amp; Preferences ↗</a><a href="#images">Images ↗</a><a href="#con">CON: replacement ↗</a><a href="#next">SSH &amp; what is next ↗</a><a href="#developers">For programmers ↗</a></nav>
+
+<section id="why" class="section wrap">
+<div class="section-heading"><div><p class="eyebrow">Why Limpet</p><h2>The goal is<br>to replace CON:.</h2></div><p class="section-lead">I wanted a modern terminal on AROS, so I started building Limpet.</p></div>
+<div class="two top">
+<div>
+<p>The AROS console, <code>CON:</code>, shows Latin-1 text in a handful of pens. Tools written in the last twenty years expect more: UTF-8, 256 and 24-bit colours, links, a screen they can redraw. Without that, ports of current command-line programs either look broken or need a special AROS mode.</p>
+<p>Limpet is meant to become the console you use every day. That means two things at once: existing AROS software keeps working as it does in <code>CON:</code>, and current command-line tools, full-screen programs and remote sessions over SSH work as they do elsewhere.</p>
+<p>Today Limpet runs beside the system console. The Shell inside it is the ordinary AROS Shell; Limpet is the window, the text renderer, the keyboard and the history. The <a href="#con"><u>experimental handler</u></a> can already stand in for <code>CON:</code>.</p>
+<p class="note">The comparison on the right uses one test program that sends the same bytes to both consoles without asking first. It covers these sequences on the named system and is not a complete compatibility table.</p>
+</div>
+<div>
+<div class="table-scroll"><table class="compare"><thead><tr><th>Bytes sent</th><th>CON:</th><th>Limpet</th></tr></thead><tbody>
+<tr><td>UTF-8 text: Polish letters, CJK, an emoji</td><td>shown as Latin-1 characters</td><td>shown correctly</td></tr>
+<tr><td><code>ESC[31m</code></td><td>pen 1</td><td>pen 1, as in CON:</td></tr>
+<tr><td>256 colours, <code>ESC[38;5;196m</code></td><td>ignored</td><td>bright red</td></tr>
+<tr><td>24-bit colour, <code>ESC[38;2;255;128;0m</code></td><td>ignored</td><td>orange</td></tr>
+<tr><td>OSC 8 link</td><td>sequence printed as text</td><td>label shown as a link</td></tr>
+<tr><td>Capability query (DOS packet)</td><td><code>ERROR_ACTION_NOT_KNOWN</code></td><td>colour level, pens, size</td></tr>
+</tbody></table></div>
+<figure class="shot" style="margin-top:26px"><img src="assets/sdk-con-compare.png" width="640" height="240" loading="lazy" alt="The test program in CON:: UTF-8 shown as Latin-1 characters, colour sequences ignored"><figcaption>The test program in <code>CON:</code>.</figcaption></figure>
+<figure class="shot" style="margin-top:18px"><img src="assets/sdk-limpet-compare.png" width="680" height="190" loading="lazy" alt="The same test program in Limpet: UTF-8 text, 256 and 24-bit colours and a link"><figcaption>The same program in Limpet. Both on AROS ABIv11 2026.09 under QEMU, Limpet 0.1.0.</figcaption></figure>
+</div>
+</div>
+</section>
+
+<section id="shell" class="section tinted"><div class="wrap">
+<div class="section-heading"><div><p class="eyebrow">Shell features</p><h2>What you get<br>in the Shell.</h2></div><p class="section-lead">Everything below works with the standard AROS Shell and its commands. Nothing needs to be installed besides Limpet.</p></div>
+<div class="cols">
+<article><h3>UTF-8 and fonts</h3><p>Latin, Greek, Cyrillic, CJK, combining characters and monochrome emoji. DejaVu Sans Mono Nerd Font is included, with fallbacks for other scripts. Right-to-left layout is not supported.</p></article>
+<article><h3>Colour</h3><p>16, 256 and 24-bit colour. Native Shell output keeps its Workbench pens, so the prompt and <code>List</code> look the way AROS programs intend.</p></article>
+<article><h3>Scrollback and resize</h3><p>Scroll with the wheel or <kbd>Shift</kbd>+<kbd>PgUp</kbd>. When you resize the window, the text on screen and in the history is wrapped again to the new width.</p></article>
+<article><h3>Search</h3><p><kbd>RAmiga</kbd>+<kbd>F</kbd> finds text in the output, including what has scrolled away. <kbd>Ctrl</kbd>+<kbd>R</kbd> searches the commands you typed earlier.</p></article>
+<article><h3>Copy and paste</h3><p>Select with the mouse, copy with <kbd>RAmiga</kbd>+<kbd>C</kbd>, paste with <kbd>RAmiga</kbd>+<kbd>V</kbd>, through the system clipboard. A selection stays in place while other lines change.</p></article>
+<article><h3>Links</h3><p><kbd>Ctrl</kbd>+click opens a web address through OpenURL, or a local file with its default tool. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click copies the address. Nothing opens by itself.</p></article>
+<article><h3>Completion and file drop</h3><p><kbd>Tab</kbd> completes paths and commands. Drag icons from Workbench onto the window and their quoted paths appear on the command line.</p></article>
+<article><h3>Break keys</h3><p><kbd>Ctrl</kbd>+<kbd>C</kbd> breaks the running command; <kbd>Ctrl</kbd>+<kbd>D</kbd>/<kbd>E</kbd>/<kbd>F</kbd> send their signals as in <code>CON:</code>; <kbd>Ctrl</kbd>+<kbd>\</kbd> ends input.</p></article>
+<article><h3>Full-screen programs</h3><p>Alternate screen, bracketed paste, resize and mouse-wheel reports, and synchronized updates for programs that draw the whole window, such as editors.</p></article>
+</div>
+<p class="caption" style="margin-top:30px">Keys, options and limits are listed in the <a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/capabilities.md"><u>capability reference</u></a>.</p>
+</div></section>
+
+<section id="programs" class="section wrap">
+<div class="section-heading"><div><p class="eyebrow">Programs</p><h2>Programs that<br>run in Limpet.</h2></div><p class="section-lead">Native AROS ports that use what the terminal offers. Each is a separate download; in <code>CON:</code> or in a file they print plain text.</p></div>
+
+<div class="app first"><figure class="shot"><img src="assets/eza.png" width="990" height="678" loading="lazy" alt="eza in Limpet: a long listing with file-type icons, sizes, dates and a Git status column, followed by a tree view of two drawers"><figcaption>eza 0.23.5 in Limpet 0.10.1 on AROS One. The Git column marks new (N) and modified (M) files.</figcaption></figure>
+<div><h3>eza <span class="tag">port in preparation</span></h3><p>A replacement for <code>List</code> and <code>Dir</code> with colours, file-type icons, a tree view and Git status read straight from the repository. Permissions are the native AmigaDOS <code>hsparwed</code> bits.</p><pre>eza -l --icons --git --header
+eza --icons -T src themes</pre><p>eza asks Limpet whether it can draw the icons and leaves them out if not. They are shown with the bundled font at its default size. The AROS port is not released yet.</p></div></div>
+
+<div class="app flip"><figure class="shot"><img src="assets/helix.png" width="990" height="678" loading="lazy" alt="Helix in Limpet with two panes: a Rust file with syntax highlighting on the left and a C file on the right"><figcaption>Helix 25.07.1 in Limpet 0.10.1 on AROS One, two files side by side.</figcaption></figure>
+<div><h3>Helix</h3><p>A modal text editor with syntax highlighting, multiple cursors, splits and language-server support. It needs a terminal that can redraw the screen, so it runs in Limpet and not in <code>CON:</code>.</p><pre>hx main.rs</pre><p>The port is for ABIv11 distributions and includes a language server for WebAssembly text files. <a href="https://github.com/tomaszstaniak/aros-helix"><u>Helix for AROS ↗</u></a></p></div></div>
+
+<div class="app"><figure class="shot"><img src="assets/apkg-show-dark.png" width="680" height="478" loading="lazy" alt="apkg show in Limpet with coloured status and a table sized to the window"><figcaption>apkg in Limpet. In <code>CON:</code> it prints the same information as plain text.</figcaption></figure>
+<div><h3>Fastfetch and apkg</h3><p><a href="https://github.com/tomaszstaniak/aros-fastfetch"><u>Fastfetch</u></a> shows the system summary at the top of this page. Limpet can run it whenever a new Shell window opens: choose it in Project &gt; Preferences, on the Shell page.</p><pre>apkg install fastfetch
+fastfetch -c aros-logo</pre><p><a href="https://github.com/tomaszstaniak/arospkg"><u>apkg</u></a>, the AROS package manager, uses Limpet for coloured results, tables that fit the window and a download bar that stays on one line.</p></div></div>
+</section>
+
+<section id="themes" class="section cool"><div class="wrap">
+<div class="two wide-right">
+<div><p class="eyebrow">Themes &amp; Preferences</p><h2>Use the colour<br>schemes you know.</h2><p class="section-lead">Fifteen themes come with Limpet. Colour files made for Ghostty, Kitty and iTerm2 work as they are.</p>
+<p>Download a scheme, put the file into the themes drawer (Preferences has a button that opens it) and pick it from the list. The window behind Preferences shows the choice at once. <strong>Use</strong> keeps it until the next restart, <strong>Save</strong> for good, <strong>Cancel</strong> goes back.</p>
+<p>Included: Dracula, Nord, Tokyo Night, Gruvbox Dark, One Dark, Rosé Pine, Catppuccin Mocha and Latte, Solarized Dark and Light, Limpet's own dark, light and high-contrast themes, and two Amiga palettes: MagicWB and Workbench 3.1.</p>
+<p class="note">A theme sets the default text and background, the 16 palette colours, the cursor and the selection. Colours a program chooses itself, such as an editor's own scheme, are not changed.</p></div>
+<figure class="shot"><img src="assets/preferences.png" width="628" height="416" loading="lazy" alt="Limpet Preferences, Appearance page: a list of themes, the colours of the chosen theme, font and window background settings"><figcaption>Preferences in Limpet 0.10.1 on AROS One. Font, size, start-up command, scrollback and history are set on the same three pages; the settings are also a plain text file.</figcaption></figure>
+</div>
+<div class="themes">
+<figure><img src="assets/theme-dracula.png" width="600" height="478" loading="lazy" alt="The eza listing in the Dracula theme"><figcaption>Dracula</figcaption></figure>
+<figure><img src="assets/theme-gruvbox-dark.png" width="600" height="478" loading="lazy" alt="The eza listing in the Gruvbox Dark theme"><figcaption>Gruvbox Dark</figcaption></figure>
+<figure><img src="assets/theme-catppuccin-latte.png" width="600" height="478" loading="lazy" alt="The eza listing in the Catppuccin Latte theme"><figcaption>Catppuccin Latte</figcaption></figure>
+<figure><img src="assets/theme-amigaos31.png" width="600" height="478" loading="lazy" alt="The eza listing in the Workbench 3.1 palette"><figcaption>Workbench 3.1 colours</figcaption></figure>
+</div>
+<p class="caption">The same eza listing in four of the included themes.</p>
+</div></section>
+
+<section id="images" class="section wrap">
+<div class="section-heading"><div><p class="eyebrow">Images</p><h2>Images in<br>the terminal.</h2></div><p class="section-lead">Programs can draw pictures between lines of text, using a subset of the Kitty graphics protocol.</p></div>
+<div class="two top">
+<figure class="shot"><img src="assets/webb-kitty.png" width="984" height="708" loading="lazy" alt="The James Webb Space Telescope's Cosmic Cliffs image displayed in a Limpet window"><figcaption>Webb's <em>Cosmic Cliffs</em> shown through the Kitty graphics protocol. Image: NASA, ESA, CSA, STScI.</figcaption></figure>
+<figure class="shot"><img src="assets/mandelbrot-zoom.gif" width="680" height="478" loading="lazy" alt="An animated Mandelbrot zoom drawn in Limpet with text characters"><figcaption>No image protocol here: a Mandelbrot zoom drawn with Unicode half-blocks and 24-bit colours.</figcaption></figure>
+</div>
+<p class="note" style="margin-top:28px;max-width:760px">Pictures are sent as raw RGB or RGBA pixels. PNG data and scaling by the terminal are not supported; see the <a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/kitty-graphics.md"><u>supported subset</u></a>.</p>
+</section>
+
+<section id="con" class="section tinted"><div class="wrap">
+<div class="section-heading"><div><p class="eyebrow">CON: replacement · experimental</p><h2>Limpet as the<br>system console.</h2></div><p class="section-lead">A separate download adds <code>LIMPET:</code>, a DOS console handler. One command lets it answer for <code>CON:</code> until the next restart.</p></div>
+<div class="two top">
+<div>
+<ol class="steps">
+<li><div><strong>Install the handler.</strong> Unpack the experimental archive into the Limpet drawer and run <code>Install-Handler</code>. It mounts <code>LIMPET:</code> until the next reboot and writes nothing to the system's start-up files.</div></li>
+<li><div><strong>Ask for a Limpet window by name.</strong> <code>NewShell WINDOW LIMPET:</code>, or any program that opens <code>LIMPET:0/0/640/200/Title</code>. <code>CON:</code> is untouched.</div></li>
+<li><div><strong>Or let it stand in for CON:.</strong> <code>LimpetCON ON</code> makes new <code>CON:</code> windows Limpet windows: NewShell, Execute Command, programs that open their own console. <code>LimpetCON OFF</code> or a restart gives the system console back.</div></li>
+</ol>
+<p style="margin-top:24px">The handler reads window names the way <code>CON:</code> does (position, size, title, <code>CLOSE</code>, <code>WAIT</code>, <code>AUTO</code>, <code>SCREEN</code>) and supports the things console programs rely on: line and raw mode, <code>WaitForChar()</code>, break signals, and the Amiga cursor and window reports.</p>
+<p class="note">Why it is still experimental: a Limpet console window uses about 19 MiB of memory on mainline AROS and about 30 MiB on ABIv11 distributions, while the system console on mainline uses under 1 MiB. With empty size fields it opens an 80×24 window where <code>CON:</code> opens a strip across the screen. Programs started from Workbench icons have not been checked widely. The <a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/limpet-handler.md"><u>handler page</u></a> lists what matches <code>CON:</code> and what does not.</p>
+</div>
+<div>
+<figure class="shot"><img src="assets/limpetcon-newshell.png" width="640" height="478" loading="lazy" alt="A Shell window titled AROS-Shell that is drawn by Limpet after LimpetCON ON"><figcaption>Plain <code>NewShell</code> after <code>LimpetCON ON</code>, AROS One, Limpet 0.10.0.</figcaption></figure>
+<figure class="shot" style="margin-top:22px"><img src="assets/limpetcon-execute-command.png" width="684" height="476" loading="lazy" alt="The Command Output window of Workbench's Execute Command drawn by Limpet"><figcaption>Workbench's Execute Command writing to a Limpet window, mainline AROS, Limpet 0.10.1.</figcaption></figure>
+</div>
+</div>
+</div></section>
+
+<section id="next" class="section wrap">
+<div class="section-heading"><div><p class="eyebrow">SSH &amp; what is next</p><h2>Where Limpet<br>is going.</h2></div><p class="section-lead">The order of work follows the goal: first a console good enough to replace <code>CON:</code>, then the things a modern terminal is used for.</p></div>
+<div class="two top">
+<div>
+<h3>SSH <span class="tag">preview</span></h3>
+<p>An SSH client for Limpet exists as a preview for mainline AROS, built on libssh and the system's OpenSSL. In tests it opened an interactive session to an OpenSSH server with public-key login and a checked host key; the remote side followed window resizes, <kbd>Ctrl</kbd>+<kbd>C</kbd> interrupted the remote command, and the remote exit status came back to the AROS Shell.</p>
+<p>It is in the source tree (<a href="https://github.com/tomaszstaniak/limpet/tree/main/examples/ssh"><u>examples/ssh</u></a>), not in the downloads. Still open: remote full-screen programs, behaviour when the network drops, standard known-hosts handling and a build for ABIv11 distributions.</p>
+</div>
+<ul class="list">
+<li><strong>CON: for daily use.</strong> Less memory per console window, <code>CON:</code>'s default window placement, a round of Workbench programs, and an optional line for <code>S:User-Startup</code>.</li>
+<li><strong>Unix terminal programs.</strong> Most of them expect a pseudo-terminal and termios, which AROS does not provide yet. A runtime for that works in experiments on mainline; it is not distributed, so such programs do not run unchanged today.</li>
+<li><strong>Panes and a multiplexer.</strong> Horizontal and vertical splits with separate sessions.</li>
+<li><strong>Completion and shortcuts.</strong> Better completion for commands and their arguments, configurable keys and prompt.</li>
+<li><strong>Raspberry Pi hardware.</strong> The Pi build runs under QEMU's Pi model and still needs testing on a real board.</li>
+</ul>
+</div>
+<p class="caption" style="margin-top:26px">The full list, with links to the interfaces proposed for AROS itself, is in the <a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/roadmap.md"><u>roadmap</u></a>.</p>
+</section>
+
+<section id="developers" class="section cool"><div class="wrap">
+<div class="two">
+<div><p class="eyebrow">For programmers</p><h2>Colour in Limpet,<br>plain text in CON:.</h2><p class="section-lead">A program can ask the console what it supports before it prints anything.</p>
+<p>The question is a DOS packet on the output handle. It does not read from the keyboard and does not change terminal modes, so it is safe in scripts and with redirected output. Limpet answers with its colour level, pens, size and input modes; <code>CON:</code> and files answer that they do not know the packet, and the program prints plain text.</p>
+<p>The SDK is a small C library with helpers for colours, progress lines, links, window titles and images. Programs that only write text and read lines need none of it: Limpet decodes their UTF-8 output as it is.</p>
+<p><a class="text-link" href="https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.6.0">SDK 0.6.0 ↗</a> &nbsp; <a class="text-link" href="https://github.com/tomaszstaniak/limpet/blob/main/doc/protocols.md">Protocol reference ↗</a></p></div>
+<div class="code-panel"><div class="code-heading">C · ASK FIRST, THEN PRINT</div><pre>LimpetPresentation p;
+char red[LIMPET_SEQUENCE_MAX];
+
+fflush(stdout);
+if (limpet_query_presentation(Output(), &amp;p, NULL)
+        == LIMPET_OK &amp;&amp;
+    limpet_sgr_ansi(red, sizeof red, &amp;p, 1, 0))
+    printf("%serror:%s file not found\n",
+           red, LIMPET_SGR_FG_DEFAULT);
+else
+    printf("error: file not found\n");</pre></div>
+</div>
+</div></section>
+
+<section id="download" class="section wrap download"><p class="eyebrow">PC / Raspberry Pi</p><h2>Download Limpet 0.10.1.</h2><p class="section-lead">Archives for ABIv11 distributions such as AROS One, for mainline AROS on PC, and a test build for AROS on the Raspberry Pi.</p>
+<div class="downloads"><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.10.1/Limpet-0.10.1-aros-x86_64-abiv11-pc.zip"><span class="download-kind">PC / x86_64</span><strong>AROS One / ABIv11</strong><span>ABIv11 · ZIP archive <b>↓</b></span></a><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.10.1/Limpet-0.10.1-aros-x86_64-abiv1-pc.zip"><span class="download-kind">PC / x86_64</span><strong>Mainline AROS</strong><span>ABIv1 · ZIP archive <b>↓</b></span></a><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.10.1/Limpet-0.10.1-aros-aarch64-abiv1-raspi.zip"><span class="download-kind">Raspberry Pi / AArch64 · test build</span><strong>AROS for Raspberry Pi</strong><span>ABIv1 · ZIP archive <b>↓</b></span></a></div>
+<div class="install-grid"><div><h3>Install with apkg</h3><pre class="cmd">apkg update
+apkg install limpet</pre><p>The same command works on all three systems. <a href="https://github.com/tomaszstaniak/arospkg"><u>About the package manager ↗</u></a></p></div><div><h3>Or from an archive</h3><p>Copy the <strong>Limpet</strong> drawer and its icon into <code>SYS:Utilities</code>, then double-click Limpet. The included README lists keys, options and known limitations. The experimental <code>LIMPET:</code> handler is a separate archive in the same release.</p><a class="text-link" href="https://github.com/tomaszstaniak/limpet/releases/tag/v0.10.1">Release notes &amp; all files ↗</a></div></div></section>
+</main>
+<footer class="wrap"><div><a class="brand" href="#"><img src="assets/icon.png" width="30" height="30" alt="">Limpet</a><p>A terminal for the AROS Shell.</p></div><div><a href="https://github.com/tomaszstaniak/limpet">GitHub ↗</a><a href="https://github.com/tomaszstaniak/limpet/issues">Report an issue ↗</a><a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/README.md">Documentation ↗</a><a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/changes.md">Changelog ↗</a></div><div class="creator-links"><div><span class="eyebrow">Support the work</span><p>Support development and explore more of my projects.</p></div><nav aria-label="Creator and support links"><a href="https://www.patreon.com/c/reperspective">Patreon ↗</a><a href="https://ko-fi.com/enbewu">Ko-fi ↗</a><a href="https://tomaszstaniak.com">tomaszstaniak.com ↗</a></nav></div><p class="legal">Limpet is MIT-licensed. Bundled fonts and the included colour schemes have their own licences, listed in the Licenses drawer of each archive. Screenshots were taken under QEMU; each caption names the system and the Limpet version.</p></footer>
+</body></html>
