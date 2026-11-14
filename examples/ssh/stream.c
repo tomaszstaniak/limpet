@@ -1,6 +1,8 @@
 #include "stream.h"
 #include "pump.h"
 #include "term_query.h"
+#include "sgr_ansi.h"
+#include "pens.h"
 #include "../../src/aros_tty_client.h"
 #include <libssh/callbacks.h>
 #include <proto/exec.h>
@@ -17,6 +19,8 @@ struct stream {
     int have_status; /* status is from this loop's query */
     int received_completion;
     unsigned columns,rows;
+    int pens; /* the local terminal reads basic SGR colours as screen pens */
+    struct xt_sgr_filter colours[2];
 };
 
 /* Both packets go to the input handle's handler and are answered at once.
@@ -100,6 +104,16 @@ static int write_local(void *context,int stream,const unsigned char *data,size_t
     struct stream *s=context;
     /* Native DOS output is synchronous: bounded byte count does not remove
      * physical sink backpressure. A handler may block this Write. */
+    if(s->pens) {
+        /* The pump offers at most its buffer; the rewritten bytes are
+         * written whole, so the count returned stays in input bytes. */
+        static unsigned char rewritten[XT_SGR_OUTPUT_MAX(SSH_PUMP_BUFFER_SIZE)];
+        size_t n;
+        if(size>SSH_PUMP_BUFFER_SIZE) size=SSH_PUMP_BUFFER_SIZE;
+        n=xt_sgr_filter(&s->colours[stream],data,size,rewritten);
+        if(n && Write(s->output[stream],rewritten,(LONG)n)!=(LONG)n) return -1;
+        return (int)size;
+    }
     return (int)Write(s->output[stream],data,(LONG)size);
 }
 static int send_eof(void *context)
@@ -195,6 +209,10 @@ int xt_ssh_stream(ssh_session session,ssh_channel channel,const char *command)
         }
         if(!SetMode(s.input,1)) goto cleanup;
         raw=1;
+        /* A remote program writes ANSI colours; in a console session Limpet
+         * reads the basic ones as screen pens, as CON: does. */
+        s.pens=xt_ssh_output_uses_pens(s.output[0]);
+        xt_sgr_filter_init(&s.colours[0]); xt_sgr_filter_init(&s.colours[1]);
     }
     ssh_set_blocking(session,0);
     ssh_pump_init(&pump,!interactive);

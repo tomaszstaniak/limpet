@@ -59,6 +59,16 @@ come from bytes printed by that remote test script, not screenshot editing.
 Stop the private server after testing. Never package keys or credential-bearing
 test ISOs with the terminal.
 
+## Remote colours
+
+In a console session Limpet reads SGR 30-37 and 40-47 as screen pens, as
+`CON:` does, so a remote program's basic colours would appear as pens. In an
+interactive session the client asks the terminal (the presentation query of
+the Limpet SDK) and, when pens are in use, rewrites those parameters in the
+remote output to `38;5;n` and `48;5;n` ([`sgr_ansi.c`](sgr_ansi.c), host test
+`make test-ssh-sgr`). Other sequences pass unchanged. Command mode output is
+not rewritten.
+
 ## Remote terminal settings
 
 Mainline `tcgetattr()` only fills ICANON. libssh's default PTY request copied
@@ -92,8 +102,13 @@ The remote application may subsequently change its own PTY modes normally.
 - This trust format does not distinguish ports; migrate to standard libssh
   known-host verification before providing a general-purpose client.
 - SCP code is inherited, untested and outside this terminal acceptance.
-- No claims for DNS/IPv6, remote full-screen editors, multiple concurrent SSH
-  sessions, aarch64 or distribution compatibility from the x86_64 demo.
+- Checked on 2026-11-14 (Limpet 0.10.1, mainline nightly 2026-11-13 under
+  QEMU): shell session with Git colours, remote Vim with a split window, exit
+  with return code 0. In one of three runs the whole system stopped
+  responding during the session; the cause is not known.
+- No claims for DNS/IPv6, other remote full-screen programs, multiple
+  concurrent SSH sessions, aarch64 or distribution compatibility from the
+  x86_64 demo.
 
 ## Exact-byte transfer regression
 

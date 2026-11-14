@@ -17,10 +17,12 @@ test "$actual" = 49560f677d96e3706a904ac2de1116e25f3680937d51e5c92198fcba4a1c1e9
 if [ ! -d build/ssh/libssh-0.12.2 ]; then
     tar -xf "$archive" -C build/ssh
 fi
-if ! patch -s -R --dry-run -d build/ssh/libssh-0.12.2 -p1 < tools/ssh/libssh-aros.patch; then
-    patch --dry-run -d build/ssh/libssh-0.12.2 -p1 < tools/ssh/libssh-aros.patch
+# Apply the patch once. A reverse dry run does not tell: some patch programs
+# report success for it on an unpatched tree.
+if ! grep -q xt_ssh_home_dir build/ssh/libssh-0.12.2/src/misc.c; then
     patch -d build/ssh/libssh-0.12.2 -p1 < tools/ssh/libssh-aros.patch
 fi
+grep -q xt_ssh_home_dir build/ssh/libssh-0.12.2/src/misc.c
 cmake -S build/ssh/libssh-0.12.2 -B build/ssh/mainline \
     -DCMAKE_PROJECT_libssh_INCLUDE="$root/tools/ssh/aros-cmake.cmake" \
     -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
@@ -39,8 +41,9 @@ cmake -S build/ssh/libssh-0.12.2 -B build/ssh/mainline \
     -U 'HAVE_OPENSSL_EVP_KDF_CTX_NEW*' -U HAVE_OPENSSL_RAND_PRIV_BYTES
 cmake --build build/ssh/mainline -j "${JOBS:-4}"
 "$AROS_GCC" --sysroot="$AROS_SDK" -std=gnu99 \
-    -Ibuild/ssh/libssh-0.12.2/include -Ibuild/ssh/mainline/include \
-    examples/ssh/client.c examples/ssh/stream.c examples/ssh/pump.c examples/ssh/term_query.c src/aros_tty_client.c \
+    -Ibuild/ssh/libssh-0.12.2/include -Ibuild/ssh/mainline/include -Isdk/include \
+    examples/ssh/client.c examples/ssh/stream.c examples/ssh/pump.c examples/ssh/term_query.c \
+    examples/ssh/sgr_ansi.c examples/ssh/pens.c sdk/src/limpet_query.c sdk/src/limpet_format.c src/aros_tty_client.c \
     tools/ssh/aros-interface.c build/ssh/mainline/src/libssh.a \
     -lcrypto -lnet -lposixc -lstdcio -lstdc -lautoinit -o build/ssh/ssh
 "$AROS_GCC" --sysroot="$AROS_SDK" -std=gnu99 -Wall -Wextra -Werror \

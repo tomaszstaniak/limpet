@@ -1284,6 +1284,14 @@ test: test-ssh-term-query
 test-ssh-term-query: build/test_ssh_term_query
 	./build/test_ssh_term_query
 
+build/test_ssh_sgr: tests/test_ssh_sgr.c examples/ssh/sgr_ansi.c examples/ssh/sgr_ansi.h
+	@mkdir -p build
+	cc -std=c99 -Wall -Wextra -Werror tests/test_ssh_sgr.c examples/ssh/sgr_ansi.c -o $@
+test: test-ssh-sgr
+.PHONY: test-ssh-sgr
+test-ssh-sgr: build/test_ssh_sgr
+	./build/test_ssh_sgr
+
 build/test_reflow: tests/test_reflow.c src/screen_model.c src/screen_model.h src/hyperlink.c
 	@mkdir -p build
 	cc -std=c99 -Wall -Wextra -Werror -Ivendor/utf8proc -DUTF8PROC_STATIC tests/test_reflow.c src/screen_model.c src/hyperlink.c vendor/utf8proc/utf8proc.c -o $@

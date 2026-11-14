@@ -126,7 +126,7 @@ fastfetch -c aros-logo</pre><p><a href="https://github.com/tomaszstaniak/arospkg
 <div>
 <h3>SSH <span class="tag">preview</span></h3>
 <p>An SSH client for Limpet exists as a preview for mainline AROS, built on libssh and the system's OpenSSL. In tests it opened an interactive session to an OpenSSH server with public-key login and a checked host key; the remote side followed window resizes, <kbd>Ctrl</kbd>+<kbd>C</kbd> interrupted the remote command, and the remote exit status came back to the AROS Shell.</p>
-<p>It is in the source tree (<a href="https://github.com/tomaszstaniak/limpet/tree/main/examples/ssh"><u>examples/ssh</u></a>), not in the downloads. Still open: remote full-screen programs, behaviour when the network drops, standard known-hosts handling and a build for ABIv11 distributions.</p>
+<p>It is in the source tree (<a href="https://github.com/tomaszstaniak/limpet/tree/main/examples/ssh"><u>examples/ssh</u></a>), not in the downloads. A remote Vim opened, split its window and quit back to the prompt. Still open: wider testing of remote full-screen programs, behaviour when the network drops, standard known-hosts handling and a build for ABIv11 distributions.</p>
 </div>
 <ul class="list">
 <li><strong>CON: for daily use.</strong> Less memory per console window, <code>CON:</code>'s default window placement, a round of Workbench programs, and an optional line for <code>S:User-Startup</code>.</li>
@@ -135,6 +135,10 @@ fastfetch -c aros-logo</pre><p><a href="https://github.com/tomaszstaniak/arospkg
 <li><strong>Completion and shortcuts.</strong> Better completion for commands and their arguments, configurable keys and prompt.</li>
 <li><strong>Raspberry Pi hardware.</strong> The Pi build runs under QEMU's Pi model and still needs testing on a real board.</li>
 </ul>
+</div>
+<div class="two top" style="margin-top:34px">
+<figure class="shot"><img src="assets/ssh-session.png" width="684" height="477" loading="lazy" alt="Limpet window titled ssh: a remote shell on a Mac showing uname, a coloured git log, git status, a file listing and a diff"><figcaption>An SSH session from Limpet 0.10.1 on mainline AROS to an OpenSSH server on a Mac, Dracula theme. Git prints its own colours.</figcaption></figure>
+<figure class="shot"><img src="assets/ssh-vim.png" width="684" height="477" loading="lazy" alt="Vim running on the remote computer inside the Limpet window, two files side by side with line numbers and syntax colours"><figcaption>Vim on the remote computer in the same session, two files side by side. Both on the mainline nightly build of 2026-11-13 under QEMU.</figcaption></figure>
 </div>
 <p class="caption" style="margin-top:26px">The full list, with links to the interfaces proposed for AROS itself, is in the <a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/roadmap.md"><u>roadmap</u></a>.</p>
 </section>
