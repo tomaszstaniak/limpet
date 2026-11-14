@@ -817,5 +817,5 @@ for the preview APIs.
 
 ## SSH
 
-An SSH client preview exists for mainline AROS (`examples/ssh/`). It is not
-part of the ABIv11 release and has not been built for ABIv11.
+An SSH client, `ssh`, comes with Limpet since 0.11.0 for mainline AROS
+(x86_64 and Raspberry Pi) and ABIv11; see [SSH](../examples/ssh/README.md).

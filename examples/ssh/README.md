@@ -1,128 +1,62 @@
-# Native SSH integration preview
+# SSH client
 
-This is a mainline x86_64 experiment, not a production SSH distribution.
-`client.c` derives from AROS `workbench/network/sshd/ssh.c` (copyright notice
-retained). The client uses normal DOS input/output handles plus the optional
-terminal queries for EOF and geometry. The query implementation is in
-[`term_query.c`](term_query.c).
-libssh supplies SSH, and the remote server supplies the PTY.
-This does **not** implement a local AROS POSIX PTY.
+`ssh` is the SSH client that comes with Limpet since 0.11.0, for mainline AROS (x86_64 and Raspberry Pi) and ABIv11 distributions. It is built on libssh 0.12.2 and the [aros-crypto](https://github.com/tomaszstaniak/aros-crypto) kit (Mbed TLS 3.6.7).
+
+## Use
+
+    ssh [-v] [-i keyfile] [-p port] [-l user] [user@]host [command]
+
+- `ssh user@host` opens a remote shell in the Limpet window. The remote side gets the window's size and follows resizes; Ctrl-C and Ctrl-D go to the remote program. Leave with `exit`; the remote shell's return code comes back to the AROS Shell.
+- `ssh user@host "command"` runs one command. Its output can be redirected (`ssh >file ...`); local input is not sent to it.
+- Without a user name (`-l`, `user@`, a `User` line in `config`, or the `USER` variable) `ssh` asks for one.
+- `-v` prints libssh's log; repeat it for more detail.
+
+## Keys and known hosts
+
+The SSH drawer is `ENVARC:SSH`, or `HOME/.ssh` when the `HOME` variable is set. Its files have the formats of OpenSSH:
+
+| File | Purpose |
+| --- | --- |
+| `id_ed25519`, `id_ecdsa`, `id_rsa` | your private keys, tried in this order; a passphrase is asked for when a key has one |
+| `known_hosts` | the keys of servers you have accepted |
+| `config` | per-host settings (`Host`, `HostName`, `User`, `Port`, `IdentityFile`, ...) |
+
+This version does not make keys. Make one on another computer (`ssh-keygen -t ed25519`), put the public half on the server and copy the private file into the drawer.
+
+The first time a server is contacted, `ssh` shows the fingerprint of its key and asks. Compare it with the fingerprint the server's administrator gives you; only `yes` accepts. A server whose key differs from the remembered one is refused: either it was set up again, or someone is answering in its place. Remove its line from `known_hosts` only when you know the reason.
+
+Login is tried with a key, then with the server's questions (keyboard-interactive), then with a password. What you type as a password or passphrase is not shown.
+
+## Random numbers
+
+Encryption needs unpredictable numbers. On mainline AROS they come from the system (`entropy.resource`). ABIv11 has no such source; there the kit uses jitterentropy, which measures timing differences of the processor and tests its timer at start. If the source fails, `ssh` says so and stops before anything is sent.
+
+## Limits
+
+- No file transfer (scp, sftp), port forwarding, agent, key generation or IPv6. On ABIv11 host names are looked up as IPv4 addresses through `bsdsocket.library`.
+- Use it in a Limpet window. In the system console (`CON:`) it was not tested; window size and colours are not available there.
+- One command's output is passed through as bytes; in an interactive session the remote program's basic colours are rewritten so that Limpet shows them as colours and not as Workbench pens.
+- When the connection is lost, `ssh` ends with return code 20. It does not reconnect.
+- Mainline nightly build of 2026-11-13 under QEMU with the e1000 network card: network traffic can stop the whole system. This also happens with a network test that does not use `ssh`.
 
 ## Build
 
-Run `sh tools/build-ssh.sh` from the project root. The script downloads pinned
-libssh 0.12.2 from its official release site, checks the archive SHA-256, applies
-the local home-directory fallback patch and builds against mainline's existing
-OpenSSL. `AROS_GCC` and `AROS_SDK` can select matching tools/SDKs. Output:
-`build/ssh/ssh` and `build/ssh/check-transfer`. No SDK or mainline source files
-are overwritten. The terminal
-worker must also be rebuilt (`make package`) for native status-query support.
+    AROS_GCC=<compiler> AROS_SDK=<SDK> AROS_CRYPTO=<aros-crypto kit> sh tools/build-ssh.sh <target>
 
-The platform adapter supplies native socket library calls and the SDK's
-`select` to `WaitSelect` mapping. The SDK omits the public `inet_pton` macro,
-so the adapter calls the implemented Roadshow vector 101. Interface-name lookup
-uses Miami's API. If no HOME is configured, libssh uses the full program-directory
-path for its default path expansion; no environment variable is changed.
+`<target>` is `aros-x86_64-abiv1-pc`, `aros-aarch64-abiv1-raspi` or `aros-x86_64-abiv11-pc`; the kit is the one built for the same target. The script downloads libssh 0.12.2 from its release site, checks the SHA-256, applies `tools/ssh/libssh-aros.patch` and builds `build/<target>/ssh/ssh`.
 
-PIC must be disabled: the first linked binary contained GOT relocations and was
-rejected by the native loader. The build now rejects GOT/TLS relocation types.
-Compilation of libssh treats implicit function declarations and integer/pointer
-conversions as errors. Upstream deprecation warnings remain.
+What the patch changes in libssh, and why:
 
-## Isolated acceptance setup
+- the home directory comes from the `HOME` variable or the program's drawer, not from an account database;
+- position-independent code and compiler thread-local storage are off (the AROS loader has neither relocation kind);
+- libssh does not initialise itself before `main`, because the program sets the kit up first;
+- a failed seeding of the random generator is an error (upstream goes on without one);
+- on ABIv11, sockets are closed and switched with `bsdsocket.library` calls, because its C library does not know socket descriptors.
 
-Use a disposable mainline guest and a separate host OpenSSH instance listening
-only on `127.0.0.1:22222`, not the host's normal SSH service. Generate new test
-host/client keys. Configure that instance with only the test public key,
-password/PAM/agent/TCP/X11 forwarding disabled, and normal strict ownership
-checks. Put its authorized public key beneath an owner-controlled path rather
-than a world-writable `/tmp` ancestor. Never disable host-key checking to make
-the test pass.
+`tools/ssh/aros-abiv11.c` holds what ABIv11's C library lacks. It is not compiled into the mainline builds.
 
-In the disposable guest, provision:
+Host tests: `make test` runs `test_ssh_pump`, `test_ssh_term_query` and `test_ssh_sgr`.
 
-- `RAM:xterm-ssh/client_key`: disposable private authentication key.
-- `RAM:xterm-ssh/known_hosts`: the copied client's private format,
-  `hostname SHA256-colon-separated-hex-fingerprint`, **not** OpenSSH's file format.
-  Derive the expected fingerprint from the locally generated server public key,
-  independently of the network connection.
+## Licences
 
-With QEMU user networking the host is `10.0.2.2`. Start from the XTERM Shell:
-
-```text
-RAM:xterm-dos/ssh -p 22222 -l TESTUSER 10.0.2.2
-```
-
-The acceptance server uses a forced, clean `/bin/sh -i` with a controlled prompt,
-not the user's interactive shell configuration. Any welcome colors/clearing
-come from bytes printed by that remote test script, not screenshot editing.
-Stop the private server after testing. Never package keys or credential-bearing
-test ISOs with the terminal.
-
-## Remote colours
-
-In a console session Limpet reads SGR 30-37 and 40-47 as screen pens, as
-`CON:` does, so a remote program's basic colours would appear as pens. In an
-interactive session the client asks the terminal (the presentation query of
-the Limpet SDK) and, when pens are in use, rewrites those parameters in the
-remote output to `38;5;n` and `48;5;n` ([`sgr_ansi.c`](sgr_ansi.c), host test
-`make test-ssh-sgr`). Other sequences pass unchanged. Command mode output is
-not rewritten.
-
-## Remote terminal settings
-
-Mainline `tcgetattr()` only fills ICANON. libssh's default PTY request copied
-incomplete flags/control characters and disabled remote echo and normal CR/LF
-processing in the first interactive test. The client now explicitly requests
-canonical input, echo, signals, CR-to-NL input, NL-to-CRLF output and standard
-Ctrl-C/Ctrl-D/erase/kill characters using
-[RFC 4254 terminal modes](https://www.rfc-editor.org/rfc/rfc4254#section-8).
-The remote application may subsequently change its own PTY modes normally.
-
-## Limits still requiring work
-
-- Updated XTERM handlers supply initial geometry and resize notifications through
-  polling. Old/other handlers fall back to 80x24 and WaitForChar; that fallback
-  still cannot distinguish idle input from EOF.
-- Local F5 EOF is recognized and sends channel EOF after buffered input drains.
-  Remote PTY behavior varies: a screen-output test needed idle-grace cancellation
-  (return 20), while the final captured-output test returned 0. If the peer does
-  not finish, the client cancels after an idle grace period, not reporting success.
-  The exhausted local Shell then closes; use a new XTERM stream to reconnect.
-  Use remote `exit` or raw Ctrl-D for normal logout. Ctrl-D is a remote terminal
-  character, not local stream EOF.
-- The bounded pump preserves partial input/output writes and services both
-  remote streams. Network loss, long-running connections, output-handler stalls
-  and full-window upload stress still need broader native coverage. DOS Write
-  remains synchronous; bounded buffers do not make a blocked sink asynchronous.
-- Command mode does not forward local stdin; it sends channel EOF and drains
-  stdout/stderr. Pipelines into remote commands are not implemented.
-- Password fallback and unknown-host prompts retain upstream limitations;
-  acceptance uses preprovisioned trust and public-key authentication only.
-- This trust format does not distinguish ports; migrate to standard libssh
-  known-host verification before providing a general-purpose client.
-- SCP code is inherited, untested and outside this terminal acceptance.
-- Checked on 2026-11-14 (Limpet 0.10.1, mainline nightly 2026-11-13 under
-  QEMU): shell session with Git colours, remote Vim with a split window, exit
-  with return code 0. In one of three runs the whole system stopped
-  responding during the session; the cause is not known.
-- No claims for DNS/IPv6, other remote full-screen programs, multiple
-  concurrent SSH sessions, aarch64 or distribution compatibility from the
-  x86_64 demo.
-
-## Exact-byte transfer regression
-
-`check-transfer.c` is a native acceptance driver, not an SSH feature. Compile
-with the same mainline compiler/SDK as the client. With `RAM:xterm-ssh` present,
-run it with one quoted command argument:
-
-```text
-check-transfer "RAM:xterm-dos/ssh -p 22222 -l TESTUSER 10.0.2.2 bulk"
-```
-
-The private server's forced `bulk` command must emit 8192 repetitions of
-`0123456789abcdef0123456789abcdef\n` to stdout and
-`fedcba9876543210fedcba9876543210\n` to stderr, then `STDOUT_DONE\n` and
-`STDERR_DONE\n` respectively, and exit 0. The driver saves each stream separately
-in `RAM:xterm-ssh/bulk-out` and `bulk-err`, verifies all 270347 bytes of each and
-checks for trailing data. It replaces those two test files on each run.
+`client.c` derives from mainline AROS `workbench/network/sshd/ssh.c` and is under the AROS Public License (`licenses/AROS-APL.txt`); the other files here are MIT like the rest of Limpet. libssh is LGPL 2.1 (`licenses/libssh-COPYING.txt`) and is linked statically: this source and the build script are what you need to link it again with a changed libssh.

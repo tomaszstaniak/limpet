@@ -81,6 +81,18 @@ package_target() {  # $1 = target
     # Project > Preferences starts it; the icon lets Workbench start it too.
     cp $b/LimpetPrefs $d/LimpetPrefs
     cp $root/assets/icon/Limpet.info.png $d/LimpetPrefs.info
+    # The SSH client, built by tools/build-ssh.sh for the same target and
+    # version, with the licence texts of what is linked into it.
+    local sb=$b/ssh
+    [[ -f $sb/build-record && $(head -1 $sb/build-record) == "target $t" ]] ||
+        { print -u2 "$sb: build the SSH client with tools/build-ssh.sh $t"; exit 1; }
+    (cd $sb && tail -1 build-record | shasum -a 256 -c --quiet) ||
+        { print -u2 "$sb/ssh differs from what tools/build-ssh.sh built"; exit 1; }
+    file -b $sb/ssh | grep -q "ELF 64-bit.*$want" || { print -u2 "$sb/ssh is not an ELF for $t"; exit 1; }
+    nm $sb/ssh | grep " $helperset\$" >/dev/null || { print -u2 "$sb/ssh has no $helperset: not built for $t"; exit 1; }
+    check_version $sb/ssh ssh
+    cp $sb/ssh $d/ssh
+    cp $sb/licences/*.txt $d/Licenses/
     sed "s/@VERSION@/$ver/g" $root/tools/release/README-$t.txt > $d/README.txt
     grep -q '@VERSION@' $d/README.txt && { print -u2 "README still has @VERSION@"; exit 1; }
     # the drawer's own icon, beside it at the archive root (apkg installs it)

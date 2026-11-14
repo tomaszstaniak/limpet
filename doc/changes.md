@@ -3,6 +3,34 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.11.0 (2026-11-14)
+
+New:
+
+- **SSH client.** `ssh` is in the Limpet drawer for all three systems
+  (mainline x86_64, Raspberry Pi, ABIv11). `ssh user@host` opens a remote
+  shell in the window: the remote program's colours, full-screen programs
+  such as Vim, window resizes, Ctrl-C to the remote side. `ssh user@host
+  "command"` runs one command and returns its return code. Login with a
+  key (also a passphrase-protected one), a password or the server's
+  questions. An unknown server's key fingerprint is shown and asked about; a
+  changed key is refused. Keys, `known_hosts` and `config` are OpenSSH
+  files in `ENVARC:SSH`, or in `HOME/.ssh` when `HOME` is set. See
+  [SSH](../examples/ssh/README.md).
+- The cryptography is the [aros-crypto](https://github.com/tomaszstaniak/aros-crypto)
+  kit (Mbed TLS 3.6.7): random numbers from the system on mainline, from
+  jitterentropy on ABIv11, and no connection when that source fails.
+
+Not in this version: scp and sftp, port forwarding, an agent, key
+generation, IPv6.
+
+Known problem of mainline AROS, found while testing: on the nightly build of
+2026-11-13 under QEMU (e1000 network card) network traffic can stop the
+whole system. It also happens with a network test that does not use `ssh`.
+
+No change to the terminal itself, its settings or the console handler. See
+the [verification record](verification-0.11.0.md).
+
 ## 0.10.1 (2026-11-14)
 
 Changed:

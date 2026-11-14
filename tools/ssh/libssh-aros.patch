@@ -1,3 +1,54 @@
+--- a/cmake/Modules/DefineCMakeDefaults.cmake
++++ b/cmake/Modules/DefineCMakeDefaults.cmake
+@@ -17,5 +17,8 @@
+ # Create the compile command database for clang by default
+ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+ 
+-# Always build with -fPIC
+-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
++# Build with -fPIC unless the caller decided (the AROS loader takes no GOT
++# relocations).
++if (NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
++    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
++endif()
+--- a/include/libssh/priv.h
++++ b/include/libssh/priv.h
+@@ -188,7 +188,12 @@
+ 
+ #include <unistd.h>
+ 
++#ifdef XT_SSH_BSDSOCKET_DIRECT
++/* AROS without a C library that knows socket descriptors: bsdsocket calls. */
++#define _XCLOSESOCKET CloseSocket
++#else
+ #define _XCLOSESOCKET close
++#endif
+ 
+ #endif /* _WIN32 */
+ 
+--- a/src/connect.c
++++ b/src/connect.c
+@@ -104,6 +104,8 @@
+ {
+ #ifdef _WIN32
+     return closesocket(s);
++#elif defined XT_SSH_BSDSOCKET_DIRECT
++    return CloseSocket(s);
+ #else
+     return close(s);
+ #endif
+--- a/src/libmbedcrypto.c
++++ b/src/libmbedcrypto.c
+@@ -1079,6 +1079,9 @@
+             &ssh_mbedtls_entropy, NULL, 0);
+     if (rc != 0) {
+         mbedtls_ctr_drbg_free(&ssh_mbedtls_ctr_drbg);
++        mbedtls_entropy_free(&ssh_mbedtls_entropy);
++        /* Without a seeded generator no key may be made. */
++        return SSH_ERROR;
+     }
+ 
+ #if !(defined(MBEDTLS_CHACHA20_C) && defined(MBEDTLS_POLY1305_C))
 --- a/src/misc.c
 +++ b/src/misc.c
 @@ -307,6 +307,10 @@
@@ -11,3 +62,40 @@
      rc = getpwuid_r(getuid(), &pwd, buf, NSS_BUFLEN_PASSWD, &pwdbuf);
      if (rc != 0 || pwdbuf == NULL ) {
          szPath = getenv("HOME");
+--- a/src/socket.c
++++ b/src/socket.c
+@@ -1072,8 +1072,20 @@
+ {
+     u_long nonblocking = 0;
+     return ioctlsocket(fd, FIONBIO, &nonblocking);
++}
++
++#elif defined XT_SSH_BSDSOCKET_DIRECT
++int ssh_socket_set_nonblocking(socket_t fd)
++{
++    long nonblocking = 1;
++    return IoctlSocket(fd, FIONBIO, (char *)&nonblocking);
+ }
+ 
++int ssh_socket_set_blocking(socket_t fd)
++{
++    long nonblocking = 0;
++    return IoctlSocket(fd, FIONBIO, (char *)&nonblocking);
++}
+ #else /* _WIN32 */
+ int ssh_socket_set_nonblocking(socket_t fd)
+ {
+--- a/src/threads/mbedtls.c
++++ b/src/threads/mbedtls.c
+@@ -38,7 +38,10 @@
+     if (cmp == 0) {
+         return SSH_OK;
+     }
+-#ifdef MBEDTLS_THREADING_ALT
++#if defined __AROS__
++    /* The aros-crypto kit gives Mbed TLS its mutexes (aros_crypto_setup). */
++    return SSH_ERROR;
++#elif defined MBEDTLS_THREADING_ALT
+     else {
+         if (user_callbacks != NULL) {
+             crypto_thread_finalize();
