@@ -40,6 +40,9 @@ the table above.
 
 ## Not checked
 
+The first two items and removal with apkg were checked later, for 0.10.1:
+see [its record](verification-0.10.1.md).
+
 - Colour queries from a program, and the bold switch, in a guest. Both are
   covered by the host tests.
 - "Add file..." and the settings written by Use on the final archives (see

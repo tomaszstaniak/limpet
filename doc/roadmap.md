@@ -1,6 +1,6 @@
 # Roadmap
 
-Limpet 0.10.0 is available for AROS x86_64 ABIv11 and mainline x86_64
+Limpet 0.10.1 is available for AROS x86_64 ABIv11 and mainline x86_64
 ABIv1, with an AArch64 Raspberry Pi test build. The experimental `LIMPET:`
 handler is a separate download for all three targets; with `LimpetCON ON`
 it can stand in for `CON:` until the system restarts.
@@ -57,10 +57,10 @@ Sharing AArch64 and ABIv1 with a hosted AArch64 AROS does not establish binary
 compatibility: the Pi build is for the native Pi system. i386 and other architectures need their own dependency,
 build and runtime checks before a release is promised.
 
-Mainline builds of 2026-10-24 to 2026-10-26 report support for translucent
-windows but do not draw their frame, so Limpet cannot refuse them today. The
-next step is to find the revision and library version that fixed the frame
-and keep the solid background below it, rather than guessing from build dates.
+Mainline builds of 2026-10-24 to 2026-10-27 report support for translucent
+windows but do not draw their frame. Since 0.10.1 Limpet keeps the solid
+background there: it asks for layers.library 50.9, the version of the
+mainline change that draws the frame (`fc8bbc76`).
 
 ## Graphics
 

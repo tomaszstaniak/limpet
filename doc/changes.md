@@ -3,6 +3,24 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.10.1 (2026-11-14)
+
+Changed:
+
+- Mainline AROS built between 2026-10-24 and 2026-10-27 offers transparent
+  windows but draws no frame around them. On those builds the window
+  background now stays solid, as on any system without transparent
+  windows; Preferences says so. Newer mainline builds are not affected.
+- Preferences, Shell page, "Run now": when Fastfetch is chosen by its place
+  and is not there, Preferences says so instead of sending a command that
+  fails in the window.
+- The Raspberry Pi archive's README no longer mentions a hosted AArch64
+  system that the build was never meant for.
+
+No change to themes, settings files or the console handler. The checks left
+open in 0.10.0 were run for this release; see the
+[verification record](verification-0.10.1.md).
+
 ## 0.10.0 (2026-11-13)
 
 New:

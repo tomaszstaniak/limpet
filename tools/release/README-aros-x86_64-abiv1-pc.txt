@@ -32,6 +32,15 @@ This build has the same features as Limpet @VERSION@ for ABIv11; the
 changes of each version are listed in doc/changes.md in the source
 (https://github.com/tomaszstaniak/limpet).
 
+Changed in 0.10.1
+-----------------
+
+On mainline AROS built between 2026-10-24 and 2026-10-27, which shows
+transparent windows without their frame, the background stays solid.
+Preferences, Shell page: "Run now" says so when the Fastfetch program
+chosen there is not at its place.
+
+
 New in 0.10.0
 -------------
 

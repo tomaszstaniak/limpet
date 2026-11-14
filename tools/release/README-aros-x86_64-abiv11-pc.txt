@@ -23,6 +23,13 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+Changed in 0.10.1
+-----------------
+
+Preferences, Shell page: "Run now" says so when the Fastfetch program
+chosen there is not at its place. Nothing else changes on this system.
+
+
 New in 0.10.0
 -------------
 
