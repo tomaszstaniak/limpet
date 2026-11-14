@@ -122,7 +122,7 @@ records](verification-0.5.0.md#limpet-handler-experimental) and
 | Line feed mode (`CSI 20 h` / `CSI 20 l`) | supported as console.device has it: on from the start in every console window, cooked and raw, so a line feed also returns the carriage; `CSI 20 l` turns it off, `CSI 20 h` on. VT and PTY sessions start with it off | `screen_model.c` | `lf.control`; `test_amiga_reports` |
 | Amiga raw input events (`CSI n {`) | not supported (ABIv11 CON: does not report them either) | | none |
 | Output: Amiga console sequences | partly: Limpet's VT subset with SGR 30-37/40-47 as pens; not checked one by one against console.device's set | `screen_model.c` | Shell prompt, `List`, `Search` |
-| Memory per window | about 32.5 MiB (fonts read per window) | `font_cache.c` | measured 2026-09-25 on ABIv11 2026.09 |
+| Memory per window | about 30 MiB on ABIv11 (10 MiB of it the font files, held in memory by each window), about 19 MiB on mainline; 7 MiB of either is the scrollback at its default size. The system console window: 0.4 MiB | `font_cache.c`, `aros_xterm.c` | measured 2026-11-14 with 0.10.1 on AROS One 1.3 and the mainline nightly 20261110 |
 | Open and close cycles | not established: free memory 86,864 B lower after the first 5 windows, 544 B lower after the next 5 (about 109 B each). Whether that is the handler leaking, memory the system keeps for libraries and segments, or neither, was not found | | 10 cycles from a script, `Avail FLUSH` |
 
 VT sequences, Unicode rendering and inline images are separate from
@@ -159,10 +159,12 @@ compatibility with the Amiga console interface.
    get an error.
 4. **No console.device behind `ACTION_DISK_INFO`.** Only reading the
    `ConUnit` works.
-5. **32.5 MiB and a font load per window**, and a start of 15-25 s under
-   QEMU TCG (window state not controlled). Many small `CON:` windows (each
-   `Run`-started tool with its own window) would cost much more than
-   with `CON:`.
+5. **19 to 30 MiB per window** (table above), against 0.4 MiB for a
+   system console window. Many small `CON:` windows (each `Run`-started
+   tool with its own window) cost much more than with `CON:`. Opening a
+   window, writing a line and closing it took about one second under QEMU
+   TCG with Limpet in `RAM:` (0.10.1); the 15 to 25 s seen in September
+   2026 were not seen again.
 6. **On mainline** DOS keeps the handler's own port, and `CliInit` puts
    requesters on the console's window. The contract tests above pass there
    (0.7.0, mainline `74a2d80b` under QEMU); requesters were not checked.
