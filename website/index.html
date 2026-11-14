@@ -17,7 +17,7 @@
 <figure class="shot"><img src="assets/fastfetch.png" width="990" height="678" alt="Limpet window on AROS One showing Fastfetch output: the AROS logo as a picture, system details and coloured memory bars"><figcaption>Fastfetch in Limpet 0.10.1 on AROS One, Tokyo Night theme. The logo is a picture drawn in the terminal.</figcaption></figure>
 </section>
 
-<nav class="section-index wrap" aria-label="Sections"><a href="#why">Why Limpet ↗</a><a href="#shell">Shell features ↗</a><a href="#programs">Fastfetch, eza, Helix ↗</a><a href="#themes">Themes &amp; Preferences ↗</a><a href="#images">Images ↗</a><a href="#con">CON: replacement ↗</a><a href="#next">SSH &amp; what is next ↗</a><a href="#developers">For programmers ↗</a></nav>
+<nav class="section-index wrap" aria-label="Sections"><a href="#why">Why Limpet ↗</a><a href="#shell">Shell features ↗</a><a href="#programs">Fastfetch, eza, Helix ↗</a><a href="#themes">Themes &amp; Preferences ↗</a><a href="#images">Images ↗</a><a href="#ssh">SSH ↗</a><a href="#con">CON: replacement ↗</a><a href="#next">What is next ↗</a><a href="#developers">For programmers ↗</a></nav>
 
 <section id="why" class="section wrap">
 <div class="section-heading"><div><p class="eyebrow">Why Limpet</p><h2>The goal is<br>to replace CON:.</h2></div><p class="section-lead">I wanted a modern terminal on AROS, so I started building Limpet.</p></div>
@@ -120,26 +120,39 @@ fastfetch -c aros-logo</pre><p><a href="https://github.com/tomaszstaniak/arospkg
 </div>
 </div></section>
 
-<section id="next" class="section wrap">
-<div class="section-heading"><div><p class="eyebrow">SSH &amp; what is next</p><h2>Where Limpet<br>is going.</h2></div><p class="section-lead">The order of work follows the goal: first a console good enough to replace <code>CON:</code>, then the things a modern terminal is used for.</p></div>
+<section id="ssh" class="section wrap">
+<div class="section-heading"><div><p class="eyebrow">SSH</p><h2>Work on<br>other computers.</h2></div><p class="section-lead">Limpet comes with an SSH client. Open a shell on a server, a Mac or a Linux machine and use it in the same window, with the same colours, fonts and keys.</p></div>
 <div class="two top">
 <div>
-<h3>SSH <span class="tag">since 0.11.0</span></h3>
-<p>Limpet comes with an SSH client for all three systems. <code>ssh user@host</code> opens a remote shell in the window, with the remote program's colours, full-screen programs such as Vim and window resizes; <code>ssh user@host "command"</code> runs one command and returns its return code. You log in with a key, a password or the server's own questions. An unknown server's key fingerprint is shown and asked about; a changed key is refused.</p>
-<p>Keys and <code>known_hosts</code> are OpenSSH files in <code>ENVARC:SSH</code>. The cryptography is the <a href="https://github.com/tomaszstaniak/aros-crypto"><u>aros-crypto</u></a> kit (Mbed TLS). Not yet there: file transfer, port forwarding, key generation and IPv6. Details are in the <a href="https://github.com/tomaszstaniak/limpet/blob/main/examples/ssh/README.md"><u>SSH guide</u></a>.</p>
+<pre class="cmd">ssh user@host
+ssh user@host "uname -a"
+ssh -p 2222 -i Work:keys/server user@host</pre>
+<p>The first line opens a remote shell: the remote program's colours, full-screen programs such as Vim, and the window size follow along. The second runs one command and returns its return code to the AROS Shell.</p>
+<p>Log in with a key, a password or the server's own questions. The first time you contact a server, Limpet shows the fingerprint of its key and asks; a server whose key has changed is refused.</p>
 </div>
 <ul class="list">
-<li><strong>CON: for daily use.</strong> Less memory per console window, <code>CON:</code>'s default window placement, a round of Workbench programs, and an optional line for <code>S:User-Startup</code>.</li>
-<li><strong>Unix terminal programs.</strong> Most of them expect a pseudo-terminal and termios, which AROS does not provide yet. A runtime for that works in experiments on mainline; it is not distributed, so such programs do not run unchanged today.</li>
-<li><strong>Panes and a multiplexer.</strong> Horizontal and vertical splits with separate sessions.</li>
-<li><strong>Completion and shortcuts.</strong> Better completion for commands and their arguments, configurable keys and prompt.</li>
-<li><strong>Raspberry Pi hardware.</strong> The Pi build runs under QEMU's Pi model and still needs testing on a real board.</li>
+<li><strong>Your OpenSSH files work.</strong> Keys, <code>known_hosts</code> and <code>config</code> live in <code>ENVARC:SSH</code> in the formats of OpenSSH. Copy a key from another computer and connect.</li>
+<li><strong>On all three systems.</strong> ABIv11 distributions, mainline AROS on PCs and on the Raspberry Pi; <code>ssh</code> is in the Limpet drawer.</li>
+<li><strong>Current cryptography.</strong> libssh with Mbed TLS from the <a href="https://github.com/tomaszstaniak/aros-crypto"><u>aros-crypto</u></a> kit; Ed25519 keys, ChaCha20-Poly1305 and AES.</li>
+<li><strong>Not there yet.</strong> File transfer, port forwarding, key generation and IPv6. The <a href="https://github.com/tomaszstaniak/limpet/blob/main/examples/ssh/README.md"><u>SSH guide</u></a> has the details.</li>
 </ul>
 </div>
 <div class="two top" style="margin-top:34px">
-<figure class="shot"><img src="assets/ssh-session.png" width="684" height="477" loading="lazy" alt="Limpet window titled ssh: a remote shell on a Mac showing uname, a coloured git log, git status, a file listing and a diff"><figcaption>An SSH session from Limpet on mainline AROS to an OpenSSH server on a Mac, Dracula theme. Git prints its own colours.</figcaption></figure>
-<figure class="shot"><img src="assets/ssh-vim.png" width="684" height="477" loading="lazy" alt="Vim running on the remote computer inside the Limpet window, two files side by side with line numbers and syntax colours"><figcaption>Vim on the remote computer in the same session, two files side by side. Both on the mainline nightly build of 2026-11-13 under QEMU.</figcaption></figure>
+<figure class="shot"><img src="assets/ssh-session.png" width="684" height="477" loading="lazy" alt="Limpet window titled ssh: a remote shell on a Mac showing uname, a coloured git log, git status, a file listing and a diff"><figcaption>A shell on a Mac from Limpet on mainline AROS, Dracula theme. Git prints its own colours.</figcaption></figure>
+<figure class="shot"><img src="assets/ssh-vim.png" width="684" height="477" loading="lazy" alt="Vim running on the remote computer inside the Limpet window, two files side by side with line numbers and syntax colours"><figcaption>Vim on the remote computer in the same session, two files side by side.</figcaption></figure>
 </div>
+</section>
+
+<section id="next" class="section wrap">
+<div class="section-heading"><div><p class="eyebrow">What is next</p><h2>Where Limpet<br>is going.</h2></div><p class="section-lead">The order of work follows the goal: first a console good enough to replace <code>CON:</code>, then the things a modern terminal is used for.</p></div>
+<ul class="list">
+<li><strong>CON: for daily use.</strong> Less memory per console window, <code>CON:</code>'s default window placement, a round of Workbench programs, and an optional line for <code>S:User-Startup</code>.</li>
+<li><strong>More SSH.</strong> File transfer, key generation and an agent.</li>
+<li><strong>Unix terminal programs.</strong> Most of them expect a pseudo-terminal and termios, which AROS does not provide yet. A runtime for that works in experiments on mainline; it is not distributed, so such programs do not run unchanged today.</li>
+<li><strong>Panes and a multiplexer.</strong> Horizontal and vertical splits with separate sessions.</li>
+<li><strong>Completion and shortcuts.</strong> Better completion for commands and their arguments, configurable keys and prompt.</li>
+<li><strong>Raspberry Pi hardware.</strong> The Pi build still has to be run on a real board.</li>
+</ul>
 <p class="caption" style="margin-top:26px">The full list, with links to the interfaces proposed for AROS itself, is in the <a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/roadmap.md"><u>roadmap</u></a>.</p>
 </section>
 
