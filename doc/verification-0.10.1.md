@@ -65,8 +65,23 @@ ten minutes while the catalogue had been fetched without trouble. It was
 interrupted; apkg reported that nothing had been written, and the second
 attempt completed in under two minutes. The cause was not established.
 
-The upgrade from 0.10.0 to 0.10.1 through the public catalogue is recorded
-below, after publication.
+
+## Catalogue
+
+After publication, 2026-11-14, apkg 0.7.8. The published archives were
+downloaded again and match the tested ones byte for byte; the public
+catalogue lists 0.10.1 for all three systems.
+
+| System | Result |
+| --- | --- |
+| AROS One 1.3, x86_64 ABIv11 | 0.10.0 installed, `apkg update`, `apkg upgrade limpet` from the public catalogue: 3 files replaced, 30 unchanged; verify 33 files; reports 0.10.1 and opens a Shell. |
+| official nightly 20261110, x86_64 ABIv1 | The same upgrade with the public index and the published archive fetched on the host (no name resolution on the test machine): 3 files replaced, verify 33 files, opens a Shell, removed with apkg. The catalogue now lists this build as installable on mainline x86_64. |
+| official nightly 20261110, AArch64 ABIv1 Pi | With the package root on the SD card: 0.10.0 installed, `apkg update`, `apkg upgrade limpet` from the public catalogue; the installed program reports 0.10.1 and opens a Shell; removed with apkg. The text output of apkg's later commands, `verify` among them, was not captured in this run (the files stayed empty), so the file check is not recorded here. |
+
+On the Pi three earlier attempts with the package root in `RAM:` ended in
+a system failure while apkg installed 0.10.0 from an archive placed in its
+cache, before Limpet was started. It concerns apkg or the Pi system under
+QEMU, not Limpet.
 
 ## Not checked
 

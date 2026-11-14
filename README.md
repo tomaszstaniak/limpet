@@ -99,7 +99,7 @@ Each system has its own archive on the
 | System | Archive (0.10.1) | apkg |
 | --- | --- | --- |
 | AROS One and other ABIv11 systems, x86_64 | `Limpet-0.10.1-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
-| mainline AROS (ABIv1), x86_64 | `Limpet-0.10.1-aros-x86_64-abiv1-pc.zip` | listed in the catalogue; the [apkg build for mainline](https://github.com/tomaszstaniak/arospkg) is experimental |
+| mainline AROS (ABIv1), x86_64 | `Limpet-0.10.1-aros-x86_64-abiv1-pc.zip` | `apkg install limpet` |
 | AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.10.1-aros-aarch64-abiv1-raspi.zip` | `apkg install limpet` |
 
 Releases up to 0.7.0 named the same archives `-abiv11`, `-v1-x86_64` and
