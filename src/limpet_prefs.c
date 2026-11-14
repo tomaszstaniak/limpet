@@ -318,6 +318,13 @@ static void run_now(void)
     if(request_out || !port_name) return;
     memset(&request,0,sizeof request);
     if(session_start_line(&s,request.line,sizeof request.line-2,&why)<=0) return;
+    /* A Fastfetch chosen by its place: say so here when it is not there,
+       instead of the Shell's "object not found" in the window. By name the
+       Shell's own search path decides, which this program cannot know. */
+    if(s.session_start==XSTART_FASTFETCH && s.fastfetch[0] && !exists(s.fastfetch)) {
+        say("Not run: Fastfetch is not at the place set here");
+        return;
+    }
     request.message.mn_Node.ln_Type=NT_MESSAGE;
     request.message.mn_Length=sizeof request;
     request.message.mn_ReplyPort=reply_port;

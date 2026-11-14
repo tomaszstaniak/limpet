@@ -21,6 +21,13 @@ int main(void)
     assert(background_path(70, 0, 1) == XBACKGROUND_PATH_OPAQUE);
     assert(background_path(70, 1, 0) == XBACKGROUND_PATH_OPAQUE);
     assert(background_path(70, 0, 0) == XBACKGROUND_PATH_OPAQUE);
+    /* Systems whose alpha windows have no frame stay solid. */
+    assert(!background_layers_draw_frame(50, 7));
+    assert(!background_layers_draw_frame(50, 8));
+    assert(background_layers_draw_frame(50, 9));
+    assert(background_layers_draw_frame(50, 13));
+    assert(background_layers_draw_frame(51, 0));
+    assert(!background_layers_draw_frame(45, 30));
     /* Opacity to alpha. The smallest opacity must still take clicks, and
        layers.library takes alpha 0 as "not here". */
     assert(background_alpha_byte(100) == 255);

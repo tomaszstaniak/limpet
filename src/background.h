@@ -27,6 +27,15 @@ static inline int background_path(unsigned percent, int screen_supports, int win
         ? XBACKGROUND_PATH_ALPHA : XBACKGROUND_PATH_OPAQUE;
 }
 
+/* layers.library from which a window with an alpha surface has its frame.
+ * Mainline of 2026-10-24 to 2026-10-27 already answers SA_SourceAlphaSupport,
+ * but pens drew into the surface with alpha 0: no frame was seen and its
+ * gadgets took no clicks. Fixed in mainline fc8bbc76, which is layers 50.9. */
+static inline int background_layers_draw_frame(unsigned version, unsigned revision)
+{
+    return version > 50 || (version == 50 && revision >= 9);
+}
+
 static inline unsigned char background_alpha_byte(unsigned percent)
 {
     if (percent >= 100) return 255;

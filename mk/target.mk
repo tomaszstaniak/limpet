@@ -35,6 +35,7 @@ target: target-check
 	$(T_CC) $(T_PROBE_CFLAGS) -Wno-error -o $(TD)/probes/tty-winsize tests/tty_winsize_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/console-geometry-probe tests/console_geometry_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/key-inject tests/key_inject.c $(T_LDFLAGS)
+	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/colour-query-probe tests/colour_query_probe.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/link-logger tests/link_logger.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/win-inject tests/win_inject.c $(T_LDFLAGS)
 	$(T_CC) $(T_PROBE_CFLAGS) -o $(TD)/probes/openurl-set-browser tests/openurl_set_browser.c $(T_LDFLAGS)

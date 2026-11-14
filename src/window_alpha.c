@@ -1,5 +1,8 @@
 #include "window_alpha.h"
+#include "background.h"
+#include <proto/exec.h>
 #include <proto/intuition.h>
+#include <exec/libraries.h>
 #include <intuition/intuition.h>
 #include <intuition/screens.h>
 #include <graphics/clip.h>
@@ -19,8 +22,15 @@ int window_alpha_supported(struct Screen *screen)
 {
     IPTR alpha = 0;
     if (!screen) return 0;
-    if (!GetAttr(SA_SourceAlphaSupport, (Object *)screen, &alpha)) return 0;
-    return alpha != 0;
+    if (!GetAttr(SA_SourceAlphaSupport, (Object *)screen, &alpha) || !alpha) return 0;
+    /* The screen says yes; the frame of such a window needs more
+       (background.h). layers.library is in the ROM: no file is read. */
+    {
+        struct Library *layers = OpenLibrary((CONST_STRPTR)"layers.library", 0);
+        int ok = layers && background_layers_draw_frame(layers->lib_Version, layers->lib_Revision);
+        if (layers) CloseLibrary(layers);
+        return ok;
+    }
 }
 
 unsigned long window_alpha_tag(void) { return WA_AlphaSurface; }
