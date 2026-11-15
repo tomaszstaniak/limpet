@@ -251,8 +251,12 @@ int xt_ssh_start(int network, int verbosity)
     {
         /* libssh reads socket errors from the C library's errno (EINPROGRESS,
          * EAGAIN); bsdsocket.library stores them there once told where it is. */
+        /* By default the socket calls of a task with a pending Ctrl-C end
+         * at once with EINTR, and libssh then repeats them without end. The
+         * programs look at Ctrl-C themselves, so that mask is cleared. */
         struct TagItem tags[] = {
             { SBTM_SETVAL(SBTC_ERRNOLONGPTR), (IPTR)&errno },
+            { SBTM_SETVAL(SBTC_BREAKMASK), 0 },
             { TAG_END, 0 }
         };
         if (!SocketBase)
@@ -262,7 +266,7 @@ int xt_ssh_start(int network, int verbosity)
         }
         if (sizeof(errno) != sizeof(LONG) || SocketBaseTagList(tags) != 0)
         {
-            Printf("%s: bsdsocket.library did not accept the error variable\n", (IPTR)tool);
+            Printf("%s: bsdsocket.library did not accept the program's settings\n", (IPTR)tool);
             return -1;
         }
 #ifdef XT_SSH_ABIV11
@@ -298,6 +302,17 @@ void xt_ssh_stop(void)
     ssh_finalize();
     aros_crypto_teardown();
     started = 0;
+}
+
+/* Ctrl-C pressed while connecting or logging in: say so once and leave the
+ * signal for the caller, which ends without doing its work. */
+static int break_pending(void)
+{
+    static int told;
+    if (!(SetSignal(0, 0) & SIGBREAKF_CTRL_C)) return 0;
+    if (!told) Printf("%s: stopped\n", (IPTR)tool);
+    told = 1;
+    return 1;
 }
 
 ssh_session xt_ssh_connect(const struct xt_ssh_login *login)
@@ -366,17 +381,20 @@ ssh_session xt_ssh_connect(const struct xt_ssh_login *login)
 
     if (ssh_connect(session) != SSH_OK)
     {
+        if (break_pending()) goto fail;
         Printf("%s: cannot connect to %s, port %ld: %s\n",
                (IPTR)tool, (IPTR)login->host, (long)port, (IPTR)ssh_get_error(session));
         goto fail;
     }
+    if (break_pending()) goto disconnect;
     if (verify_host(session, login->host, port) != 0)
         goto disconnect;
     if (authenticate(session, login->keyfile) != 0)
     {
-        Printf("%s: login was not accepted\n", (IPTR)tool);
+        if (!break_pending()) Printf("%s: login was not accepted\n", (IPTR)tool);
         goto disconnect;
     }
+    if (break_pending()) goto disconnect;
     return session;
 
 disconnect:

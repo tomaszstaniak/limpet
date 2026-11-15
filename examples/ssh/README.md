@@ -1,6 +1,6 @@
 # SSH programs
 
-Limpet comes with four SSH programs for mainline AROS (x86_64 and Raspberry Pi) and ABIv11 distributions: `ssh` (since 0.11.0), and `scp`, `ssh-keygen` and `ssh-copy-id` (since 0.12.0). They are built on libssh 0.12.2 and the [aros-crypto](https://github.com/tomaszstaniak/aros-crypto) kit (Mbed TLS 3.6.7).
+Limpet comes with four SSH programs for mainline AROS (x86_64 and Raspberry Pi) and ABIv11 distributions: `ssh` (since 0.11.0), and `scp`, `ssh-keygen` and `ssh-copy-id` (since 0.12.1). They are built on libssh 0.12.2 and the [aros-crypto](https://github.com/tomaszstaniak/aros-crypto) kit (Mbed TLS 3.6.7).
 
 ## First login with a key
 
@@ -36,8 +36,10 @@ Copies files between AROS and one server, through the server's SFTP service.
 - Local sources may be AmigaDOS patterns. Patterns on the server side are not expanded: name the files or copy the directory.
 - `-r` copies drawers and directories. Copying into an existing directory puts the source inside it; otherwise the target gets the source's contents.
 - Use `""` as the target for the current drawer.
-- In a Limpet window a large file shows its percentage; each finished file gets one line. `-q` prints errors only. Ctrl-C stops: a half-received file is deleted, a half-sent one is named.
-- Files arrive with the server's default permissions (uploads are made with mode 644, directories 755); dates and protection bits are not carried over. A `:` in a server file name becomes `_` on AROS. Links to files are copied as files; links to directories are not followed.
+- In a Limpet window a large file shows its percentage; each finished file gets one line. `-q` prints errors only. Ctrl-C stops the copy.
+- A file arrives under a temporary name (`scp-....part` on AROS, `.<name>.scp-part` on the server) and replaces the target only when it is complete. A copy that is stopped or fails leaves the file that was there before as it was. If the computer or the connection stops in the middle, the temporary file can remain; delete it.
+- Two server names that would be one name on AROS (`a:b.txt` and `a_b.txt`, or `Foo` and `foo`) are not written over each other: the first is copied, the second is reported and the return code is 10. Copy the second by itself with another target name. The same holds for two sources with one name.
+- New files on the server get mode 644 and directories 755; a file that replaces one keeps the old one's mode. Dates and protection bits are not carried over. A `:` in a server file name becomes `_` on AROS. Links to files are copied as files; links to directories are not followed.
 - The return code is 0 when everything was copied, 10 when something was not, 20 when the connection or login failed.
 
 ## ssh-keygen
@@ -83,14 +85,15 @@ Encryption needs unpredictable numbers. On mainline AROS they come from the syst
 - Use the programs in a Limpet window. In the system console (`CON:`) they were not tested; window size and colours are not available there.
 - One command's output is passed through as bytes; in an interactive session the remote program's basic colours are rewritten so that Limpet shows them as colours and not as Workbench pens.
 - When the connection is lost, `ssh` ends with return code 20. It does not reconnect.
+- Ctrl-C stops `scp` between blocks and all four programs after a connection or login step. While a program waits for the server (up to 30 seconds when connecting, up to 2 minutes during a copy) Ctrl-C takes effect when that wait ends.
 - `scp` sends and receives one block at a time. Under QEMU's Raspberry Pi model sending reaches about 30 KB per second (receiving about 400 KB per second); on the PC targets 5 MB take a few seconds either way.
 
 ## Known system problems
 
-These are faults of network drivers, not of the SSH programs, but sending much data (an `scp` upload) is what triggers them. Save your work before a large transfer.
+On two configurations the whole system can stop responding while much data is sent, and an `scp` upload sends much data. Save your work before a large transfer.
 
-- **ABIv11, `e1000.device` 1.1 (AROS One 1.3):** the whole system can stop responding while data is sent. The driver allocates memory in interrupt code; this is corrected in AROS (`e1000.device` 1.2, [deadwood2/AROS#274](https://github.com/deadwood2/AROS/issues/274)), which no distribution includes yet. With the corrected driver loaded the same transfers pass.
-- **Mainline x86_64, nightly build of 2026-11-13, e1000 card under QEMU:** the whole system can stop responding during network traffic, also with a network test that uses none of these programs. The cause is not established.
+- **ABIv11, `e1000.device` 1.1 (AROS One 1.3):** this driver has a known fault, memory allocation in interrupt code, corrected in AROS as `e1000.device` 1.2 ([deadwood2/AROS#274](https://github.com/deadwood2/AROS/issues/274)); no distribution includes that version yet. In our runs an upload stopped the system with 1.1, and the same transfers passed with 1.2 loaded.
+- **Mainline x86_64, nightly build of 2026-11-13, e1000 card under QEMU:** the system stopped in most of our runs with SSH traffic (eleven of fifteen boots in the last round), in uploads and in downloads. It also stops under a network test that uses none of these programs. The cause is not established; whether it is the network driver is not known.
 
 ## Build
 

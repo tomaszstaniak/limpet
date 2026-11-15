@@ -25,4 +25,14 @@ int xt_scp_remote_join(char *out, size_t size, const char *directory, const char
 /* A name from a server as a local file name: 0 when it is usable as it is or
  * after ':' became '_'; -1 for "", ".", ".." and names with '/'. */
 int xt_scp_local_name(char *out, size_t size, const char *name, size_t length);
+/* The names already given out in one target directory. claim() returns 0
+ * for a new name, 1 when the name is taken (with fold: also when it differs
+ * only in the case of letters, as on AROS file systems) and -1 without
+ * memory. */
+struct xt_scp_names {
+    char **items;
+    size_t count, room;
+};
+int xt_scp_names_claim(struct xt_scp_names *names, const char *name, int fold);
+void xt_scp_names_free(struct xt_scp_names *names);
 #endif

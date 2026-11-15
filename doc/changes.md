@@ -3,7 +3,10 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## 0.12.0 (2026-11-15)
+## 0.12.1 (not released yet)
+
+The first version meant for release with these programs; 0.12.0 was tagged
+and not released.
 
 New:
 
@@ -13,6 +16,12 @@ New:
   before the colon that is a volume, device or assign is a local path;
   anything else, and everything with `user@`, is a server. In a window a
   large file shows its percentage; Ctrl-C stops the copy.
+- `scp` writes each file under a temporary name and puts it in the target's
+  place only when it is complete, in both directions: a copy that is
+  stopped, fails or loses the connection leaves the old file whole.
+- `scp` does not write two server names over each other when they are one
+  name on AROS (`a:b.txt` and `a_b.txt`, `Foo` and `foo`), nor two sources
+  with one name: the second is reported and the return code is 10.
 - **`ssh-keygen`** makes Ed25519, ECDSA and RSA key pairs in the OpenSSH
   file formats, with an optional passphrase, and shows fingerprints (`-l`)
   and public keys (`-y`). It needs no network.
@@ -23,18 +32,21 @@ New:
 
 Changed:
 
-- `ssh`: no change in behaviour; its login code moved to a shared file.
+- `ssh`: its login code moved to a shared file. Ctrl-C pressed while it
+  connects or logs in now ends it with "stopped" once the connection attempt
+  is over (at most the 30-second timeout); the same holds for the new
+  programs.
 
-Known problems of the systems, found while testing uploads: with
-`e1000.device` 1.1 (AROS One 1.3) and on the mainline nightly of 2026-11-13
-with the e1000 card under QEMU, the whole system can stop responding while
-much data is sent. See [SSH](../examples/ssh/README.md), "Known system
-problems".
+Found while testing uploads: with `e1000.device` 1.1 (AROS One 1.3), which
+has a known fault, and on the mainline nightly of 2026-11-13 with the e1000
+card under QEMU, where the cause is not established, the whole system can
+stop responding while much data is sent. See
+[SSH](../examples/ssh/README.md), "Known system problems".
 
 Not included: port forwarding, an agent, an interactive `sftp`, IPv6.
 
 No change to the terminal itself, its settings or the console handler. See
-the [verification record](verification-0.12.0.md).
+the [verification record](verification-0.12.1.md).
 
 ## 0.11.0 (2026-11-14)
 

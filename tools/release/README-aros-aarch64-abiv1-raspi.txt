@@ -33,7 +33,7 @@ This build has the same features as Limpet @VERSION@ for ABIv11; the
 changes of each version are listed in doc/changes.md in the source
 (https://github.com/tomaszstaniak/limpet).
 
-New in 0.12.0
+New in 0.12.1
 -------------
 
 Three more SSH programs are in the drawer, beside ssh:
@@ -55,6 +55,11 @@ The server side is written [user@]host:path; a name before the colon that
 is a volume, device or assign on this computer is taken as local, so
 Work:file stays a local file. Local sources can be patterns (#?.txt). In
 a Limpet window scp shows how far a large file is; Ctrl-C stops it.
+
+A file arrives under a temporary name and replaces the target only when it
+is complete, so a copy that stops in the middle leaves the old file as it
+was. Two server names that would be one name on AROS (a:b and a_b, Foo and
+foo) are not written over each other; the second is reported.
 
 New in 0.11.0
 -------------

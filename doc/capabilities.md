@@ -819,4 +819,4 @@ for the preview APIs.
 
 SSH programs come with Limpet for mainline AROS (x86_64 and Raspberry Pi)
 and ABIv11: `ssh` since 0.11.0; `scp`, `ssh-keygen` and `ssh-copy-id` since
-0.12.0. See [SSH](../examples/ssh/README.md).
+0.12.1. See [SSH](../examples/ssh/README.md).

@@ -23,7 +23,7 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
-New in 0.12.0
+New in 0.12.1
 -------------
 
 Three more SSH programs are in the drawer, beside ssh:
@@ -46,12 +46,18 @@ is a volume, device or assign on this computer is taken as local, so
 Work:file stays a local file. Local sources can be patterns (#?.txt). In
 a Limpet window scp shows how far a large file is; Ctrl-C stops it.
 
-Known problem of the system, not of these programs: with the e1000 network
-driver of AROS One 1.3 (e1000.device 1.1) the whole system can stop
-responding while much data is sent, for example when scp uploads large
-files. Save your work before such a transfer. The driver is corrected in
-AROS (e1000.device 1.2); no distribution includes that version yet. Other
-network cards were not tried.
+A file arrives under a temporary name and replaces the target only when it
+is complete, so a copy that stops in the middle leaves the old file as it
+was. Two server names that would be one name on AROS (a:b and a_b, Foo and
+foo) are not written over each other; the second is reported.
+
+Known problem: with the e1000 network driver of AROS One 1.3 (e1000.device
+1.1) the whole system can stop responding while much data is sent, for
+example when scp uploads large files. Save your work before such a
+transfer. The driver has a known fault that is corrected in AROS
+(e1000.device 1.2); no distribution includes that version yet. In our runs
+the same transfers passed with the corrected driver. Other network cards
+were not tried.
 
 New in 0.11.0
 -------------

@@ -32,7 +32,7 @@ This build has the same features as Limpet @VERSION@ for ABIv11; the
 changes of each version are listed in doc/changes.md in the source
 (https://github.com/tomaszstaniak/limpet).
 
-New in 0.12.0
+New in 0.12.1
 -------------
 
 Three more SSH programs are in the drawer, beside ssh:
@@ -55,10 +55,16 @@ is a volume, device or assign on this computer is taken as local, so
 Work:file stays a local file. Local sources can be patterns (#?.txt). In
 a Limpet window scp shows how far a large file is; Ctrl-C stops it.
 
-Known problem of the system, not of these programs: on the nightly build
-of 2026-11-13 under QEMU with the e1000 network card, the whole system can
-stop responding during network traffic. Sending large files with scp makes
-it more likely. Save your work before such a transfer.
+A file arrives under a temporary name and replaces the target only when it
+is complete, so a copy that stops in the middle leaves the old file as it
+was. Two server names that would be one name on AROS (a:b and a_b, Foo and
+foo) are not written over each other; the second is reported.
+
+Known problem: on the nightly build of 2026-11-13 under QEMU with the
+e1000 network card, the whole system stopped responding in most of our
+runs with SSH traffic, while files were sent and while they were received.
+It also stops under a network test that uses none of these programs. The
+cause is not established. Save your work before a transfer.
 
 New in 0.11.0
 -------------

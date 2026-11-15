@@ -1,4 +1,5 @@
 #include "scp_spec.h"
+#include <stdlib.h>
 #include <string.h>
 
 static int put(char *out, size_t size, const char *text, size_t length)
@@ -75,4 +76,50 @@ int xt_scp_local_name(char *out, size_t size, const char *name, size_t length)
     }
     out[length] = 0;
     return 0;
+}
+
+/* Letters as AROS file systems compare them: A-Z and the Latin-1 capitals. */
+static unsigned char folded(unsigned char c)
+{
+    if ((c >= 'A' && c <= 'Z') || (c >= 0xC0 && c <= 0xDE && c != 0xD7)) return (unsigned char)(c + 32);
+    return c;
+}
+
+static int same_name(const char *a, const char *b, int fold)
+{
+    for (; *a && *b; ++a, ++b)
+    {
+        unsigned char x = (unsigned char)*a, y = (unsigned char)*b;
+        if (fold ? folded(x) != folded(y) : x != y) return 0;
+    }
+    return !*a && !*b;
+}
+
+int xt_scp_names_claim(struct xt_scp_names *names, const char *name, int fold)
+{
+    size_t i, length = strlen(name) + 1;
+    char *copy;
+    for (i = 0; i < names->count; ++i)
+        if (same_name(names->items[i], name, fold)) return 1;
+    if (names->count == names->room)
+    {
+        size_t room = names->room ? names->room * 2 : 16;
+        char **items = realloc(names->items, room * sizeof *items);
+        if (!items) return -1;
+        names->items = items;
+        names->room = room;
+    }
+    if (!(copy = malloc(length))) return -1;
+    memcpy(copy, name, length);
+    names->items[names->count++] = copy;
+    return 0;
+}
+
+void xt_scp_names_free(struct xt_scp_names *names)
+{
+    size_t i;
+    for (i = 0; i < names->count; ++i) free(names->items[i]);
+    free(names->items);
+    names->items = NULL;
+    names->count = names->room = 0;
 }

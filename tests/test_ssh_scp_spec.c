@@ -67,6 +67,37 @@ int main(void)
     assert(xt_scp_local_name(out, sizeof out, "a/b", 3) == -1);
     assert(xt_scp_local_name(out, sizeof out, "", 0) == -1);
     assert(xt_scp_local_name(out, sizeof out, ".profile", 8) == 0);
+    {
+        /* a:b.txt and a_b.txt get the same AROS name; Foo and foo are one
+         * file there. The second of each pair must be refused. */
+        struct xt_scp_names names = { 0, 0, 0 };
+        char first[16], second[16];
+        int i;
+        assert(xt_scp_local_name(first, sizeof first, "a:b.txt", 7) == 0);
+        assert(xt_scp_local_name(second, sizeof second, "a_b.txt", 7) == 0);
+        assert(xt_scp_names_claim(&names, first, 1) == 0);
+        assert(xt_scp_names_claim(&names, second, 1) == 1);
+        assert(xt_scp_names_claim(&names, "Foo", 1) == 0);
+        assert(xt_scp_names_claim(&names, "foo", 1) == 1);
+        assert(xt_scp_names_claim(&names, "FOO", 1) == 1);
+        assert(xt_scp_names_claim(&names, "foo2", 1) == 0);
+        assert(xt_scp_names_claim(&names, "fo", 1) == 0);
+        assert(xt_scp_names_claim(&names, "\xc9t\xe9", 1) == 0);      /* Latin-1 capital and small e acute */
+        assert(xt_scp_names_claim(&names, "\xe9t\xe9", 1) == 1);
+        for (i = 0; i < 100; ++i)
+        {
+            char name[16];
+            snprintf(name, sizeof name, "file%d", i);
+            assert(xt_scp_names_claim(&names, name, 1) == 0);
+        }
+        assert(xt_scp_names_claim(&names, "FILE57", 1) == 1);
+        xt_scp_names_free(&names);
+        /* On a server the case of letters tells names apart. */
+        assert(xt_scp_names_claim(&names, "Foo", 0) == 0);
+        assert(xt_scp_names_claim(&names, "foo", 0) == 0);
+        assert(xt_scp_names_claim(&names, "foo", 0) == 1);
+        xt_scp_names_free(&names);
+    }
     puts("ssh scp spec: PASS");
     return 0;
 }

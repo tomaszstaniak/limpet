@@ -1,4 +1,10 @@
-# Verification record: Limpet 0.12.0
+# Verification record: Limpet 0.12.0 (not released)
+
+0.12.0 was tagged and not released: a review found that `scp` could write
+one received file over another and could lose the old target of a stopped
+copy. 0.12.1 corrects that; its record is
+[verification-0.12.1.md](verification-0.12.1.md). This record stays as the
+account of the 0.12.0 archives.
 
 Checks of 2026-11-15. All targets were built from the same source with
 version 0.12.0 and date 15.11.2026, with the toolchains, SDKs and aros-crypto
