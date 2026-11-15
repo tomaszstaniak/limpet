@@ -3,10 +3,9 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
-## 0.12.1 (not released yet)
+## 0.12.1 (2026-11-15)
 
-The first version meant for release with these programs; 0.12.0 was tagged
-and not released.
+0.12.0 was tagged and not released.
 
 New:
 

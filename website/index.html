@@ -121,7 +121,7 @@ fastfetch -c aros-logo</pre><p><a href="https://github.com/tomaszstaniak/arospkg
 </div></section>
 
 <section id="ssh" class="section wrap">
-<div class="section-heading"><div><p class="eyebrow">SSH</p><h2>Work on<br>other computers.</h2></div><p class="section-lead">Limpet comes with an SSH client. Open a shell on a server, a Mac or a Linux machine and use it in the same window, with the same colours, fonts and keys.</p></div>
+<div class="section-heading"><div><p class="eyebrow">SSH</p><h2>Work on<br>other computers.</h2></div><p class="section-lead">Limpet comes with <code>ssh</code>, <code>scp</code> and the key tools. Open a shell on a server, a Mac or a Linux machine in the same window, and copy files both ways.</p></div>
 <div class="two top">
 <div>
 <pre class="cmd">ssh user@host
@@ -131,15 +131,27 @@ ssh -p 2222 -i Work:keys/server user@host</pre>
 <p>Log in with a key, a password or the server's own questions. The first time you contact a server, Limpet shows the fingerprint of its key and asks; a server whose key has changed is refused.</p>
 </div>
 <ul class="list">
-<li><strong>Your OpenSSH files work.</strong> Keys, <code>known_hosts</code> and <code>config</code> live in <code>ENVARC:SSH</code> in the formats of OpenSSH. Copy a key from another computer and connect.</li>
-<li><strong>On all three systems.</strong> ABIv11 distributions, mainline AROS on PCs and on the Raspberry Pi; <code>ssh</code> is in the Limpet drawer.</li>
+<li><strong>Your OpenSSH files work.</strong> Keys, <code>known_hosts</code> and <code>config</code> live in <code>ENVARC:SSH</code> in the formats of OpenSSH. Bring a key from another computer or make one here.</li>
+<li><strong>On all three systems.</strong> ABIv11 distributions, mainline AROS on PCs and on the Raspberry Pi; the programs are in the Limpet drawer.</li>
 <li><strong>Current cryptography.</strong> libssh with Mbed TLS from the <a href="https://github.com/tomaszstaniak/aros-crypto"><u>aros-crypto</u></a> kit; Ed25519 keys, ChaCha20-Poly1305 and AES.</li>
-<li><strong>Not there yet.</strong> File transfer, port forwarding, key generation and IPv6. The <a href="https://github.com/tomaszstaniak/limpet/blob/main/examples/ssh/README.md"><u>SSH guide</u></a> has the details.</li>
+<li><strong>Not there yet.</strong> Port forwarding, an agent and IPv6. The <a href="https://github.com/tomaszstaniak/limpet/blob/main/examples/ssh/README.md"><u>SSH guide</u></a> has the details.</li>
 </ul>
 </div>
 <div class="two top" style="margin-top:34px">
 <figure class="shot"><img src="assets/ssh-session.png" width="684" height="477" loading="lazy" alt="Limpet window titled ssh: a remote shell on a Mac showing uname, a coloured git log, git status, a file listing and a diff"><figcaption>A shell on a Mac from Limpet on mainline AROS, Dracula theme. Git prints its own colours.</figcaption></figure>
 <figure class="shot"><img src="assets/ssh-vim.png" width="684" height="477" loading="lazy" alt="Vim running on the remote computer inside the Limpet window, two files side by side with line numbers and syntax colours"><figcaption>Vim on the remote computer in the same session, two files side by side.</figcaption></figure>
+</div>
+<div class="two top" style="margin-top:34px">
+<figure class="shot"><img src="assets/ssh-keys.png" width="684" height="477" loading="lazy" alt="Limpet window: ssh-keygen makes a key and shows its fingerprint, ssh-copy-id asks for the password once and reports that the key is accepted, scp -r copies a drawer of four files to the server"><figcaption>A new key, put on the server, then a drawer copied with it.</figcaption></figure>
+<div>
+<h3>Keys and files</h3>
+<pre class="cmd">ssh-keygen
+ssh-copy-id user@host
+scp notes.txt user@host:
+scp -r user@host:project Work:</pre>
+<p><code>ssh-keygen</code> makes a key pair and asks for a passphrase. <code>ssh-copy-id</code> logs in with your password once and puts the public key on the server; from then on <code>ssh</code> and <code>scp</code> use the key.</p>
+<p><code>scp</code> copies files and whole drawers in both directions. Write the server side as <code>user@host:path</code>; <code>Work:file</code> stays a local path because <code>Work:</code> is a volume. Local names can be patterns such as <code>#?.txt</code>.</p>
+</div>
 </div>
 </section>
 
@@ -147,7 +159,7 @@ ssh -p 2222 -i Work:keys/server user@host</pre>
 <div class="section-heading"><div><p class="eyebrow">What is next</p><h2>Where Limpet<br>is going.</h2></div><p class="section-lead">The order of work follows the goal: first a console good enough to replace <code>CON:</code>, then the things a modern terminal is used for.</p></div>
 <ul class="list">
 <li><strong>CON: for daily use.</strong> Less memory per console window, <code>CON:</code>'s default window placement, a round of Workbench programs, and an optional line for <code>S:User-Startup</code>.</li>
-<li><strong>More SSH.</strong> File transfer, key generation and an agent.</li>
+<li><strong>More SSH.</strong> Port forwarding and an agent.</li>
 <li><strong>Unix terminal programs.</strong> Most of them expect a pseudo-terminal and termios, which AROS does not provide yet. A runtime for that works in experiments on mainline; it is not distributed, so such programs do not run unchanged today.</li>
 <li><strong>Panes and a multiplexer.</strong> Horizontal and vertical splits with separate sessions.</li>
 <li><strong>Completion and shortcuts.</strong> Better completion for commands and their arguments, configurable keys and prompt.</li>
@@ -176,10 +188,10 @@ else
 </div>
 </div></section>
 
-<section id="download" class="section wrap download"><p class="eyebrow">PC / Raspberry Pi</p><h2>Download Limpet 0.11.0.</h2><p class="section-lead">Archives for ABIv11 distributions such as AROS One, for mainline AROS on PC, and a test build for AROS on the Raspberry Pi.</p>
-<div class="downloads"><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.11.0/Limpet-0.11.0-aros-x86_64-abiv11-pc.zip"><span class="download-kind">PC / x86_64</span><strong>AROS One / ABIv11</strong><span>ABIv11 · ZIP archive <b>↓</b></span></a><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.11.0/Limpet-0.11.0-aros-x86_64-abiv1-pc.zip"><span class="download-kind">PC / x86_64</span><strong>Mainline AROS</strong><span>ABIv1 · ZIP archive <b>↓</b></span></a><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.11.0/Limpet-0.11.0-aros-aarch64-abiv1-raspi.zip"><span class="download-kind">Raspberry Pi / AArch64 · test build</span><strong>AROS for Raspberry Pi</strong><span>ABIv1 · ZIP archive <b>↓</b></span></a></div>
+<section id="download" class="section wrap download"><p class="eyebrow">PC / Raspberry Pi</p><h2>Download Limpet 0.12.1.</h2><p class="section-lead">Archives for ABIv11 distributions such as AROS One, for mainline AROS on PC, and a test build for AROS on the Raspberry Pi.</p>
+<div class="downloads"><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.12.1/Limpet-0.12.1-aros-x86_64-abiv11-pc.zip"><span class="download-kind">PC / x86_64</span><strong>AROS One / ABIv11</strong><span>ABIv11 · ZIP archive <b>↓</b></span></a><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.12.1/Limpet-0.12.1-aros-x86_64-abiv1-pc.zip"><span class="download-kind">PC / x86_64</span><strong>Mainline AROS</strong><span>ABIv1 · ZIP archive <b>↓</b></span></a><a href="https://github.com/tomaszstaniak/limpet/releases/download/v0.12.1/Limpet-0.12.1-aros-aarch64-abiv1-raspi.zip"><span class="download-kind">Raspberry Pi / AArch64 · test build</span><strong>AROS for Raspberry Pi</strong><span>ABIv1 · ZIP archive <b>↓</b></span></a></div>
 <div class="install-grid"><div><h3>Install with apkg</h3><pre class="cmd">apkg update
-apkg install limpet</pre><p>The same command works on all three systems. <a href="https://github.com/tomaszstaniak/arospkg"><u>About the package manager ↗</u></a></p></div><div><h3>Or from an archive</h3><p>Copy the <strong>Limpet</strong> drawer and its icon into <code>SYS:Utilities</code>, then double-click Limpet. The included README lists keys, options and known limitations. The experimental <code>LIMPET:</code> handler is a separate archive in the same release.</p><a class="text-link" href="https://github.com/tomaszstaniak/limpet/releases/tag/v0.11.0">Release notes &amp; all files ↗</a></div></div></section>
+apkg install limpet</pre><p>The same command works on all three systems. <a href="https://github.com/tomaszstaniak/arospkg"><u>About the package manager ↗</u></a></p></div><div><h3>Or from an archive</h3><p>Copy the <strong>Limpet</strong> drawer and its icon into <code>SYS:Utilities</code>, then double-click Limpet. The included README lists keys, options and known limitations. The experimental <code>LIMPET:</code> handler is a separate archive in the same release.</p><a class="text-link" href="https://github.com/tomaszstaniak/limpet/releases/tag/v0.12.1">Release notes &amp; all files ↗</a></div></div></section>
 </main>
 <footer class="wrap"><div><a class="brand" href="#"><img src="assets/icon.png" width="30" height="30" alt="">Limpet</a><p>A terminal for the AROS Shell.</p></div><div><a href="https://github.com/tomaszstaniak/limpet">GitHub ↗</a><a href="https://github.com/tomaszstaniak/limpet/issues">Report an issue ↗</a><a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/README.md">Documentation ↗</a><a href="https://github.com/tomaszstaniak/limpet/blob/main/doc/changes.md">Changelog ↗</a></div><div class="creator-links"><div><span class="eyebrow">Support the work</span><p>Support development and explore more of my projects.</p></div><nav aria-label="Creator and support links"><a href="https://www.patreon.com/c/reperspective">Patreon ↗</a><a href="https://ko-fi.com/enbewu">Ko-fi ↗</a><a href="https://tomaszstaniak.com">tomaszstaniak.com ↗</a></nav></div><p class="legal">Limpet is MIT-licensed. Bundled fonts and the included colour schemes have their own licences, listed in the Licenses drawer of each archive. Screenshots were taken under QEMU; each caption names the system and the Limpet version.</p></footer>
 </body></html>
