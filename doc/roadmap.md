@@ -43,7 +43,7 @@ and theme settings, Nerd Font icons and local-file links. Further work:
 - Horizontal and vertical panes with independent sessions.
 - A distributable PTY/termios runtime for local terminal applications.
 - Broader compatibility with editors, pagers and ncurses applications.
-- SSH: file transfer, key generation, an agent; later, a multiplexer.
+- SSH: port forwarding and an agent; later, a multiplexer.
 
 Helix already runs in Limpet as a separate AROS port. That does not imply
 that every POSIX terminal application will run unchanged.

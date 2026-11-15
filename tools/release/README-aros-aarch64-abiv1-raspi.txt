@@ -33,6 +33,29 @@ This build has the same features as Limpet @VERSION@ for ABIv11; the
 changes of each version are listed in doc/changes.md in the source
 (https://github.com/tomaszstaniak/limpet).
 
+New in 0.12.0
+-------------
+
+Three more SSH programs are in the drawer, beside ssh:
+
+    ssh-keygen                       make a key pair (asks for a passphrase)
+    ssh-copy-id user@host            put its public half on a server
+    scp notes.txt user@host:         copy a file to your home directory there
+    scp user@host:notes.txt RAM:     and back
+    scp -r Work:project user@host:backup
+                                     a drawer with everything in it
+
+ssh-keygen makes an Ed25519 key in the SSH drawer (-t ecdsa or -t rsa for
+the other kinds, -f for another file). ssh-copy-id logs in once with your
+password and adds the key to your account; after that ssh and scp log in
+with the key.
+
+scp copies between AROS and one server, over the server's SFTP service.
+The server side is written [user@]host:path; a name before the colon that
+is a volume, device or assign on this computer is taken as local, so
+Work:file stays a local file. Local sources can be patterns (#?.txt). In
+a Limpet window scp shows how far a large file is; Ctrl-C stops it.
+
 New in 0.11.0
 -------------
 
@@ -50,19 +73,19 @@ are asked; a server whose key has changed is refused.
 
 Keys and known_hosts are files in the formats of OpenSSH. They are in
 ENVARC:SSH (id_ed25519, id_ecdsa, id_rsa, known_hosts, config), or in
-HOME/.ssh when the HOME variable is set. Copy a key made on another
-computer there; this version cannot make keys.
+HOME/.ssh when the HOME variable is set. A key made on another computer
+can be copied there.
 
 Random numbers for the encryption come from the system (entropy.resource).
 
-Not in this version: file transfer (scp, sftp), port forwarding, an agent
-and IPv6. Use ssh in a Limpet window; it was not tested in the system
-console.
+Not included: port forwarding, an agent and IPv6. Use ssh in a Limpet
+window; it was not tested in the system console.
 
-ssh contains libssh 0.12.2 (LGPL 2.1), Mbed TLS 3.6.7 (Apache 2.0) and
+The SSH programs contain libssh 0.12.2 (LGPL 2.1), Mbed TLS 3.6.7 (Apache 2.0) and
 a file derived from AROS (AROS Public License); the texts are in Licenses.
-Its source and build script are in the project repository (examples/ssh,
-tools/build-ssh.sh), so it can be rebuilt with another libssh.
+Their source and build script are in the project repository
+(examples/ssh, tools/build-ssh.sh), so they can be rebuilt with another
+libssh.
 
 Changed in 0.10.1
 -----------------

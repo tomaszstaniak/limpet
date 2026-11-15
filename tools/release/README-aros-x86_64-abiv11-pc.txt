@@ -23,6 +23,36 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in 0.12.0
+-------------
+
+Three more SSH programs are in the drawer, beside ssh:
+
+    ssh-keygen                       make a key pair (asks for a passphrase)
+    ssh-copy-id user@host            put its public half on a server
+    scp notes.txt user@host:         copy a file to your home directory there
+    scp user@host:notes.txt RAM:     and back
+    scp -r Work:project user@host:backup
+                                     a drawer with everything in it
+
+ssh-keygen makes an Ed25519 key in the SSH drawer (-t ecdsa or -t rsa for
+the other kinds, -f for another file). ssh-copy-id logs in once with your
+password and adds the key to your account; after that ssh and scp log in
+with the key.
+
+scp copies between AROS and one server, over the server's SFTP service.
+The server side is written [user@]host:path; a name before the colon that
+is a volume, device or assign on this computer is taken as local, so
+Work:file stays a local file. Local sources can be patterns (#?.txt). In
+a Limpet window scp shows how far a large file is; Ctrl-C stops it.
+
+Known problem of the system, not of these programs: with the e1000 network
+driver of AROS One 1.3 (e1000.device 1.1) the whole system can stop
+responding while much data is sent, for example when scp uploads large
+files. Save your work before such a transfer. The driver is corrected in
+AROS (e1000.device 1.2); no distribution includes that version yet. Other
+network cards were not tried.
+
 New in 0.11.0
 -------------
 
@@ -40,23 +70,23 @@ are asked; a server whose key has changed is refused.
 
 Keys and known_hosts are files in the formats of OpenSSH. They are in
 ENVARC:SSH (id_ed25519, id_ecdsa, id_rsa, known_hosts, config), or in
-HOME/.ssh when the HOME variable is set. Copy a key made on another
-computer there; this version cannot make keys.
+HOME/.ssh when the HOME variable is set. A key made on another computer
+can be copied there.
 
 ABIv11 has no system source of random numbers. ssh takes them from
 jitterentropy, which measures timing differences of the processor and
 refuses to start when its own test of the timer fails; ssh then stops
 before connecting. Host names are looked up as IPv4 addresses.
 
-Not in this version: file transfer (scp, sftp), port forwarding, an agent
-and IPv6. Use ssh in a Limpet window; it was not tested in the system
-console.
+Not included: port forwarding, an agent and IPv6. Use ssh in a Limpet
+window; it was not tested in the system console.
 
-ssh contains libssh 0.12.2 (LGPL 2.1), Mbed TLS 3.6.7 (Apache 2.0),
+The SSH programs contain libssh 0.12.2 (LGPL 2.1), Mbed TLS 3.6.7 (Apache 2.0),
 jitterentropy 3.7.0 (BSD) and a file derived from AROS (AROS Public
 License); the texts are in Licenses.
-Its source and build script are in the project repository (examples/ssh,
-tools/build-ssh.sh), so it can be rebuilt with another libssh.
+Their source and build script are in the project repository
+(examples/ssh, tools/build-ssh.sh), so they can be rebuilt with another
+libssh.
 
 Changed in 0.10.1
 -----------------

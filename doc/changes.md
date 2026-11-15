@@ -3,6 +3,39 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.12.0 (2026-11-15)
+
+New:
+
+- **`scp`** copies files and whole drawers between AROS and a server, over
+  the server's SFTP service: `scp notes.txt user@host:`, `scp -r
+  user@host:project Work:`. Local sources can be AmigaDOS patterns. A name
+  before the colon that is a volume, device or assign is a local path;
+  anything else, and everything with `user@`, is a server. In a window a
+  large file shows its percentage; Ctrl-C stops the copy.
+- **`ssh-keygen`** makes Ed25519, ECDSA and RSA key pairs in the OpenSSH
+  file formats, with an optional passphrase, and shows fingerprints (`-l`)
+  and public keys (`-y`). It needs no network.
+- **`ssh-copy-id`** logs in once with the password and adds the public key
+  to the account on the server.
+- The four programs share the login code of `ssh`: the same SSH drawer,
+  `known_hosts` question, `config` entries and login methods.
+
+Changed:
+
+- `ssh`: no change in behaviour; its login code moved to a shared file.
+
+Known problems of the systems, found while testing uploads: with
+`e1000.device` 1.1 (AROS One 1.3) and on the mainline nightly of 2026-11-13
+with the e1000 card under QEMU, the whole system can stop responding while
+much data is sent. See [SSH](../examples/ssh/README.md), "Known system
+problems".
+
+Not included: port forwarding, an agent, an interactive `sftp`, IPv6.
+
+No change to the terminal itself, its settings or the console handler. See
+the [verification record](verification-0.12.0.md).
+
 ## 0.11.0 (2026-11-14)
 
 New:

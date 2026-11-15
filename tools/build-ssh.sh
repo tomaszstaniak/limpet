@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build the SSH client for one target:
+# Build the SSH programs (ssh, scp, ssh-keygen, ssh-copy-id) for one target:
 #
 #     AROS_GCC=... AROS_SDK=... AROS_CRYPTO=... sh tools/build-ssh.sh TARGET
 #
@@ -8,7 +8,7 @@
 # AROS_SDK its Developer SDK and AROS_CRYPTO the aros-crypto kit built for the
 # same target (https://github.com/tomaszstaniak/aros-crypto: include/, lib/).
 # LIMPET_VERSION and LIMPET_DATE (dd.mm.yyyy) name the build.
-# Output: build/TARGET/ssh/ssh, licences/ and build-record.
+# Output: build/TARGET/ssh/: the four programs, licences/ and build-record.
 set -eu
 cd "$(dirname "$0")/.."
 target=${1:?target name}
@@ -71,7 +71,7 @@ cmake -S "$source" -B "$out/libssh" \
     -DCMAKE_C_FLAGS="-include \"$root/tools/ssh/aros-platform.h\" -Werror=implicit-function-declaration -Werror=int-conversion -ffile-prefix-map=$root=. $define" \
     -DCMAKE_EXE_LINKER_FLAGS='-Wl,-u,SocketBase -lnet' \
     -DBUILD_SHARED_LIBS=OFF -DWITH_EXAMPLES=OFF -DWITH_GSSAPI=OFF \
-    -DWITH_ZLIB=OFF -DWITH_SERVER=OFF -DWITH_SFTP=OFF -DWITH_NACL=OFF \
+    -DWITH_ZLIB=OFF -DWITH_SERVER=OFF -DWITH_SFTP=ON -DWITH_NACL=OFF \
     -DWITH_EXEC=OFF -DWITH_PCAP=OFF -DCMAKE_BUILD_TYPE=Release \
     -DWITH_MBEDTLS=ON -DMBEDTLS_INCLUDE_DIR="$AROS_CRYPTO/include" \
     -DMBEDTLS_SSL_LIBRARY="$AROS_CRYPTO/lib/libaroscrypto.a" \
@@ -84,24 +84,34 @@ cmake -S "$source" -B "$out/libssh" \
 cmake --build "$out/libssh" -j "${JOBS:-4}"
 version=${LIMPET_VERSION:-0.0.0-dev}
 date=${LIMPET_DATE:-$(date +%d.%m.%Y)}
-"$AROS_GCC" --sysroot="$AROS_SDK" -std=gnu99 -O2 -Wall -Wextra -Wno-pointer-sign -Wno-deprecated-declarations \
-    -ffile-prefix-map="$root"=. $define \
-    "-DLIMPET_SSH_VERSION=\"$version\"" "-DLIMPET_SSH_DATE=\"$date\"" \
-    -I"$source/include" -I"$out/libssh/include" -I"$AROS_CRYPTO/include" "-DMBEDTLS_CONFIG_FILE=<aros_crypto_config.h>" -Isdk/include \
-    examples/ssh/client.c examples/ssh/stream.c examples/ssh/pump.c examples/ssh/term_query.c \
-    examples/ssh/sgr_ansi.c examples/ssh/pens.c sdk/src/limpet_query.c sdk/src/limpet_format.c src/aros_tty_client.c \
-    tools/ssh/aros-interface.c tools/ssh/aros-abiv11.c "$out/libssh/src/libssh.a" "$AROS_CRYPTO/lib/libaroscrypto.a" \
-    $libs -o "$out/ssh"
-found=$("$tool-readelf" -rW "$out/ssh")
-if printf '%s\n' "$found" | grep -E "$relocations"; then
-    echo 'Unsupported AROS loader relocation in SSH executable' >&2
-    exit 1
-fi
-if "$tool-nm" -u "$out/ssh" | grep .; then
-    echo 'Undefined symbols in SSH executable' >&2
-    exit 1
-fi
-# What the package needs beside the program: the licence texts of what is
+programs='ssh scp ssh-keygen ssh-copy-id'
+# compile PROGRAM SOURCES...: one program on the shared part and the libraries.
+compile() {
+    program=$1; shift
+    "$AROS_GCC" --sysroot="$AROS_SDK" -std=gnu99 -O2 -Wall -Wextra -Wno-pointer-sign -Wno-deprecated-declarations \
+        -Werror=implicit-function-declaration \
+        -ffile-prefix-map="$root"=. $define \
+        "-DLIMPET_SSH_VERSION=\"$version\"" "-DLIMPET_SSH_DATE=\"$date\"" \
+        -I"$source/include" -I"$out/libssh/include" -I"$AROS_CRYPTO/include" "-DMBEDTLS_CONFIG_FILE=<aros_crypto_config.h>" -Isdk/include \
+        "$@" examples/ssh/common.c tools/ssh/aros-interface.c tools/ssh/aros-abiv11.c \
+        "$out/libssh/src/libssh.a" "$AROS_CRYPTO/lib/libaroscrypto.a" \
+        $libs -o "$out/$program"
+    found=$("$tool-readelf" -rW "$out/$program")
+    if printf '%s\n' "$found" | grep -E "$relocations"; then
+        echo "Unsupported AROS loader relocation in $program" >&2
+        exit 1
+    fi
+    if "$tool-nm" -u "$out/$program" | grep .; then
+        echo "Undefined symbols in $program" >&2
+        exit 1
+    fi
+}
+compile ssh examples/ssh/client.c examples/ssh/stream.c examples/ssh/pump.c examples/ssh/term_query.c \
+    examples/ssh/sgr_ansi.c examples/ssh/pens.c sdk/src/limpet_query.c sdk/src/limpet_format.c src/aros_tty_client.c
+compile scp examples/ssh/scp.c examples/ssh/scp_spec.c
+compile ssh-keygen examples/ssh/keygen.c
+compile ssh-copy-id examples/ssh/copy_id.c
+# What the package needs beside the programs: the licence texts of what is
 # linked into it, and a record of this build.
 rm -rf "$out/licences"; mkdir -p "$out/licences"
 cp examples/ssh/licenses/libssh-COPYING.txt "$out/licences/libssh-COPYING.txt"
@@ -114,8 +124,8 @@ if [ -f "$AROS_CRYPTO/LICENSE.jitterentropy.bsd" ]; then
 fi
 {
     echo "target $target"
-    echo "ssh $version ($date), libssh 0.12.2"
+    echo "ssh, scp, ssh-keygen, ssh-copy-id $version ($date), libssh 0.12.2"
     sed 's/^/kit: /' "$AROS_CRYPTO/BUILD.txt"
-    (cd "$out" && shasum -a 256 ssh)
+    (cd "$out" && shasum -a 256 $programs)
 } > "$out/build-record"
-ls -l "$out/ssh"
+(cd "$out" && ls -l $programs)

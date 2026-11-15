@@ -1292,6 +1292,14 @@ test: test-ssh-sgr
 test-ssh-sgr: build/test_ssh_sgr
 	./build/test_ssh_sgr
 
+build/test_ssh_scp_spec: tests/test_ssh_scp_spec.c examples/ssh/scp_spec.c examples/ssh/scp_spec.h
+	mkdir -p build
+	cc -std=c99 -Wall -Wextra -Werror tests/test_ssh_scp_spec.c examples/ssh/scp_spec.c -o $@
+test: test-ssh-scp-spec
+.PHONY: test-ssh-scp-spec
+test-ssh-scp-spec: build/test_ssh_scp_spec
+	./build/test_ssh_scp_spec
+
 build/test_reflow: tests/test_reflow.c src/screen_model.c src/screen_model.h src/hyperlink.c
 	@mkdir -p build
 	cc -std=c99 -Wall -Wextra -Werror -Ivendor/utf8proc -DUTF8PROC_STATIC tests/test_reflow.c src/screen_model.c src/hyperlink.c vendor/utf8proc/utf8proc.c -o $@

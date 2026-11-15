@@ -81,17 +81,20 @@ package_target() {  # $1 = target
     # Project > Preferences starts it; the icon lets Workbench start it too.
     cp $b/LimpetPrefs $d/LimpetPrefs
     cp $root/assets/icon/Limpet.info.png $d/LimpetPrefs.info
-    # The SSH client, built by tools/build-ssh.sh for the same target and
-    # version, with the licence texts of what is linked into it.
-    local sb=$b/ssh
+    # The SSH programs, built by tools/build-ssh.sh for the same target and
+    # version, with the licence texts of what is linked into them.
+    local sb=$b/ssh program
     [[ -f $sb/build-record && $(head -1 $sb/build-record) == "target $t" ]] ||
-        { print -u2 "$sb: build the SSH client with tools/build-ssh.sh $t"; exit 1; }
-    (cd $sb && tail -1 build-record | shasum -a 256 -c --quiet) ||
-        { print -u2 "$sb/ssh differs from what tools/build-ssh.sh built"; exit 1; }
-    file -b $sb/ssh | grep -q "ELF 64-bit.*$want" || { print -u2 "$sb/ssh is not an ELF for $t"; exit 1; }
-    nm $sb/ssh | grep " $helperset\$" >/dev/null || { print -u2 "$sb/ssh has no $helperset: not built for $t"; exit 1; }
-    check_version $sb/ssh ssh
-    cp $sb/ssh $d/ssh
+        { print -u2 "$sb: build the SSH programs with tools/build-ssh.sh $t"; exit 1; }
+    (cd $sb && tail -4 build-record | shasum -a 256 -c --quiet) ||
+        { print -u2 "$sb: a program differs from what tools/build-ssh.sh built"; exit 1; }
+    for program in ssh scp ssh-keygen ssh-copy-id; do
+        grep -q "  $program\$" $sb/build-record || { print -u2 "$sb/build-record does not name $program"; exit 1; }
+        file -b $sb/$program | grep -q "ELF 64-bit.*$want" || { print -u2 "$sb/$program is not an ELF for $t"; exit 1; }
+        nm $sb/$program | grep " $helperset\$" >/dev/null || { print -u2 "$sb/$program has no $helperset: not built for $t"; exit 1; }
+        check_version $sb/$program $program
+        cp $sb/$program $d/$program
+    done
     cp $sb/licences/*.txt $d/Licenses/
     sed "s/@VERSION@/$ver/g" $root/tools/release/README-$t.txt > $d/README.txt
     grep -q '@VERSION@' $d/README.txt && { print -u2 "README still has @VERSION@"; exit 1; }
