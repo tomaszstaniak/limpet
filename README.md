@@ -8,17 +8,17 @@ It comes with SSH programs: `ssh`, `scp`, `ssh-keygen` and `ssh-copy-id` ([guide
 
 Website: <https://tomaszstaniak.github.io/limpet/>
 
-The goal is to replace `CON:`: keep compatibility with existing AROS
-software and support modern command-line tools, full-screen applications
-and remote work over SSH.
+I want it to replace `CON:` one day. For that it has to stay compatible
+with existing AROS software while running modern command-line tools,
+full-screen applications and remote sessions over SSH.
 
 ![A rotating Mandelbrot zoom in Limpet](doc/screenshots/mandelbrot-zoom.gif)
 
 Mandelbrot zoom, drawn with Unicode half-blocks and 24-bit ANSI colours.
 
-![The James Webb Space Telescope’s Cosmic Cliffs image displayed in Limpet](doc/screenshots/webb-kitty.png)
+![The James Webb Space Telescope's Cosmic Cliffs image displayed in Limpet](doc/screenshots/webb-kitty.png)
 
-Webb’s *Cosmic Cliffs*, displayed with the Kitty graphics protocol.
+Webb's *Cosmic Cliffs*, displayed with the Kitty graphics protocol.
 Image: NASA, ESA, CSA, STScI.
 
 ## Download
@@ -34,8 +34,8 @@ Image: NASA, ESA, CSA, STScI.
   0.12.1 release. `CON:` stays the system's unless `LimpetCON ON` is run. See [installation and limits](doc/limpet-handler.md).
 
 Earlier releases are listed on [GitHub](https://github.com/tomaszstaniak/limpet/releases).
-See the [terminal changelog](doc/changes.md) and [SDK changelog](sdk/CHANGES.md)
-for version history. The `main` branch also contains unreleased development.
+Version history is in the [terminal changelog](doc/changes.md) and the
+[SDK changelog](sdk/CHANGES.md).
 
 ## Features
 
@@ -50,8 +50,9 @@ colours and progress updates.
 Limpet includes:
 
 - UTF-8 text, CJK, monochrome emoji and combining characters;
-- 16-colour, 256-colour and 24-bit colour, with dark, light and high-contrast
-  themes; the Shell prompt keeps its Workbench pen colours;
+- 16-colour, 256-colour and 24-bit colour; fifteen [themes](doc/themes.md),
+  and colour files made for Ghostty, Kitty and iTerm2 work as themes too;
+  the Shell prompt keeps its Workbench pen colours;
 - DejaVu Sans Mono Nerd Font, including file-type icons for tools such as eza;
 - scrollback, output search and Ctrl-R command-history search;
 - selection that stays while other rows change, and copy and paste through
@@ -66,16 +67,17 @@ Limpet includes:
 - inline images through a [subset of the Kitty graphics protocol](doc/kitty-graphics.md);
 - Ctrl+click links: web addresses go to OpenURL, local files open through
   Workbench with their default tool;
-- [Project > Preferences](doc/session-start.md) to run Fastfetch or a custom
-  command once when a new Shell window opens;
+- Project > Preferences for themes, font, scrollback and history, and to
+  [run Fastfetch or a custom command](doc/session-start.md) when a new
+  Shell window opens;
 - an experimental [translucent window background](doc/window-background.md),
   on systems that can show it, off until chosen in Preferences;
 - a [settings file](doc/search-and-settings.md) for font, size, theme,
   scrollback and command history.
 
-The AROS Shell itself is unchanged: Limpet is the window it runs in.
-Limpet runs alongside the system console for now. Programs that explicitly
-open `CON:` still use the existing console handler.
+The AROS Shell itself is unchanged; Limpet is the window it runs in. For
+now Limpet runs alongside the system console, and programs that open `CON:`
+themselves still get the existing console handler.
 
 [Why Limpet](doc/why-limpet.md) compares the Shell in `CON:` and in Limpet,
 with the same bytes sent to both.
@@ -104,9 +106,6 @@ Each system has its own archive on the
 | AROS One and other ABIv11 systems, x86_64 | `Limpet-0.12.1-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
 | mainline AROS (ABIv1), x86_64 | `Limpet-0.12.1-aros-x86_64-abiv1-pc.zip` | `apkg install limpet` |
 | AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.12.1-aros-aarch64-abiv1-raspi.zip` | `apkg install limpet` |
-
-Releases up to 0.7.0 named the same archives `-abiv11`, `-v1-x86_64` and
-`-v1-aarch64`.
 
 By hand on AROS One:
 
@@ -145,7 +144,7 @@ input. If the console does not support it, the application can use plain text.
 | --- | --- |
 | ![hello example in Limpet](doc/screenshots/sdk-hello.png) | ![examples in CON:](doc/screenshots/sdk-con-fallback.png) |
 
-The SDK archive (`limpet-sdk-0.5.0.zip`, tag `sdk-v0.6.0`) contains the
+The SDK archive (`limpet-sdk-0.6.0.zip`, tag `sdk-v0.6.0`) contains the
 headers, a prebuilt library for ABIv11, the library sources, eight
 examples and this documentation.
 
@@ -195,8 +194,7 @@ Bug reports and patches: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Why the name?
 
-A limpet is a mollusc. It has a shell and attaches itself to a surface.
-That's where the name comes from.
+A limpet is a mollusc with a shell, and it attaches itself to a surface.
 
 ## Licence
 

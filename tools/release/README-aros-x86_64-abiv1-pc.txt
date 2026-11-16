@@ -1,8 +1,8 @@
 Limpet @VERSION@ for mainline AROS (ABIv1, x86_64)
 =================================================
 
-Limpet is a terminal for the AROS Shell, written for AROS (it is not a port
-of X11 xterm). Drawn with Intuition and FreeType:
+Limpet is a terminal for the AROS Shell, written for AROS and drawn with
+Intuition and FreeType. It has:
 - Unicode text: CJK, emoji, combining clusters;
 - 16 and 24-bit colours and themes;
 - selection, copy and paste;
@@ -11,8 +11,7 @@ of X11 xterm). Drawn with Intuition and FreeType:
 - inline images through a documented subset of the Kitty graphics protocol.
 
 Built for mainline AROS (ABIv1, x86_64) with the mainline GCC 10.5
-toolchain; this version was tested on nightly builds of 2026-10-31 and
-2026-11-02.
+toolchain; this version was tested on the nightly build of 2026-11-13.
 Mainline binaries do not run on ABIv11 systems such as AROS One, and ABIv11
 binaries do not run here.
 
@@ -60,11 +59,10 @@ is complete, so a copy that stops in the middle leaves the old file as it
 was. Two server names that would be one name on AROS (a:b and a_b, Foo and
 foo) are not written over each other; the second is reported.
 
-Known problem: on the nightly build of 2026-11-13 under QEMU with the
-e1000 network card, the whole system stopped responding in most of our
-runs with SSH traffic, while files were sent and while they were received.
-It also stops under a network test that uses none of these programs. The
-cause is not established. Save your work before a transfer.
+Known issue: on the nightly build of 2026-11-13 under QEMU with the e1000
+network card, the system can stop responding during SSH transfers. The
+cause is not known yet. If you see this on your computer, please report
+it: https://github.com/tomaszstaniak/limpet/issues
 
 New in 0.11.0
 -------------
@@ -131,7 +129,7 @@ Requirements
 - Mainline AROS (ABIv1), x86_64, built on 2026-08-29 or later: Ctrl-C
   reaches the program in the window through the system's task
   notification, which older builds lack. This version was tested on
-  mainline nightlies of 2026-10-31 and 2026-11-02, under QEMU.
+  the mainline nightly of 2026-11-13, under QEMU.
 - The system font FONTS:TrueType/OpenSans-Regular.ttf, and
   FONTS:TrueType/VeraMono.ttf when the bundled font is removed or another
   font is set (both installed with the system).
@@ -143,8 +141,13 @@ Install
 
 The drawer is self-contained. Nothing is copied into the system.
 
-Mainline AROS does not come with UnZip. Unpack the archive on another
-computer and copy the Limpet drawer and Limpet.info into SYS:Utilities.
+    apkg install limpet
+
+puts it in apkg's packages drawer (apkg remove limpet takes it out).
+
+By hand: mainline AROS does not come with UnZip. Unpack the archive on
+another computer and copy the Limpet drawer and Limpet.info into
+SYS:Utilities.
 If you have installed an UnZip, this does the same:
 
     UnZip Limpet-@VERSION@-aros-x86_64-abiv1-pc.zip -d SYS:Utilities
@@ -191,8 +194,8 @@ Settings
 --------
 
 Limpet reads ENV:Limpet/Limpet.conf when a window opens, or
-ENVARC:Limpet/Limpet.conf when ENV: has none; without either it works as
-before. One key=value per line, # starts a comment:
+ENVARC:Limpet/Limpet.conf when ENV: has none; without either it uses its
+defaults. One key=value per line, # starts a comment:
 
     font=FONTS:TrueType/VeraMono.ttf   a monospace TrueType/OpenType font;
                                        without it, Fonts/DejaVuSansMNerd-
@@ -258,18 +261,16 @@ Features on this build
     Unicode, CJK, emoji (monochrome)                 yes
     Kitty graphics, documented subset                yes
     Ctrl-C to break a running command                yes (see limitations)
-    Selection kept while other rows are redrawn      yes (new in 0.2.0)
+    Selection kept while other rows are redrawn      yes
     Bracketed paste, resize and wheel reports        yes, for raw-mode programs
-                                                     (new in 0.2.0)
-    Window title: running command and its state      yes (new in 0.3.0)
-    Ctrl-R search through the command history        yes (new in 0.3.0)
+    Window title: running command and its state      yes
+    Ctrl-R search through the command history        yes
     Icons dropped from Workbench give their paths    yes, at the Shell prompt
-                                                     (new in 0.4.0)
-    Find in output                                   yes (new in 0.5.0)
-    Settings file: font, theme, scrollback, history  yes (new in 0.5.0)
-    Ctrl-D/E/F signals, Ctrl-\ end of input          yes (new in 0.6.0)
+    Find in output                                   yes
+    Settings file: font, theme, scrollback, history  yes
+    Ctrl-D/E/F signals, Ctrl-\ end of input          yes
     Shift+Enter for raw-mode programs                yes, when the program
-                                                     asks (new in 0.6.0)
+                                                     asks
     POSIX pseudo-terminal (PTY)                      no; the PTY is a separate
                                                      preview for mainline only
 
@@ -300,8 +301,8 @@ Known limitations
   in a dropped name as pattern characters.
 - F5 ends the input of the whole Shell session, not just of the running
   program.
-- A Run whose output is redirected to a file leaves the file empty. This is
-  a limitation of the system's Run, not of the terminal.
+- A Run whose output is redirected to a file leaves the file empty; that
+  comes from the system's Run.
 - Kitty graphics: raw RGB/RGBA only, no PNG, no compression, no animation
   frames; 16 images, 1024x1024 pixels each.
 - The colour emoji font (Noto Color Emoji) is not included.
@@ -321,8 +322,8 @@ Uninstall
 
 
 
-Limpet itself writes nothing else to the system: no preferences and no
-assigns. A settings file you made stays; delete it with
+Limpet makes no assigns. Settings saved from Preferences or written by
+hand stay; delete them with
     Delete ENVARC:Limpet ENV:Limpet ALL
 
 

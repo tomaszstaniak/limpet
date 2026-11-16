@@ -1,8 +1,8 @@
 Limpet @VERSION@ for AROS ABIv11 (x86_64)
 =========================================
 
-Limpet is a terminal for the AROS Shell, written for AROS (it is not a port
-of X11 xterm). Drawn with Intuition and FreeType:
+Limpet is a terminal for the AROS Shell, written for AROS and drawn with
+Intuition and FreeType. It has:
 - Unicode text: CJK, emoji, combining clusters;
 - 16 and 24-bit colours and themes;
 - selection, copy and paste;
@@ -51,13 +51,10 @@ is complete, so a copy that stops in the middle leaves the old file as it
 was. Two server names that would be one name on AROS (a:b and a_b, Foo and
 foo) are not written over each other; the second is reported.
 
-Known problem: with the e1000 network driver of AROS One 1.3 (e1000.device
-1.1) the whole system can stop responding while much data is sent, for
-example when scp uploads large files. Save your work before such a
-transfer. The driver has a known fault that is corrected in AROS
-(e1000.device 1.2); no distribution includes that version yet. In our runs
-the same transfers passed with the corrected driver. Other network cards
-were not tried.
+Known issue: with the e1000 network driver of AROS One 1.3 (e1000.device
+1.1) the system can stop responding during a large upload. e1000.device
+1.2 from AROS corrects it. If you see this with another card or driver,
+please report it: https://github.com/tomaszstaniak/limpet/issues
 
 New in 0.11.0
 -------------
@@ -182,8 +179,8 @@ Settings
 --------
 
 Limpet reads ENV:Limpet/Limpet.conf when a window opens, or
-ENVARC:Limpet/Limpet.conf when ENV: has none; without either it works as
-before. One key=value per line, # starts a comment:
+ENVARC:Limpet/Limpet.conf when ENV: has none; without either it uses its
+defaults. One key=value per line, # starts a comment:
 
     font=FONTS:TrueType/VeraMono.ttf   a monospace TrueType/OpenType font;
                                        without it, Fonts/DejaVuSansMNerd-
@@ -249,18 +246,16 @@ Features on this build
     Unicode, CJK, emoji (monochrome)                 yes
     Kitty graphics, documented subset                yes
     Ctrl-C to break a running command                yes (see limitations)
-    Selection kept while other rows are redrawn      yes (new in 0.2.0)
+    Selection kept while other rows are redrawn      yes
     Bracketed paste, resize and wheel reports        yes, for raw-mode programs
-                                                     (new in 0.2.0)
-    Window title: running command and its state      yes (new in 0.3.0)
-    Ctrl-R search through the command history        yes (new in 0.3.0)
+    Window title: running command and its state      yes
+    Ctrl-R search through the command history        yes
     Icons dropped from Workbench give their paths    yes, at the Shell prompt
-                                                     (new in 0.4.0)
-    Find in output                                   yes (new in 0.5.0)
-    Settings file: font, theme, scrollback, history  yes (new in 0.5.0)
-    Ctrl-D/E/F signals, Ctrl-\ end of input          yes (new in 0.6.0)
+    Find in output                                   yes
+    Settings file: font, theme, scrollback, history  yes
+    Ctrl-D/E/F signals, Ctrl-\ end of input          yes
     Shift+Enter for raw-mode programs                yes, when the program
-                                                     asks (new in 0.6.0)
+                                                     asks
     POSIX pseudo-terminal (PTY)                      no; the PTY is a separate
                                                      preview for mainline only
 
@@ -293,12 +288,10 @@ Known limitations
   in a dropped name as pattern characters.
 - F5 ends the input of the whole Shell session, not just of the running
   program.
-- Memory: each terminal session leaves about 0.2 KB that is not returned
-  (measured over 100 sessions). About 0.12 KB of that is what the system
-  keeps for any Shell's life. The remaining 70-75 B is not explained yet.
-  It matters only after thousands of sessions without a reboot.
-- A Run whose output is redirected to a file leaves the file empty. This is
-  a limitation of the system's Run, not of the terminal.
+- Each terminal session leaves about 0.2 KB of memory that is not
+  returned. It matters only after thousands of sessions without a reboot.
+- A Run whose output is redirected to a file leaves the file empty; that
+  comes from the system's Run.
 - Kitty graphics: raw RGB/RGBA only, no PNG, no compression, no animation
   frames; 16 images, 1024x1024 pixels each.
 - The colour emoji font (Noto Color Emoji) is not included.
@@ -318,8 +311,8 @@ Uninstall
 
 (after apkg install: apkg remove limpet)
 
-Limpet itself writes nothing else to the system: no preferences and no
-assigns. A settings file you made stays; delete it with
+Limpet makes no assigns. Settings saved from Preferences or written by
+hand stay; delete them with
     Delete ENVARC:Limpet ENV:Limpet ALL
 
 
