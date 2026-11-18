@@ -31,6 +31,14 @@ This build has the same features as Limpet @VERSION@ for ABIv11; the
 changes of each version are listed in doc/changes.md in the source
 (https://github.com/tomaszstaniak/limpet).
 
+New in 0.12.2
+-------------
+
+Moving the window is lighter on the system. The window now keeps what is
+covered or outside the screen, so dragging it (also with the Opaque
+commodity) or uncovering it does not make the terminal draw its text again.
+
+
 New in 0.12.1
 -------------
 

@@ -2623,7 +2623,7 @@ int main(int argc,char **argv)
         ULONG alpha_tag=TAG_IGNORE;
         ULONG flags=WFLG_CLOSEGADGET | WFLG_DRAGBAR | WFLG_DEPTHGADGET |
                   WFLG_SIZEGADGET | WFLG_SIZEBBOTTOM | WFLG_ACTIVATE |
-                  WFLG_GIMMEZEROZERO | WFLG_SIMPLE_REFRESH | WFLG_REPORTMOUSE;
+                  WFLG_SMART_REFRESH | WFLG_REPORTMOUSE;
         unsigned o=console_spec.options;
         /* The CON: options that say what the window looks like. */
         if(!console_spec.close_gadget) flags&=~WFLG_CLOSEGADGET;
@@ -2633,8 +2633,13 @@ int main(int argc,char **argv)
         if(o&XCON_NODRAG) flags&=~WFLG_DRAGBAR;
         if(o&XCON_NOBORDER) flags|=WFLG_BORDERLESS;
         if(o&XCON_BACKDROP) { flags|=WFLG_BACKDROP; flags&=~(WFLG_DRAGBAR|WFLG_SIZEGADGET|WFLG_SIZEBBOTTOM); }
-        /* Solid windows are as they always were; only a chosen opacity on a
-           screen that says it can show it asks for anything new. */
+        /* Smart refresh, one layer: the system keeps what is covered or
+           off the screen, so moving the window or uncovering it does not
+           make the terminal draw its rows again, and a move has one layer
+           to carry instead of the two of a GimmeZeroZero window. A refresh
+           still comes when the window grows.
+           A chosen opacity on a screen that can show it adds only the
+           alpha tag. */
         if(settings.background_opacity<100) {
             struct Screen *on=LockPubScreen((CONST_STRPTR)(console_spec.screen[0]?console_spec.screen:NULL));
             if(!on) on=LockPubScreen(NULL);
@@ -2643,10 +2648,7 @@ int main(int argc,char **argv)
                 UnlockPubScreen(NULL,on);
             }
         }
-        if(window_translucent) {
-            flags&=~(WFLG_GIMMEZEROZERO|WFLG_SIMPLE_REFRESH);
-            alpha_tag=window_alpha_tag();
-        }
+        if(window_translucent) alpha_tag=window_alpha_tag();
     window = OpenWindowTags(NULL,
         WA_Title, (IPTR)(console_spec.title[0]?console_spec.title:"Limpet"),
         WA_Left, console_spec.left>=0?console_spec.left:40,

@@ -23,15 +23,15 @@ Image: NASA, ESA, CSA, STScI.
 
 ## Download
 
-- [Limpet 0.12.1](https://github.com/tomaszstaniak/limpet/releases/tag/v0.12.1)
+- [Limpet 0.12.2](https://github.com/tomaszstaniak/limpet/releases/tag/v0.12.2)
   for AROS ABIv11, x86_64 (AROS One and similar), and for mainline AROS,
   x86_64.
-- A test build of 0.12.1 for AROS on the Raspberry Pi (AArch64) in the same
+- A test build of 0.12.2 for AROS on the Raspberry Pi (AArch64) in the same
   release. It was run under QEMU's Pi model, not yet on a Raspberry Pi.
 - [SDK 0.6.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.6.0)
   for application developers.
 - The separate `LIMPET:` console handler is an experimental download in the
-  0.12.1 release. `CON:` stays the system's unless `LimpetCON ON` is run. See [installation and limits](doc/limpet-handler.md).
+  0.12.2 release. `CON:` stays the system's unless `LimpetCON ON` is run. See [installation and limits](doc/limpet-handler.md).
 
 Earlier releases are listed on [GitHub](https://github.com/tomaszstaniak/limpet/releases).
 Version history is in the [terminal changelog](doc/changes.md) and the
@@ -101,15 +101,15 @@ Both run natively on AROS and are separate downloads.
 Each system has its own archive on the
 [releases](https://github.com/tomaszstaniak/limpet/releases) page:
 
-| System | Archive (0.12.1) | apkg |
+| System | Archive (0.12.2) | apkg |
 | --- | --- | --- |
-| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.12.1-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
-| mainline AROS (ABIv1), x86_64 | `Limpet-0.12.1-aros-x86_64-abiv1-pc.zip` | `apkg install limpet` |
-| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.12.1-aros-aarch64-abiv1-raspi.zip` | `apkg install limpet` |
+| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.12.2-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
+| mainline AROS (ABIv1), x86_64 | `Limpet-0.12.2-aros-x86_64-abiv1-pc.zip` | `apkg install limpet` |
+| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.12.2-aros-aarch64-abiv1-raspi.zip` | `apkg install limpet` |
 
 By hand on AROS One:
 
-    UnZip Limpet-0.12.1-aros-x86_64-abiv11-pc.zip -d SYS:Utilities
+    UnZip Limpet-0.12.2-aros-x86_64-abiv11-pc.zip -d SYS:Utilities
 
 Mainline AROS and the Pi system do not come with UnZip. Unpack the archive
 on another computer (or with an UnZip you installed) and copy the `Limpet`

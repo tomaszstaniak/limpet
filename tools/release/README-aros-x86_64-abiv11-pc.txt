@@ -23,6 +23,14 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in 0.12.2
+-------------
+
+Moving the window is lighter on the system. The window now keeps what is
+covered or outside the screen, so dragging it (also with the Opaque
+commodity) or uncovering it does not make the terminal draw its text again.
+
+
 New in 0.12.1
 -------------
 

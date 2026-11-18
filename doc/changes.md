@@ -3,6 +3,21 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.12.2 (2026-11-18)
+
+Changed:
+
+- Moving the window costs the system less. A user reported that swinging
+  the window around with the Opaque commodity slowed the whole system. The
+  window is now a smart refresh window with one layer (before: simple
+  refresh with GimmeZeroZero, two layers), so the system keeps what is
+  covered or outside the screen and the terminal does not draw its rows
+  again when the window moves or is uncovered. Measured on AROS One 1.3
+  under QEMU with Opaque running: about 30 % more processor time left for
+  other programs while the window is dragged, about 20 % more when part of
+  it is outside the screen. See
+  [verification-0.12.2.md](verification-0.12.2.md).
+
 ## 0.12.1 (2026-11-15)
 
 0.12.0 was tagged and not released.
