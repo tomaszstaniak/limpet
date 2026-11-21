@@ -3,6 +3,44 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.13.0 (2026-11-21)
+
+New:
+
+- **Prompt.** Preferences, Shell page: the prompt of new Shell windows can
+  be the current drawer, the drawer with the last command's return code,
+  or both in the theme's colours. The system's prompt stays the default.
+  The setting is `prompt=` in `ENVARC:Limpet/Shell.conf`.
+- **TAB knows a command's arguments.** After a command Limpet has a
+  definition for, TAB also offers the command's keywords (`Copy a t` gives
+  `TO`), only drawers where the command takes a drawer (`CD`, `MakeDir`,
+  `Assign`, `Path`), and the allowed words where it takes one of a few
+  (`apkg` and its commands). Definitions for 43 AmigaDOS commands and for
+  apkg come with Limpet; the keywords were read from the commands on
+  mainline AROS and on AROS One 1.3. A text file in
+  `ENVARC:Limpet/Completions` adds or replaces one. TAB on an empty word,
+  on a path and on a quoted word works as before.
+  See [prompt-and-completion.md](prompt-and-completion.md).
+
+Fixed:
+
+- `ssh`, `scp`, `ssh-keygen`, `ssh-copy-id` no longer depend on the Shell's
+  stack size. Started from a Shell with the default stack (40960 bytes),
+  they could stop with the system's "Stack extends out of range" requester
+  while connecting to a server that offers the post-quantum key exchange
+  (ML-KEM, the default of current OpenSSH). The programs now run on a stack
+  of their own.
+- `ssh`, `scp`, `ssh-copy-id`: Ctrl-C ends a wait for the server. Before,
+  a program that waited for an answer (up to 30 seconds while connecting,
+  up to 2 minutes during a copy) took the Ctrl-C only when the wait was
+  over. While connecting and logging in it now stops at once; during a
+  copy, `scp` first finishes the block in flight and removes its unfinished
+  file from the server, and gives up on a server that has not answered for
+  two seconds.
+- `scp`: when an upload cannot be finished and its temporary file cannot be
+  removed (the connection is gone), `scp` names the file that may be left
+  on the server. The next upload of the same file writes over it.
+
 ## 0.12.2 (2026-11-18)
 
 Changed:

@@ -15,6 +15,11 @@ struct xt_ssh_login {
     int port;            /* 0: config, then 22 */
 };
 
+/* Runs the program's work on a stack large enough for the key exchange
+ * and key generation (the Shell's default of 40960 bytes is not), and
+ * returns its result. Each program's main() is this one call. */
+int xt_ssh_run(int (*program)(int argc, char **argv), int argc, char **argv);
+
 /* The program's name in messages ("scp: ..."). */
 void xt_ssh_tool(const char *name);
 const char *xt_ssh_tool_name(void);
@@ -38,6 +43,11 @@ void xt_ssh_stop(void);
 /* Connects, checks the server's key against known_hosts (asking about an
  * unknown one) and logs in. NULL after a message. */
 ssh_session xt_ssh_connect(const struct xt_ssh_login *login);
+/* Ctrl-C ends a wait for the server that has lasted this long. While
+ * connecting and logging in that is at once; xt_ssh_connect() leaves two
+ * seconds, so that a program which looks at Ctrl-C itself between its
+ * requests gets to finish the one in flight and tidy up on the server. */
+void xt_ssh_break_after(int milliseconds);
 void xt_ssh_disconnect(ssh_session session);
 
 #endif

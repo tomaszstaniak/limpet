@@ -9,11 +9,16 @@ typedef struct {
     char names[XCOMP_MAX][XLINE_CAPACITY];
     char expected[XLINE_CAPACITY];
     size_t start, end, cursor, count, next;
+    size_t words;   /* the first `words` names are a command's keywords and
+                       allowed words: offered before files, in their own order */
     int command, quoted, limited, applied;
 } XCompletion;
 int completion_prepare(XCompletion *, const XLineEditor *);
 int completion_add(XCompletion *, const char *name, int kind);
 /* kind: 0 file/command, 1 directory ('/'), 2 volume/device/assign (':'). */
+/* A keyword or allowed word of the command (completion_args.h): sorted
+ * among the words, ahead of every file. Add these before the files. */
+int completion_add_word(XCompletion *, const char *word);
 int completion_apply(XCompletion *, XLineEditor *, int reverse);
 int completion_current(const XCompletion *, const XLineEditor *);
 #endif

@@ -40,7 +40,7 @@ static void usage(void)
     Printf("       ssh -V\n");
 }
 
-int main(int argc, char **argv)
+static int program(int argc, char **argv)
 {
     struct xt_ssh_login login = { NULL, NULL, NULL, 0 };
     const char *command = NULL;
@@ -122,4 +122,9 @@ int main(int argc, char **argv)
     }
     xt_ssh_stop();
     return exit_code;
+}
+
+int main(int argc, char **argv)
+{
+    return xt_ssh_run(program, argc, argv);
 }

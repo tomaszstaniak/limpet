@@ -85,7 +85,7 @@ static void usage(void)
     Printf("       ssh-keygen -y [-f file]     print the public key of a private key\n");
 }
 
-int main(int argc, char **argv)
+static int program(int argc, char **argv)
 {
     const char *type_name = "ed25519", *file = NULL, *comment = NULL, *passphrase = NULL;
     char directory[300], path[400], public_path[410], line[4096], first[256], second[256], user[100];
@@ -238,4 +238,9 @@ done:
     if (context) ssh_pki_ctx_free(context);
     xt_ssh_stop();
     return result;
+}
+
+int main(int argc, char **argv)
+{
+    return xt_ssh_run(program, argc, argv);
 }

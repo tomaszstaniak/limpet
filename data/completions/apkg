@@ -1,0 +1,2 @@
+# apkg, the package manager: its commands.
+first search show install list update outdated recent upgrade rollback remove verify info doctor run open self-update

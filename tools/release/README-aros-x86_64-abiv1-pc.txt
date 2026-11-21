@@ -31,6 +31,33 @@ This build has the same features as Limpet @VERSION@ for ABIv11; the
 changes of each version are listed in doc/changes.md in the source
 (https://github.com/tomaszstaniak/limpet).
 
+New in 0.13.0
+-------------
+
+Prompt: in Project > Preferences, Shell page, choose the prompt of new
+Shell windows: the current drawer, the drawer with the last command's
+return code, or both in colours. The system's prompt stays the default.
+
+TAB knows the arguments of 43 AmigaDOS commands and of apkg. After such a
+command it also offers the command's keywords once a letter is typed
+(Copy a t, TAB: TO), only drawers where the command takes a drawer (CD,
+MakeDir, Assign, Path), and apkg's commands after apkg. A text file in
+ENVARC:Limpet/Completions teaches it another program:
+
+    template FROM/A,TO/A,MODE/K,QUIET/S
+    dirs FROM TO
+    values MODE full changed
+
+(the file is named as the command; template is what "Command ?" prints).
+
+The SSH programs no longer stop with a "Stack extends out of range"
+requester when started from a Shell with the default stack and the server
+offers the newest key exchange (current OpenSSH does).
+
+ssh and scp: Ctrl-C now ends a wait for the server. While connecting it
+stops at once; during a copy scp finishes the block in flight and removes
+its unfinished file first.
+
 New in 0.12.2
 -------------
 
@@ -242,7 +269,8 @@ Keys
     Up / Down                 earlier commands
     Ctrl-R                    search earlier commands (Enter: edit it,
                               Esc: back to the line as it was)
-    TAB / Shift+TAB           complete a path or command
+    TAB / Shift+TAB           complete a command, a path or a known
+                              command's keyword; again for the next
     Shift+PgUp / PgDn, wheel  scroll back through the output
     RAmiga+F / Ctrl+Shift+F   find text in the output (Up/Down: older and
                               newer, Enter: stay there, Esc: back)

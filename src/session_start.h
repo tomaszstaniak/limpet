@@ -16,4 +16,9 @@ int session_start_line(const XSettings *, char *out, size_t capacity, const char
  * line saying so instead of the Shell's "object not found". An own command
  * is run as written. Same return values. */
 int session_start_script(const XSettings *, char *out, size_t capacity, const char **why);
+/* The Shell's Prompt command for the prompt chosen in Preferences, as a
+ * script line without a line end, or NULL for the system's own prompt. The
+ * coloured one takes its colours from the theme (palette entries, not
+ * screen pens) and ends by putting the text colour back. */
+const char *session_prompt_line(const XSettings *);
 #endif

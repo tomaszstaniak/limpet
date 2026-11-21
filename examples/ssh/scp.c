@@ -105,6 +105,14 @@ static const char *remote_reason(void)
 
 static void remote_failure(const char *path)
 {
+    /* A wait for the server that Ctrl-C ended (xt_ssh_break_after) is no
+     * fault of the server's: the stop is reported once, at the end. */
+    if (SetSignal(0, SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C)
+    {
+        stopped = broken = 1;
+        ++failures;
+        return;
+    }
     Printf("scp: %s: %s\n", (IPTR)path, (IPTR)remote_reason());
     ++failures;
 }
@@ -281,7 +289,10 @@ static void upload_file(const char *local, const char *remote)
         else ++failures;                                   /* stopped by the user */
         if (write_to == part)
         {
-            if (ssh_is_connected(session)) sftp_unlink(sftp, part);
+            /* Without a connection the unfinished copy cannot be removed;
+             * the next upload of this file writes over it. */
+            if (!ssh_is_connected(session) || sftp_unlink(sftp, part) != SSH_OK)
+                Printf("scp: the server may keep the unfinished copy %s\n", (IPTR)part);
         }
         else Printf("scp: %s is incomplete on the server\n", (IPTR)remote);
     }
@@ -658,7 +669,7 @@ static void usage(void)
     Printf("       scp -r me@server:project Work:    a directory with its contents\n");
 }
 
-int main(int argc, char **argv)
+static int program(int argc, char **argv)
 {
     struct xt_ssh_login login = { NULL, NULL, NULL, 0 };
     struct xt_scp_spec *specs;
@@ -746,7 +757,8 @@ int main(int argc, char **argv)
         sftp = sftp_new(session);
         if (!sftp || sftp_init(sftp) != SSH_OK)
         {
-            Printf("scp: %s has no file transfer service (sftp): %s\n", (IPTR)login.host, (IPTR)ssh_get_error(session));
+            if (SetSignal(0, SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C) Printf("scp: stopped\n");
+            else Printf("scp: %s has no file transfer service (sftp): %s\n", (IPTR)login.host, (IPTR)ssh_get_error(session));
         }
         else
         {
@@ -769,4 +781,9 @@ int main(int argc, char **argv)
     free(specs);
     free(local_sources);
     return result;
+}
+
+int main(int argc, char **argv)
+{
+    return xt_ssh_run(program, argc, argv);
 }

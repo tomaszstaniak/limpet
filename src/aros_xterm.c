@@ -2039,6 +2039,28 @@ static int settings_load(XSettings *into)
 }
 
 #ifndef XTERM_DOS_HANDLER
+/* Shell.conf: the prompt of a new Shell window. On any error the system's
+   prompt stays and the title says why. */
+static void shell_settings_load(XSettings *into)
+{
+    static char text[XSETTINGS_FILE_MAX+1];
+    XSettings next;
+    size_t length=0; const char *why=NULL; int line;
+    settings_default(&next);
+    switch(settings_read("Shell.conf",text,&length)) {
+    case -1:
+        snprintf(settings_message,sizeof settings_message,"Shell.conf is over 4096 bytes; not used");
+        break;
+    case 1:
+        if((line=settings_parse_shell(&next,text,length,&why))) {
+            snprintf(settings_message,sizeof settings_message,"Shell.conf line %d: %s; not used",line,why);
+            settings_default(&next);
+        }
+        break;
+    }
+    into->prompt=next.prompt;
+}
+
 /* Session.conf: what a new Shell window runs (settings.h). On any error
    nothing runs and the title says why; `into` keeps its other settings. */
 static void session_settings_load(XSettings *into)
@@ -2282,6 +2304,7 @@ static void settings_reload(void)
     strcpy(settings.theme,next.theme);
     /* What a new session runs: for the next one in this window (F4). */
     session_settings_load(&settings);
+    shell_settings_load(&settings);
     colour_settings_load(&settings);
     settings_theme(1);
     paint_damage_invalidate(&paint_damage);
@@ -2452,11 +2475,16 @@ static int start_shell(void)
 #ifndef XTERM_DOS_HANDLER
     const char *why=NULL;
     if(!shell_profile) {
-        run=session_start_script(&settings,line,sizeof line-2,&why);
+        /* The prompt first, so that it is set even when the line fails. */
+        const char *prompt=session_prompt_line(&settings);
+        size_t used=0;
+        if(prompt) used=(size_t)snprintf(line,sizeof line,"%s\n",prompt);
+        run=session_start_script(&settings,line+used,sizeof line-2-used,&why);
         if(run<0) {
             snprintf(settings_message,sizeof settings_message,"Session start: %s; not run",why);
             clip_status=settings_message;
         }
+        if(run<=0 && prompt) { line[used-1]=0; run=1; }
     }
 #endif
     return aros_session_start_shell_run(&process_session,shell_profile,run>0?line:NULL);
@@ -2571,6 +2599,7 @@ int main(int argc,char **argv)
     window_settings_load(&settings);
 #ifndef XTERM_DOS_HANDLER
     session_settings_load(&settings);
+    shell_settings_load(&settings);
 #endif
     colour_settings_load(&settings);
     settings_theme(0);

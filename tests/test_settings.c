@@ -108,6 +108,23 @@ int main(void)
         assert(settings_parse_window(&c,"bold_bright=off\n",strlen("bold_bright=off\n"),&reason)==1);
         assert(settings_parse_session(&c,"bold_bright=off\n",strlen("bold_bright=off\n"),&reason)==1);
     }
+    {
+        /* Shell.conf: the prompt; a key of no other file. */
+        const char *reason=NULL;
+        XSettings c;
+        settings_default(&c);
+        assert(c.prompt==XPROMPT_SYSTEM);
+        assert(!settings_parse_shell(&c,"prompt=colour\n",strlen("prompt=colour\n"),&reason) && c.prompt==XPROMPT_COLOUR);
+        assert(c.given==XSET_PROMPT);
+        assert(!settings_parse_shell(&c,"# p\nprompt = path\r\n",strlen("# p\nprompt = path\r\n"),&reason) && c.prompt==XPROMPT_PATH);
+        assert(!settings_parse_shell(&c,"prompt=status\n",strlen("prompt=status\n"),&reason) && c.prompt==XPROMPT_STATUS);
+        assert(!settings_parse_shell(&c,"prompt=system\n",strlen("prompt=system\n"),&reason) && c.prompt==XPROMPT_SYSTEM);
+        assert(settings_parse_shell(&c,"prompt=fancy\n",strlen("prompt=fancy\n"),&reason)==1 && strstr(reason,"system, path"));
+        assert(settings_parse_shell(&c,"theme=x\n",strlen("theme=x\n"),&reason)==1 && strstr(reason,"unknown key"));
+        assert(settings_parse(&c,"prompt=path\n",strlen("prompt=path\n"),&reason)==1 && strstr(reason,"unknown key"));
+        assert(settings_parse_session(&c,"prompt=path\n",strlen("prompt=path\n"),&reason)==1);
+        assert(settings_parse_colours(&c,"prompt=path\n",strlen("prompt=path\n"),&reason)==1);
+    }
     puts("settings PASS: defaults, all keys, CR LF, spaces, bounds, whole-file rejection with line, session start, Colours.conf");
     return 0;
 }

@@ -22,4 +22,7 @@ int settings_edit_main(const char *old, size_t old_length, const XSettings *, ch
 /* And for Colours.conf: bold_bright. */
 int settings_edit_colours(const char *old, size_t old_length, const XSettings *, char *out, size_t capacity,
                           size_t *length);
+/* And for Shell.conf: prompt. */
+int settings_edit_shell(const char *old, size_t old_length, const XSettings *, char *out, size_t capacity,
+                        size_t *length);
 #endif

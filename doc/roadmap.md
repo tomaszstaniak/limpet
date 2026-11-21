@@ -1,13 +1,10 @@
 # Roadmap
 
-Limpet 0.10.1 is available for AROS x86_64 ABIv11 and mainline x86_64
-ABIv1, with an AArch64 Raspberry Pi test build. The experimental `LIMPET:`
-handler is a separate download for all three targets; with `LimpetCON ON`
-it can stand in for `CON:` until the system restarts.
-
-New in 0.10.0: colour files made for Ghostty, Kitty and iTerm2 work as
-themes, fifteen themes come with Limpet, and Preferences has pages for
-appearance, the Shell and the terminal. See the [changelog](changes.md).
+Limpet is available for AROS x86_64 ABIv11 and mainline x86_64 ABIv1, with
+an AArch64 Raspberry Pi test build. The experimental `LIMPET:` handler is a
+separate download for all three targets; with `LimpetCON ON` it can stand in
+for `CON:` until the system restarts. What each release brought is in the
+[changelog](changes.md).
 
 ## Console compatibility
 
@@ -36,10 +33,13 @@ contracts remain documented in the [protocol reference](protocols.md).
 ## Everyday use and terminal applications
 
 Already released: command-history search, file drop, output search, font
-and theme settings, Nerd Font icons and local-file links. Further work:
+and theme settings, Nerd Font icons, local-file links, a choice of prompts
+and TAB completion of a known command's keywords. Further work:
 
-- Better completion for commands, paths and command arguments.
-- Configurable shortcuts and prompt presentation.
+- Completion: descriptions of keywords, a list of the matches, and
+  definitions for more programs.
+- Prompt segments that need the Shell's help: time taken, Git branch.
+- Configurable shortcuts.
 - Horizontal and vertical panes with independent sessions.
 - A distributable PTY/termios runtime for local terminal applications.
 - Broader compatibility with editors, pagers and ncurses applications.

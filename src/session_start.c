@@ -103,3 +103,13 @@ int session_start_script(const XSettings *s, char *out, size_t capacity, const c
     if (n < 0 || (size_t)n >= capacity) { out[0] = 0; *why = "the command is too long"; return -1; }
     return 1;
 }
+
+const char *session_prompt_line(const XSettings *s)
+{
+    switch (s->prompt) {
+    case XPROMPT_PATH: return "Prompt \"%S> \"";
+    case XPROMPT_STATUS: return "Prompt \"%S [%R]> \"";
+    case XPROMPT_COLOUR: return "Prompt \"*E[1;38;5;12m%S*E[0;38;5;8m [%R]*E[0m> \"";
+    default: return NULL;
+    }
+}

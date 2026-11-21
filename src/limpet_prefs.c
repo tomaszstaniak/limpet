@@ -50,12 +50,13 @@ typedef struct {
     char text[XSETTINGS_FILE_MAX+1],kept[XSETTINGS_FILE_MAX+1];
     size_t length,kept_length;
 } Conf;
-enum { CONF_SESSION, CONF_WINDOW, CONF_MAIN, CONF_COLOURS, CONFS };
+enum { CONF_SESSION, CONF_WINDOW, CONF_MAIN, CONF_COLOURS, CONF_SHELL, CONFS };
 static Conf conf[CONFS]={
     {"Session.conf","Limpet runs nothing",settings_parse_session,settings_edit_session,"","",0,0},
     {"Window.conf","the background stays solid",settings_parse_window,settings_edit_window,"","",0,0},
     {"Limpet.conf","Limpet uses its built-in settings until the line is corrected",settings_parse,settings_edit_main,"","",0,0},
     {"Colours.conf","bold text keeps bright colours",settings_parse_colours,settings_edit_colours,"","",0,0},
+    {"Shell.conf","the Shell keeps the system's prompt",settings_parse_shell,settings_edit_shell,"","",0,0},
 };
 
 enum { ID_CHANGED=1, ID_SAVE, ID_USE, ID_CANCEL, ID_RUN, ID_CHOOSE, ID_THEME, ID_DRAWER, ID_REFRESH, ID_ADD,
@@ -68,7 +69,7 @@ static char status[200];
 static char line_text[600];
 static char background_note_text[120];
 
-static Object *app,*win,*start_cycle,*pages,*program,*look_cycle,*config_pop,*config,
+static Object *app,*win,*start_cycle,*prompt_cycle,*pages,*program,*look_cycle,*config_pop,*config,
     *show[XFF_GROUPS],*logo_cycle,*command,*choose,*line_view,*run,*status_view,
     *opacity,*blur,*background_note,
     *theme_view,*swatch[20],*bold,*font,*font_size,*scrollback,*history;
@@ -183,6 +184,7 @@ static void gather(XSettings *s)
     unsigned i;
     *s=loaded;
     s->session_start=(unsigned)value_of(start_cycle,MUIA_Cycle_Active);
+    s->prompt=(unsigned)value_of(prompt_cycle,MUIA_Cycle_Active);
     copy_text(s->fastfetch,sizeof s->fastfetch,string_of(program));
     s->fastfetch_look=(unsigned)value_of(look_cycle,MUIA_Cycle_Active);
     copy_text(s->fastfetch_config,sizeof s->fastfetch_config,string_of(config));
@@ -597,6 +599,8 @@ int main(int argc,char **argv)
 {
     (void)argv;
     static const char *starts[]={"Nothing","Fastfetch","My own command",NULL};
+    static const char *prompts[]={"As the system sets it","Current drawer","Drawer and last return code",
+                                  "Drawer and return code, in colours",NULL};
     static const char *looks[]={"Compact","AROS logo picture","My configuration file",NULL};
     static const char *logos[]={"As in the look","Text","None",NULL};
     static const char *group_labels[XFF_GROUPS]={"System","Hardware","Memory and disks","Network"};
@@ -731,6 +735,8 @@ int main(int argc,char **argv)
                     /* Shell */
                     Child,VGroup,GroupFrameT("When a new Shell window opens"),
                         Child,ColGroup(2),
+                            Child,label("Prompt"),
+                            Child,prompt_cycle=CycleObject,MUIA_Cycle_Entries,(IPTR)prompts,End,
                             Child,label("Run"),
                             Child,start_cycle=CycleObject,MUIA_Cycle_Entries,(IPTR)starts,End,
                             End,
@@ -822,6 +828,7 @@ int main(int argc,char **argv)
     }
 
     set(start_cycle,MUIA_Cycle_Active,loaded.session_start);
+    set(prompt_cycle,MUIA_Cycle_Active,loaded.prompt<=XPROMPT_COLOUR?loaded.prompt:XPROMPT_SYSTEM);
     set(program,MUIA_String_Contents,loaded.fastfetch);
     set(look_cycle,MUIA_Cycle_Active,loaded.fastfetch_look);
     set(config,MUIA_String_Contents,loaded.fastfetch_config);
@@ -852,6 +859,7 @@ int main(int argc,char **argv)
     for(i=0;i<XFF_GROUPS;++i)
         DoMethod(show[i],MUIM_Notify,MUIA_Selected,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
     DoMethod(start_cycle,MUIM_Notify,MUIA_Cycle_Active,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
+    DoMethod(prompt_cycle,MUIM_Notify,MUIA_Cycle_Active,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
     DoMethod(look_cycle,MUIM_Notify,MUIA_Cycle_Active,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
     DoMethod(logo_cycle,MUIM_Notify,MUIA_Cycle_Active,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
     DoMethod(program,MUIM_Notify,MUIA_String_Contents,MUIV_EveryTime,(IPTR)app,2,MUIM_Application_ReturnID,ID_CHANGED);
@@ -869,7 +877,7 @@ int main(int argc,char **argv)
     DoMethod(win,MUIM_Notify,MUIA_Window_Activate,TRUE,(IPTR)app,2,MUIM_Application_ReturnID,ID_ACTIVE);
     /* Esc and the close gadget: Cancel. */
     DoMethod(win,MUIM_Notify,MUIA_Window_CloseRequest,TRUE,(IPTR)app,2,MUIM_Application_ReturnID,ID_CANCEL);
-    {   Object *chain[]={start_cycle,look_cycle,logo_cycle,choose,run,save,use,cancel,drawer,rescan,add,bold};
+    {   Object *chain[]={prompt_cycle,start_cycle,look_cycle,logo_cycle,choose,run,save,use,cancel,drawer,rescan,add,bold};
         for(i=0;i<sizeof chain/sizeof chain[0];++i) set(chain[i],MUIA_CycleChain,1);
         for(i=0;i<XFF_GROUPS;++i) set(show[i],MUIA_CycleChain,1); }
     refresh();

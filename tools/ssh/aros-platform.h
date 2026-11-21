@@ -58,6 +58,9 @@ int xt_ssh_strerror_r(int code, char *buffer, size_t size);
 #define strerror_r xt_ssh_strerror_r
 #endif
 unsigned int xt_ssh_if_nametoindex(const char *name);
+/* Asked by libssh's wait for the network every quarter of a second, with
+ * the time waited so far: nonzero ends the wait with an error (Ctrl-C). */
+int xt_ssh_break_wanted(int waited_ms);
 char *xt_ssh_home_dir(void);
 #define if_nametoindex xt_ssh_if_nametoindex
 /* proto/socket.h supplies select -> WaitSelect. Only sockets reach libssh's

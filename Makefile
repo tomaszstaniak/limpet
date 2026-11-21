@@ -13,7 +13,7 @@ UNICODE_SRC = vendor/utf8proc/utf8proc.c
 UNICODE_FLAGS = -Ivendor/utf8proc -DUTF8PROC_STATIC
 INPUT_SRC = src/terminal_input.c src/echo_session.c
 EDITOR_SRC = src/line_editor.c src/line_view.c src/window_title.c src/file_drop.c src/output_search.c
-COMPLETION_SRC = src/completion.c src/aros_completion.c
+COMPLETION_SRC = src/completion.c src/completion_args.c src/completion_defs.c src/aros_completion.c
 SESSION_SRC = src/aros_session.c src/script_tail.c src/perf_diag.c src/redraw_settle.c src/console_name.c src/session_queue.c src/session_command.c src/console_input.c src/aros_break.c
 SESSION_HEADERS = src/aros_session.h src/console_geometry.h src/session_queue.h src/session_command.h src/console_input.h src/aros_break.h src/xterm_status.h
 CLIP_GUI_SRC = src/selection.c src/paste.c src/input_order.c src/clipboard_text.c src/aros_clipboard.c src/aros_clip_job.c src/paint_damage.c src/key_queue.c src/reply_flow.c
@@ -299,6 +299,7 @@ build/test_run_redirect: tests/test_run_redirect.c
 	@mkdir -p build
 	$(AROS_GCC) $(CFLAGS) -Wno-pointer-sign $< -o $@
 test: build/test_completion
+test: build/test_completion_args
 package: build/test_completion_aros build/test_aros_completion
 package: build/test_shell_startup
 package: build/test_aros_endpoint
@@ -323,6 +324,9 @@ build/test_shell_startup: tests/test_shell_startup.c $(SESSION_SRC) $(SESSION_HE
 
 build/test_completion: tests/test_completion.c src/completion.c src/completion.h src/line_editor.c src/line_editor.h $(UNICODE_SRC) Makefile
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/completion.c src/line_editor.c $(UNICODE_SRC) -o $@
+
+build/test_completion_args: tests/test_completion_args.c src/completion_args.c src/completion_args.h src/completion_defs.c src/completion_defs.h src/completion.c src/completion.h src/line_editor.c src/line_editor.h $(UNICODE_SRC) Makefile
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/completion_args.c src/completion_defs.c src/completion.c src/line_editor.c $(UNICODE_SRC) -o $@
 
 build/test_completion_aros: tests/test_completion.c src/completion.c src/completion.h src/line_editor.c src/line_editor.h $(UNICODE_SRC) Makefile
 	$(AROS_GCC) $(CFLAGS) $< src/completion.c src/line_editor.c $(UNICODE_SRC) $(LDFLAGS) -o $@
@@ -725,6 +729,7 @@ test: $(HOST_TEST) build/test_replay build/test_graphemes build/test_input_echo 
 	./build/test_console_input
 	./build/test_line_editor
 	./build/test_completion
+	./build/test_completion_args
 	./build/test_file_drop
 	./build/test_line_view
 	./build/test_alternate

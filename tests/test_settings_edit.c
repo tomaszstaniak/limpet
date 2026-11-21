@@ -105,6 +105,21 @@ int main(void)
         m.bold_bright=1;
         assert(settings_edit_colours(text,length,&m,text+2048,2048,&length) && !strcmp(text+2048,"# c\n"));
     }
+    {
+        /* Shell.conf: the prompt, and nothing of it in the other files. */
+        static char text[4097];
+        XSettings m,back; size_t length; const char *why;
+        settings_default(&m);
+        assert(settings_edit_shell("",0,&m,text,sizeof text,&length) && !length);
+        m.prompt=XPROMPT_COLOUR;
+        assert(settings_edit_shell("# mine\n",7,&m,text,sizeof text,&length) && !strcmp(text,"# mine\nprompt=colour\n"));
+        settings_default(&back);
+        assert(!settings_parse_shell(&back,text,length,&why) && back.prompt==XPROMPT_COLOUR);
+        assert(settings_edit_colours("",0,&m,text,sizeof text,&length) && !length);
+        assert(settings_edit_session("",0,&m,text,sizeof text,&length) && !length);
+        m.prompt=XPROMPT_STATUS;
+        assert(settings_edit_shell("prompt=colour\n",14,&m,text,sizeof text,&length) && !strcmp(text,"prompt=status\n"));
+    }
     puts("settings edit PASS: other lines kept in place, keys replaced or appended, defaults left out, round trip, size");
     return 0;
 }

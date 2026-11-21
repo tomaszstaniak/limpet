@@ -60,7 +60,7 @@ static void usage(void)
     Printf("       Adds your public key to your account on the server.\n");
 }
 
-int main(int argc, char **argv)
+static int program(int argc, char **argv)
 {
     struct xt_ssh_login login = { NULL, NULL, NULL, 0 };
     const char *keyfile = NULL;
@@ -185,4 +185,9 @@ close:
 done:
     xt_ssh_stop();
     return result;
+}
+
+int main(int argc, char **argv)
+{
+    return xt_ssh_run(program, argc, argv);
 }

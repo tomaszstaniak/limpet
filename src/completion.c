@@ -63,11 +63,26 @@ int completion_add(XCompletion *c,const char *s,int kind)
     memcpy(name,s,n);
     if(kind) name[n++]=kind==1?'/':':';
     name[n]=0;
-    for(pos=0;pos<c->count && compare(c->names[pos],name)<0;pos++) {}
+    /* A file named as one of the words is the same completion. */
+    for(pos=0;pos<c->words;pos++) if(!compare(c->names[pos],name)) return 0;
+    for(pos=c->words;pos<c->count && compare(c->names[pos],name)<0;pos++) {}
     if(pos<c->count && !compare(c->names[pos],name)) return 0;
     if(c->count==XCOMP_MAX) { c->limited=1; return 0; }
     memmove(c->names+pos+1,c->names+pos,(c->count-pos)*sizeof c->names[0]);
     strcpy(c->names[pos],name); ++c->count;
+    return 1;
+}
+int completion_add_word(XCompletion *c,const char *s)
+{
+    size_t n=strlen(s), p=strlen(c->prefix), i, pos;
+    if(!n || n+2>sizeof c->names[0] || !safe(s) || strchr(s,'/') || strchr(s,':') || n<p) return 0;
+    for(i=0;i<p;i++) if(fold((unsigned char)s[i])!=fold((unsigned char)c->prefix[i])) return 0;
+    for(pos=0;pos<c->words && compare(c->names[pos],s)<0;pos++) {}
+    if(pos<c->words && !compare(c->names[pos],s)) return 0;
+    for(i=c->words;i<c->count;i++) if(!compare(c->names[i],s)) return 0;
+    if(c->count==XCOMP_MAX) { c->limited=1; return 0; }
+    memmove(c->names+pos+1,c->names+pos,(c->count-pos)*sizeof c->names[0]);
+    strcpy(c->names[pos],s); ++c->count; ++c->words;
     return 1;
 }
 int completion_apply(XCompletion *c,XLineEditor *e,int reverse)

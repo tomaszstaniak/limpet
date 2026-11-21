@@ -2,13 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 
-enum { SESSION_KEYS = 7, WINDOW_KEYS = 9, MAIN_KEYS = 14, KEYS = 15 };
+enum { SESSION_KEYS = 7, WINDOW_KEYS = 9, MAIN_KEYS = 14, COLOUR_KEYS = 15, KEYS = 16 };
 static const char *const keys[KEYS] = {
     "session_start", "session_command", "fastfetch", "fastfetch_look",
     "fastfetch_config", "fastfetch_hide", "fastfetch_logo",
     "background_opacity", "background_blur",
     "font", "font_size", "theme", "scrollback", "history",
-    "bold_bright"
+    "bold_bright",
+    "prompt"
 };
 
 /* The value of key k, or NULL when it is at its default. */
@@ -17,6 +18,7 @@ static const char *value(const XSettings *s, int k, char *buffer, size_t size)
     static const char *const start[] = { "off", "fastfetch", "command" };
     static const char *const look[] = { "compact", "picture", "file" };
     static const char *const logo[] = { "look", "text", "none" };
+    static const char *const prompt[] = { "system", "path", "status", "colour" };
     size_t n = 0;
     int i;
     switch (k) {
@@ -52,6 +54,7 @@ static const char *value(const XSettings *s, int k, char *buffer, size_t size)
         snprintf(buffer, size, "%u", s->history);
         return buffer;
     case 14: return s->bold_bright ? NULL : "off";
+    case 15: return s->prompt != XPROMPT_SYSTEM && s->prompt <= XPROMPT_COLOUR ? prompt[s->prompt] : NULL;
     default: return s->fastfetch_logo != XFF_LOGO_LOOK && s->fastfetch_logo <= XFF_LOGO_NONE ? logo[s->fastfetch_logo] : NULL;
     }
 }
@@ -135,4 +138,8 @@ int settings_edit_main(const char *old, size_t old_length, const XSettings *s, c
 
 int settings_edit_colours(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
                           size_t *length)
-{ return edit(old, old_length, s, out, capacity, length, MAIN_KEYS, KEYS); }
+{ return edit(old, old_length, s, out, capacity, length, MAIN_KEYS, COLOUR_KEYS); }
+
+int settings_edit_shell(const char *old, size_t old_length, const XSettings *s, char *out, size_t capacity,
+                        size_t *length)
+{ return edit(old, old_length, s, out, capacity, length, COLOUR_KEYS, KEYS); }

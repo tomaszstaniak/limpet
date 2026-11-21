@@ -1,4 +1,6 @@
 #include "aros_completion.h"
+#include "completion_args.h"
+#include "completion_defs.h"
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <dos/var.h>
@@ -6,7 +8,7 @@
 
 /* One TAB scans at most 4096 entries and 32 Path/assign members. This bounds
  * work and memory, not the response time of an individual DOS packet. */
-static int scan_lock(XCompletion *c,BPTR lock,unsigned *budget,int files_only)
+static int scan_lock(XCompletion *c,BPTR lock,unsigned *budget,int want)
 {
     struct FileInfoBlock *fib=AllocDosObject(DOS_FIB,NULL);
     int ok=0;
@@ -15,7 +17,7 @@ static int scan_lock(XCompletion *c,BPTR lock,unsigned *budget,int files_only)
         ok=1;
         while(*budget && ExNext(lock,fib)) {
             --*budget;
-            if(!files_only || fib->fib_DirEntryType<0)
+            if(want&(fib->fib_DirEntryType>0?2:1))
                 completion_add(c,(const char *)fib->fib_FileName,fib->fib_DirEntryType>0?1:0);
         }
         if(!*budget) c->limited=1;
@@ -25,7 +27,7 @@ static int scan_lock(XCompletion *c,BPTR lock,unsigned *budget,int files_only)
 }
 
 static int scan_path(XCompletion *c,const char *path,struct Process *reader,
-                     unsigned *budget,int files_only)
+                     unsigned *budget,int want)
 {
     BPTR lock,old;
     const char *colon=strchr(path,':');
@@ -34,13 +36,13 @@ static int scan_path(XCompletion *c,const char *path,struct Process *reader,
         old=CurrentDir(reader->pr_CurrentDir);
         lock=Lock((CONST_STRPTR)path,SHARED_LOCK);
         CurrentDir(old);
-        ok=scan_lock(c,lock,budget,files_only); if(lock) UnLock(lock);
+        ok=scan_lock(c,lock,budget,want); if(lock) UnLock(lock);
     } else if((size_t)(colon-path)==7 &&
               !strnicmp(path,"PROGDIR",7)) {
         old=CurrentDir(reader->pr_HomeDir);
         lock=reader->pr_HomeDir?Lock((CONST_STRPTR)(colon+1),SHARED_LOCK):BNULL;
         CurrentDir(old);
-        ok=scan_lock(c,lock,budget,files_only); if(lock) UnLock(lock);
+        ok=scan_lock(c,lock,budget,want); if(lock) UnLock(lock);
     } else {
         struct DevProc *dp=NULL;
         unsigned members=0;
@@ -57,7 +59,7 @@ static int scan_path(XCompletion *c,const char *path,struct Process *reader,
              * retain the reader's cwd for the current-volume ':' shorthand. */
             lock=Lock((CONST_STRPTR)(dp->dvp_Lock?colon+1:path),SHARED_LOCK);
             CurrentDir(memberold);
-            ok|=scan_lock(c,lock,budget,files_only); if(lock) UnLock(lock);
+            ok|=scan_lock(c,lock,budget,want); if(lock) UnLock(lock);
             if(!(dp->dvp_Flags&DVPF_ASSIGN)) break;
         }
         if(dp) FreeDeviceProc(dp);
@@ -66,16 +68,53 @@ static int scan_path(XCompletion *c,const char *path,struct Process *reader,
     return ok;
 }
 
+/* What the command's definition offers for an argument (completion_args.h):
+ * the user's file ENVARC:Limpet/Completions/<command> first, then the
+ * definitions that come with Limpet. An alias has only the user's: its
+ * arguments need not be those of the command of the same name. Returns
+ * which files belong beside the offers: 0 all, 1 drawers only, 2 none. */
+static int arguments(XCompletion *c,struct Process *reader)
+{
+    static const char drawer[]="ENVARC:Limpet/Completions/";
+    char name[40],path[sizeof drawer+sizeof name],text[XARGS_DEFINITION_MAX+1];
+    XArgSpec spec;
+    struct Node *var;
+    const char *builtin;
+    size_t from,i;
+    LONG got=-1;
+    BPTR file;
+    int alias=0;
+    unsigned entries=0;
+    if(c->command || !completion_args_command(c->expected,c->start,name,sizeof name,&from)) return 0;
+    for(i=0;name[i];++i)
+        if(name[i]=='#' || name[i]=='?' || name[i]=='"' || name[i]=='*' || (unsigned char)name[i]<32) return 0;
+    for(var=(struct Node *)reader->pr_LocalVars.mlh_Head;var->ln_Succ;var=var->ln_Succ) {
+        if(++entries>4096) break;
+        if(var->ln_Type==LV_ALIAS && var->ln_Name && !stricmp((const char *)var->ln_Name,name)) { alias=1; break; }
+    }
+    strcpy(path,drawer); strcat(path,name);
+    if((file=Open((CONST_STRPTR)path,MODE_OLDFILE))) {
+        got=Read(file,text,sizeof text);
+        Close(file);
+    }
+    if(got>0 && (size_t)got<sizeof text && completion_args_parse(&spec,text,(size_t)got))
+        return completion_args_offer(c,&spec);
+    if(alias || !(builtin=completion_definition(name)) ||
+       !completion_args_parse(&spec,builtin,strlen(builtin))) return 0;
+    return completion_args_offer(c,&spec);
+}
+
 int aros_completion_collect(XCompletion *c,struct Process *p)
 {
     struct Process *me=(struct Process *)FindTask(NULL);
     APTR oldwindow;
     unsigned budget=4096;
-    int ok;
+    int ok=0,files;
     if(!p || p->pr_Task.tc_Node.ln_Type!=NT_PROCESS) return 0;
     oldwindow=me->pr_WindowPtr; me->pr_WindowPtr=(APTR)-1;
-    ok=scan_path(c,c->directory,p,&budget,0);
-    if(!c->directory[0]) {
+    files=arguments(c,p);
+    if(files!=2) ok=scan_path(c,c->directory,p,&budget,files==1?2:3);
+    if(!c->directory[0] && files!=2) {
         struct DosList *list;
         unsigned entries=0;
         ULONG flags=LDF_READ|LDF_VOLUMES|LDF_DEVICES|LDF_ASSIGNS;

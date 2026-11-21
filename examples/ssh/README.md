@@ -37,7 +37,7 @@ Copies files between AROS and one server, through the server's SFTP service.
 - `-r` copies drawers and directories. Copying into an existing directory puts the source inside it; otherwise the target gets the source's contents.
 - Use `""` as the target for the current drawer.
 - In a Limpet window a large file shows its percentage; each finished file gets one line. `-q` prints errors only. Ctrl-C stops the copy.
-- A file arrives under a temporary name (`scp-....part` on AROS, `.<name>.scp-part` on the server) and replaces the target only when it is complete. A copy that is stopped or fails leaves the file that was there before as it was. If the computer or the connection stops in the middle, the temporary file can remain; delete it.
+- A file arrives under a temporary name (`scp-....part` on AROS, `.<name>.scp-part` on the server) and replaces the target only when it is complete. A copy that is stopped or fails leaves the file that was there before as it was. If the computer or the connection stops in the middle, the temporary file can remain. `scp` names one it could not remove from the server; delete it, or upload the file again, which writes over it.
 - Two server names that would be one name on AROS (`a:b.txt` and `a_b.txt`, or `Foo` and `foo`) are not written over each other: the first is copied, the second is reported and the return code is 10. Copy the second by itself with another target name. The same holds for two sources with one name.
 - New files on the server get mode 644 and directories 755; a file that replaces one keeps the old one's mode. Dates and protection bits are not carried over. A `:` in a server file name becomes `_` on AROS. Links to files are copied as files; links to directories are not followed.
 - The return code is 0 when everything was copied, 10 when something was not, 20 when the connection or login failed.
@@ -85,7 +85,7 @@ Encryption needs unpredictable numbers. On mainline AROS they come from the syst
 - Use the programs in a Limpet window. In the system console (`CON:`) they were not tested; window size and colours are not available there.
 - One command's output is passed through as bytes; in an interactive session the remote program's basic colours are rewritten so that Limpet shows them as colours and not as Workbench pens.
 - When the connection is lost, `ssh` ends with return code 20. It does not reconnect.
-- Ctrl-C stops `scp` between blocks and all four programs after a connection or login step. While a program waits for the server (up to 30 seconds when connecting, up to 2 minutes during a copy) Ctrl-C takes effect when that wait ends.
+- Ctrl-C stops a program that is connecting or logging in at once. During a copy `scp` finishes the block in flight, removes its unfinished file and stops; when the server has not answered for two seconds it stops without waiting further. A name lookup that does not answer cannot be stopped.
 - `scp` sends and receives one block at a time. Under QEMU's Raspberry Pi model sending reaches about 30 KB per second (receiving about 400 KB per second); on the PC targets 5 MB take a few seconds either way.
 
 ## Known system problems

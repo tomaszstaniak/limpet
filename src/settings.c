@@ -79,10 +79,12 @@ enum { WINDOW_KEYS = XSET_BACKGROUND_OPACITY|XSET_BACKGROUND_BLUR };
 
 enum { COLOUR_KEYS = XSET_BOLD_BRIGHT };
 
+enum { SHELL_KEYS = XSET_PROMPT };
+
 static int parse(XSettings *out, const char *text, size_t length, const char **why, unsigned allowed);
 
 int settings_parse(XSettings *out, const char *text, size_t length, const char **why)
-{ return parse(out, text, length, why, ~(unsigned)(SESSION_KEYS|WINDOW_KEYS|COLOUR_KEYS)); }
+{ return parse(out, text, length, why, ~(unsigned)(SESSION_KEYS|WINDOW_KEYS|COLOUR_KEYS|SHELL_KEYS)); }
 
 int settings_parse_session(XSettings *out, const char *text, size_t length, const char **why)
 { return parse(out, text, length, why, SESSION_KEYS); }
@@ -92,6 +94,9 @@ int settings_parse_window(XSettings *out, const char *text, size_t length, const
 
 int settings_parse_colours(XSettings *out, const char *text, size_t length, const char **why)
 { return parse(out, text, length, why, COLOUR_KEYS); }
+
+int settings_parse_shell(XSettings *out, const char *text, size_t length, const char **why)
+{ return parse(out, text, length, why, SHELL_KEYS); }
 
 static int parse(XSettings *out, const char *text, size_t length, const char **why, unsigned allowed)
 {
@@ -197,6 +202,12 @@ static int parse(XSettings *out, const char *text, size_t length, const char **w
             bit = XSET_BOLD_BRIGHT;
             if (v < 0) { *why = "bold_bright takes off or on"; return line; }
             s.bold_bright = (unsigned)v;
+        } else if (KEY("prompt")) {
+            static const char *const w[] = { "system", "path", "status", "colour" };
+            int v = word(text + vs, ve - vs, w, 4);
+            bit = XSET_PROMPT;
+            if (v < 0) { *why = "prompt takes system, path, status or colour"; return line; }
+            s.prompt = (unsigned)v;
         } else { *why = "unknown key"; return line; }
 #undef KEY
         if (!(bit & allowed)) { *why = "unknown key"; return line; }

@@ -11,6 +11,8 @@
 #include <proto/dos.h>
 #include <proto/socket.h>
 #include <exec/types.h>
+#include <exec/tasks.h>
+#include <exec/memory.h>
 #include <dos/dos.h>
 #include <dos/var.h>
 
@@ -304,6 +306,49 @@ void xt_ssh_stop(void)
     started = 0;
 }
 
+/* A Shell gives a program 40960 bytes of stack unless told otherwise. The
+ * post-quantum key exchange (ML-KEM) alone needs more: the program stopped
+ * with "Stack extends out of range" while connecting. ABIv11 has no way to
+ * ask for a stack at link time, so the swap is done here on both systems. */
+#define XT_SSH_STACK (512 * 1024)
+static IPTR on_stack(IPTR program, IPTR argc, IPTR argv)
+{
+    return (IPTR)((int (*)(int, char **))program)((int)argc, (char **)argv);
+}
+int xt_ssh_run(int (*program)(int argc, char **argv), int argc, char **argv)
+{
+    struct Task *me = FindTask(NULL);
+    struct StackSwapStruct swap;
+    struct StackSwapArgs args;
+    APTR stack;
+    IPTR result;
+
+    if ((IPTR)me->tc_SPUpper - (IPTR)me->tc_SPLower >= XT_SSH_STACK) return program(argc, argv);
+    stack = AllocMem(XT_SSH_STACK, MEMF_ANY);
+    if (!stack)
+    {
+        Printf("%s: not enough memory for the program's stack\n", (IPTR)(argc > 0 ? FilePart((CONST_STRPTR)argv[0]) : (STRPTR)"ssh"));
+        return RETURN_FAIL;
+    }
+    swap.stk_Lower = stack;
+    swap.stk_Upper = (APTR)((IPTR)stack + XT_SSH_STACK);
+    swap.stk_Pointer = swap.stk_Upper;
+    args.Args[0] = (IPTR)program;
+    args.Args[1] = (IPTR)argc;
+    args.Args[2] = (IPTR)argv;
+    result = NewStackSwap(&swap, (APTR)on_stack, &args);
+    FreeMem(stack, XT_SSH_STACK);
+    return (int)result;
+}
+
+/* libssh's wait for the network asks this (tools/ssh/libssh-aros.patch). */
+static int break_after;
+void xt_ssh_break_after(int milliseconds) { break_after = milliseconds; }
+int xt_ssh_break_wanted(int waited_ms)
+{
+    return waited_ms >= break_after && (SetSignal(0, 0) & SIGBREAKF_CTRL_C) != 0;
+}
+
 /* Ctrl-C pressed while connecting or logging in: say so once and leave the
  * signal for the caller, which ends without doing its work. */
 static int break_pending(void)
@@ -379,6 +424,7 @@ ssh_session xt_ssh_connect(const struct xt_ssh_login *login)
         port = (int)chosen;
     }
 
+    xt_ssh_break_after(0);
     if (ssh_connect(session) != SSH_OK)
     {
         if (break_pending()) goto fail;
@@ -395,6 +441,7 @@ ssh_session xt_ssh_connect(const struct xt_ssh_login *login)
         goto disconnect;
     }
     if (break_pending()) goto disconnect;
+    xt_ssh_break_after(2000);
     return session;
 
 disconnect:

@@ -63,6 +63,14 @@ int main(void)
         /* An own command is the user's business: as written. */
         settings_default(&s); s.session_start = XSTART_COMMAND; strcpy(s.session_command, "Echo hello");
         assert(session_start_script(&s, script, sizeof script, &why) == 1 && !strcmp(script, "Echo hello")); }
+    {   XSettings s;
+        settings_default(&s);
+        assert(!session_prompt_line(&s));
+        s.prompt = XPROMPT_PATH; assert(!strcmp(session_prompt_line(&s), "Prompt \"%S> \""));
+        s.prompt = XPROMPT_STATUS; assert(strstr(session_prompt_line(&s), "%S [%R]> "));
+        /* The coloured prompt ends by putting the text colour back. */
+        s.prompt = XPROMPT_COLOUR; assert(strstr(session_prompt_line(&s), "*E[0m> \""));
+        s.prompt = 99; assert(!session_prompt_line(&s)); }
     puts("session start PASS: off, presets, groups, logo, quoted requester paths, own command, limits, script with a check");
     return 0;
 }

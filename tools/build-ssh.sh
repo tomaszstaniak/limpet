@@ -46,12 +46,15 @@ fetch() {
 fetch libssh-0.12.2.tar.xz https://www.libssh.org/files/0.12/libssh-0.12.2.tar.xz \
     49560f677d96e3706a904ac2de1116e25f3680937d51e5c92198fcba4a1c1e9f
 source=build/ssh/libssh-0.12.2
-[ -d "$source" ] || tar -xf build/ssh/libssh-0.12.2.tar.xz -C build/ssh
-# Apply the patch once. A reverse dry run does not tell: some patch programs
-# report success for it on an unpatched tree.
-if ! grep -q xt_ssh_home_dir "$source/src/misc.c"; then
+# Apply the patch once, to a fresh tree: one patched by an older version of
+# the patch is unpacked again. A reverse dry run does not tell whether the
+# patch is in: some patch programs report success for it on an unpatched tree.
+if ! grep -q xt_ssh_break_wanted "$source/src/poll.c" 2>/dev/null; then
+    rm -rf build/ssh/libssh-0.12.2
+    tar -xf build/ssh/libssh-0.12.2.tar.xz -C build/ssh
     patch -d "$source" -p1 < tools/ssh/libssh-aros.patch
 fi
+grep -q xt_ssh_break_wanted "$source/src/poll.c"
 grep -q xt_ssh_home_dir "$source/src/misc.c"
 grep -q "no key may be made" "$source/src/libmbedcrypto.c"
 grep -q "aros_crypto_setup" "$source/src/threads/mbedtls.c"
