@@ -59,6 +59,15 @@ Before the stack change, the first `ssh` login from the system's Shell on
 mainline ended in the "Stack extends out of range" requester, inside the
 ML-KEM code.
 
+## Installation through apkg, after publication
+
+apkg 0.7.8 with a package root in `RAM:`, from the public catalogue, on
+AROS One 1.3 and on the mainline nightly of 2026-11-15: `update`,
+`install limpet` (0.13.0 downloaded from the release), `verify limpet` (all
+files as installed; 43 on AROS One), the installed Limpet started, `Limpet`
+and `ssh` report 0.13.0, `remove limpet`. An upgrade from 0.12.2 was not
+run, and the Raspberry Pi was not checked through apkg.
+
 ## Not checked
 
 - The message that names an unfinished copy left on the server: the test
@@ -71,5 +80,4 @@ ML-KEM code.
   in the way `main` is entered.
 - Large transfers. The known issue with QEMU's e1000 card stands.
 - The console handler archive: built, not run; its code is unchanged.
-- Installation through apkg is checked after publication.
 - Real hardware.
