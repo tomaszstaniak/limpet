@@ -11,9 +11,10 @@ Intuition and FreeType. It has:
 - inline images through a documented subset of the Kitty graphics protocol.
 
 Built for AROS on the Raspberry Pi (ABIv1, AArch64) with the Developer SDK
-of the raspi-aarch64 system of 2026-08-22. This is a test build: it was run
-under QEMU's Raspberry Pi 3 model, not yet on a real Raspberry Pi. Reports
-from a real Pi are welcome. It is a build for the native Pi system; it
+of the raspi-aarch64 nightly build of 2026-11-24. It needs a nightly build of
+2026-11-24 or later; on an earlier one use Limpet 0.13.0. This is a test
+build: it was run under QEMU's Raspberry Pi 3 model, not yet on a real
+Raspberry Pi. Reports from a real Pi are welcome. It is a build for the native Pi system; it
 has not been checked on hosted AArch64 AROS. x86_64 AROS needs
 a build of its own.
 

@@ -11,7 +11,8 @@ Intuition and FreeType. It has:
 - inline images through a documented subset of the Kitty graphics protocol.
 
 Built for mainline AROS (ABIv1, x86_64) with the mainline GCC 10.5
-toolchain; this version was tested on the nightly build of 2026-11-13.
+toolchain and the SDK of the nightly build of 2026-11-24. It needs a nightly
+build of 2026-11-24 or later; on an earlier one use Limpet 0.13.0.
 Mainline binaries do not run on ABIv11 systems such as AROS One, and ABIv11
 binaries do not run here.
 
