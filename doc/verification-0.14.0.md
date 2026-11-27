@@ -38,6 +38,20 @@ The same steps on each system, with eza 0.23.5 revision 3 and Fastfetch
 The definition in `SYS:Packages/eza` was put there by hand for the check
 and removed afterwards.
 
+## Installation through apkg
+
+After the catalogue update, on AROS One 1.3: apkg 0.8.4 installed limpet
+0.14.0, eza 0.23.5 revision 3 and fastfetch 2.70.0 revision 6 from the
+public catalogue into a root in `RAM:`; `apkg verify eza` passed. With the
+two package drawers on the Shell's path, the installed Limpet completed
+`eza --so` and `fastfetch --logo-t` from the packages' files and ran both
+programs. The public catalogue lists the three packages for all three
+systems, and each archive downloaded from its URL matches its SHA-256.
+
+Not run through apkg for this release: mainline x86_64 and the Raspberry
+Pi, and a package in the default root `SYS:Packages` (the lookup there was
+checked with a file put in place by hand).
+
 ## Not checked
 
 - An upgrade from 0.13.x through apkg on a system with user settings.
