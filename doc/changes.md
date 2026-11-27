@@ -3,6 +3,41 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.14.0 (2026-11-27)
+
+New:
+
+- **TAB completes the options of Unix-style programs.** A definition can
+  now describe options (`option -l --long`, `option --sort name size time`,
+  `option --output <file>`): TAB after `-` offers the options, TAB after
+  an option that takes one of a few words offers the words. Definitions
+  may be up to 16384 bytes (before: 2048).
+- **Programs bring their own definitions.** Limpet reads
+  `Completions/<command>` from the program's drawer (found through the
+  Shell's path, or the path typed) and from `SYS:Packages/<command>`, where
+  apkg installs. `apkg run <package>` is completed with the package's
+  definition. The packages eza 0.23.5 revision 3 and Fastfetch 2.70.0
+  revision 6 hold theirs: after `apkg install eza`, `eza --so` and TAB
+  gives `--sort`.
+- `tools/completions/from-fish.py` turns a fish completion file into a
+  definition, for authors of ports.
+- apkg's own options (`--root`, `--plain`, `--json`, ...) are completed.
+
+Changed:
+
+- After a completion with a single match, the next TAB completes the word
+  that follows (an option's value, a drawer's contents). Before, it put
+  the same word in again.
+- Two allowed words that differ only in case (`ext`, `Ext`) are both
+  offered.
+
+See [prompt-and-completion.md](prompt-and-completion.md).
+
+## 0.13.1 (2026-11-25)
+
+Mainline x86_64 and Raspberry Pi archives rebuilt for nightly builds from
+2026-11-24 on. No other changes; ABIv11 stayed at 0.13.0.
+
 ## 0.13.0 (2026-11-21)
 
 New:

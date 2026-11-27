@@ -34,10 +34,12 @@ contracts remain documented in the [protocol reference](protocols.md).
 
 Already released: command-history search, file drop, output search, font
 and theme settings, Nerd Font icons, local-file links, a choice of prompts
-and TAB completion of a known command's keywords. Further work:
+and TAB completion of a known command's keywords and options, with
+definitions that programs and packages bring along. Further work:
 
-- Completion: descriptions of keywords, a list of the matches, and
-  definitions for more programs.
+- Completion: descriptions of keywords, a list of the matches, definitions
+  for more programs, and learning a program's options from its own help
+  on request.
 - Prompt segments that need the Shell's help: time taken, Git branch.
 - Configurable shortcuts.
 - Horizontal and vertical panes with independent sessions.

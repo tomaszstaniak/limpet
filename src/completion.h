@@ -20,5 +20,7 @@ int completion_add(XCompletion *, const char *name, int kind);
  * among the words, ahead of every file. Add these before the files. */
 int completion_add_word(XCompletion *, const char *word);
 int completion_apply(XCompletion *, XLineEditor *, int reverse);
+/* Whether the next TAB continues this transaction. Not after its only
+ * match was applied: the next TAB then starts at the following word. */
 int completion_current(const XCompletion *, const XLineEditor *);
 #endif

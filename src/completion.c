@@ -77,8 +77,9 @@ int completion_add_word(XCompletion *c,const char *s)
     size_t n=strlen(s), p=strlen(c->prefix), i, pos;
     if(!n || n+2>sizeof c->names[0] || !safe(s) || strchr(s,'/') || strchr(s,':') || n<p) return 0;
     for(i=0;i<p;i++) if(fold((unsigned char)s[i])!=fold((unsigned char)c->prefix[i])) return 0;
-    for(pos=0;pos<c->words && compare(c->names[pos],s)<0;pos++) {}
-    if(pos<c->words && !compare(c->names[pos],s)) return 0;
+    /* Words that differ only in case are two words ("ext", "Ext"). */
+    for(pos=0;pos<c->words;pos++) if(!strcmp(c->names[pos],s)) return 0;
+    for(pos=0;pos<c->words && compare(c->names[pos],s)<=0;pos++) {}
     for(i=c->words;i<c->count;i++) if(!compare(c->names[i],s)) return 0;
     if(c->count==XCOMP_MAX) { c->limited=1; return 0; }
     memmove(c->names+pos+1,c->names+pos,(c->count-pos)*sizeof c->names[0]);
@@ -117,4 +118,10 @@ int completion_apply(XCompletion *c,XLineEditor *e,int reverse)
     return 1;
 }
 int completion_current(const XCompletion *c,const XLineEditor *e)
-{ return !(e->selecting && e->anchor!=e->cursor) && c->cursor==e->cursor && !strcmp(c->expected,e->text); }
+{
+    /* A single match that has been put in is finished: the next TAB
+     * completes what follows it (the option's value, the drawer's
+     * contents) instead of putting the same word in again. */
+    if(c->applied && c->count==1) return 0;
+    return !(e->selecting && e->anchor!=e->cursor) && c->cursor==e->cursor && !strcmp(c->expected,e->text);
+}

@@ -5,7 +5,7 @@
 static const struct { const char *name, *text; } definitions[] = {
     { "AddBuffers", "template DRIVE/A,BUFFERS/N\ndirs DRIVE\n" },
     { "Alias", "template NAME,STRING/F\n" },
-    { "apkg", "first search show install list update outdated recent upgrade rollback remove verify info doctor run open self-update\n" },
+    { "apkg", "first search show install list update outdated recent upgrade rollback remove verify info doctor run open self-update\noption --root <dir>\noption --plain\noption --json\noption --yes\noption --all\noption --check\noption --help\noption --version\n" },
     { "Assign", "template NAME,TARGET/M,LIST/S,EXISTS/S,DISMOUNT/S,DEFER/S,PATH/S,ADD=APPEND/S,PREPEND/S,REMOVE/S,VOLS/S,DIRS/S,DEVICES/S\ndirs TARGET\n" },
     { "Avail", "template CHIP/S,FAST/S,TOTAL/S,FLUSH/S,H=HUMAN/S\n" },
     { "Break", "template PROCESS/N,PORT,NAME/K,C/S,D/S,E/S,F/S,ALL/S\n" },

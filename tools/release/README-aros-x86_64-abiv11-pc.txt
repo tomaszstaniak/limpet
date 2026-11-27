@@ -23,6 +23,25 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in 0.14.0
+-------------
+
+TAB completes the options of Unix-style programs: after "-" it offers the
+program's options, after an option that takes one of a few words it offers
+the words (eza --sort, TAB: name, size, time, ...).
+
+Programs bring their own definitions. Limpet reads Completions/<command>
+from the program's drawer and from SYS:Packages/<command>, where apkg
+installs. The packages eza 0.23.5 revision 3 and Fastfetch 2.70.0
+revision 6 hold theirs: after "apkg install eza", "eza --so" and TAB gives
+--sort. "apkg run eza --so" is completed the same way.
+
+In your own file in ENVARC:Limpet/Completions, an option is one line:
+
+    option -v --verbose
+    option --output <file>
+    option --colour always auto never
+
 New in 0.13.0
 -------------
 
@@ -255,7 +274,8 @@ Keys
     Ctrl-R                    search earlier commands (Enter: edit it,
                               Esc: back to the line as it was)
     TAB / Shift+TAB           complete a command, a path or a known
-                              command's keyword; again for the next
+                              command's keyword or option; again for
+                              the next
     Shift+PgUp / PgDn, wheel  scroll back through the output
     RAmiga+F / Ctrl+Shift+F   find text in the output (Up/Down: older and
                               newer, Enter: stay there, Esc: back)

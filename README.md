@@ -23,13 +23,13 @@ Image: NASA, ESA, CSA, STScI.
 
 ## Download
 
-- [Limpet 0.13.1](https://github.com/tomaszstaniak/limpet/releases/tag/v0.13.1)
-  for mainline AROS, x86_64, and a test build for AROS on the Raspberry Pi
-  (AArch64), both for nightly builds of 2026-11-24 or later. The Pi build was
-  run under QEMU's Pi model, not yet on a Raspberry Pi.
+- [Limpet 0.14.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.14.0)
+  for AROS ABIv11, x86_64 (AROS One and similar), for mainline AROS,
+  x86_64, and a test build for AROS on the Raspberry Pi (AArch64). The
+  mainline and Pi archives need a nightly build of 2026-11-24 or later. The
+  Pi build was run under QEMU's Pi model, not yet on a Raspberry Pi.
 - [Limpet 0.13.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.13.0)
-  for AROS ABIv11, x86_64 (AROS One and similar), and for mainline and Pi
-  nightly builds before 2026-11-24.
+  for mainline and Pi nightly builds before 2026-11-24.
 - [SDK 0.6.0](https://github.com/tomaszstaniak/limpet/releases/tag/sdk-v0.6.0)
   for application developers.
 - The separate `LIMPET:` console handler is an experimental download in the
@@ -58,8 +58,10 @@ Limpet includes:
 - DejaVu Sans Mono Nerd Font, including file-type icons for tools such as eza;
 - scrollback, output search and Ctrl-R command-history search;
 - TAB completion of commands, paths and, for known commands, their
-  keywords and drawer arguments; a [prompt](doc/prompt-and-completion.md)
-  with the current drawer and the last return code;
+  keywords, options and drawer arguments; programs and apkg packages can
+  bring their own definitions, as eza and Fastfetch do; a
+  [prompt](doc/prompt-and-completion.md) with the current drawer and the
+  last return code;
 - selection that stays while other rows change, and copy and paste through
   the system clipboard;
 - text and history that reflow when the window is resized;
@@ -108,13 +110,13 @@ Each system has its own archive on the
 
 | System | Archive | apkg |
 | --- | --- | --- |
-| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.13.0-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
-| mainline AROS (ABIv1), x86_64 | `Limpet-0.13.1-aros-x86_64-abiv1-pc.zip` (nightly 2026-11-24 or later) | `apkg install limpet` |
-| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.13.1-aros-aarch64-abiv1-raspi.zip` (nightly 2026-11-24 or later) | `apkg install limpet` |
+| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.14.0-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
+| mainline AROS (ABIv1), x86_64 | `Limpet-0.14.0-aros-x86_64-abiv1-pc.zip` (nightly 2026-11-24 or later) | `apkg install limpet` |
+| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.14.0-aros-aarch64-abiv1-raspi.zip` (nightly 2026-11-24 or later) | `apkg install limpet` |
 
 By hand on AROS One:
 
-    UnZip Limpet-0.13.0-aros-x86_64-abiv11-pc.zip -d SYS:Utilities
+    UnZip Limpet-0.14.0-aros-x86_64-abiv11-pc.zip -d SYS:Utilities
 
 Mainline AROS and the Pi system do not come with UnZip. Unpack the archive
 on another computer (or with an UnZip you installed) and copy the `Limpet`

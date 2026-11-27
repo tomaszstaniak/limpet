@@ -131,6 +131,73 @@ int main(void)
     assert(completion_apply(&c, &e, 0) && !strcmp(e.text, "Copy a TO "));
     assert(completion_apply(&c, &e, 0) && !strcmp(e.text, "Copy a T:"));
 
+    /* Options of a Unix-style program. */
+    define("option -l --long\noption -L --level <value>\noption --color --colour always auto never\n"
+           "option -1\noption --config <file>\noption --out <dir>\n");
+    assert(spec.options == 6);
+    assert(tab("eza --l") == 2 && c.count == 2 && offered("--long") && offered("--level"));
+    assert(tab("eza -") == 2 && offered("--long") && offered("-1") && !offered("-l") && offered("--colour"));
+    assert(tab("eza --color ") == 2 && c.count == 3 && offered("auto"));
+    assert(tab("eza --color=a") == 2 && c.count == 2 && offered("always"));
+    assert(completion_apply(&c, &e, 0) && !strcmp(e.text, "eza --color=always "));
+    assert(completion_current(&c, &e));                 /* two matches: TAB goes on to the next */
+    assert(tab("eza --lo") == 2 && c.count == 1 && completion_apply(&c, &e, 0) && !strcmp(e.text, "eza --long "));
+    assert(!completion_current(&c, &e));                /* one match: TAB starts at the next word */
+    assert(tab("eza --colour n") == 2 && c.count == 1 && offered("never"));
+    assert(tab("eza -L ") == 2 && !c.count);            /* a value nobody can guess */
+    assert(tab("eza -l ") == 0 && !c.count);            /* -l is not -L: files */
+    assert(tab("eza --config ") == 0 && !c.count);
+    assert(tab("eza --out ") == 1 && tab("eza --out Work:") == 1);
+    assert(tab("eza --long ") == 0 && tab("eza --color auto ") == 0);
+    assert(tab("eza --unknown ") == 0);
+    /* A value that was left out: the next option is an option. */
+    assert(tab("eza --color --l") == 2 && offered("--long"));
+    assert(tab("eza --color --long ") == 0);
+    define("option --sort ext Ext name\n");
+    assert(tab("eza --sort e") == 2 && c.count == 2 && offered("ext") && offered("Ext"));
+    define("option -l --long\noption -L --level <value>\noption --color --colour always auto never\n"
+           "option -1\noption --config <file>\noption --out <dir>\n");
+    assert(tab("eza \"-") == 0 && !c.count);
+    assert(tab("eza ") == 0 && !c.count);
+    assert(refused("option long\n"));                  /* a name starts with - */
+    assert(refused("option -\n"));
+    assert(refused("option --a <thing>\n"));
+    assert(refused("option --a <file> x\n"));
+    assert(refused("option --a x --b\n"));
+    /* Options beside subcommands: they do not count as the first word. */
+    define("first install remove\noption --root <dir>\noption --plain\n");
+    assert(tab("apkg --plain ") == 2 && offered("install"));
+    assert(tab("apkg --root RAM:x in") == 2 && offered("install") && c.count == 1);
+    assert(tab("apkg --root ") == 1);
+    assert(tab("apkg --p") == 2 && offered("--plain") && c.count == 1);
+    assert(tab("apkg install ") == 0);
+    /* A long definition is one: the limit is 16 KB. */
+    {
+        static char big[XARGS_DEFINITION_MAX];
+        size_t n = 0;
+        while (n + 32 < sizeof big) n += (size_t)sprintf(big + n, "option --name-%04u a b\n", (unsigned)n);
+        assert(completion_args_parse(&spec, big, n) && spec.options > 500);
+    }
+
+    /* The program as typed, and a package started through apkg. */
+    {
+        char path[64], id[32];
+        size_t at;
+        assert(completion_args_program("Work:Tools/eza -l ", 18, path, sizeof path) && !strcmp(path, "Work:Tools/eza"));
+        assert(completion_args_program("List | eza ", 11, path, sizeof path) && !strcmp(path, "eza"));
+        assert(!completion_args_program("eza", 0, path, sizeof path));
+        assert(completion_args_command("apkg run eza --l", 13, name, sizeof name, &from));
+        assert(completion_args_run("apkg run eza --l", from, 13, name, id, sizeof id, &at) && !strcmp(id, "eza") && at == 12);
+        assert(!completion_args_run("apkg run ez", from, 9, name, id, sizeof id, &at));     /* the id is being typed */
+        assert(!completion_args_run("apkg run --check eza ", from, 21, name, id, sizeof id, &at));
+        assert(!completion_args_run("apkg show eza ", from, 14, name, id, sizeof id, &at));
+        assert(!completion_args_run("Copy run eza ", 4, 13, "Copy", id, sizeof id, &at));
+        define("option -l --long\n");
+        memset(&e, 0, sizeof e);
+        assert(line_editor_insert(&e, "apkg run eza --l", 16) && completion_prepare(&c, &e));
+        assert(completion_args_offer_from(&c, &spec, at) == 2 && offered("--long"));
+    }
+
     /* Every definition that comes with Limpet is one. */
     for (i = 0; completion_definition_name(i); ++i) {
         const char *text = completion_definition(completion_definition_name(i));

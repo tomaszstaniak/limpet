@@ -1,7 +1,8 @@
 # Argument definitions that come with Limpet
 
 One file per command, named as the command. The format is described in
-`src/completion_args.h` and, for users, in `doc/completion.md`.
+`src/completion_args.h` and, for users, in
+`doc/prompt-and-completion.md`.
 
 The `template` lines are the commands' own AmigaDOS templates, read from the
 commands (`Copy ?`) on mainline AROS x86_64 (nightly 2026-11-15) and on AROS

@@ -2,6 +2,7 @@
 #include "completion_args.h"
 #include "completion_defs.h"
 #include <proto/exec.h>
+#include <exec/memory.h>
 #include <proto/dos.h>
 #include <dos/var.h>
 #include <string.h>
@@ -68,40 +69,105 @@ static int scan_path(XCompletion *c,const char *path,struct Process *reader,
     return ok;
 }
 
-/* What the command's definition offers for an argument (completion_args.h):
- * the user's file ENVARC:Limpet/Completions/<command> first, then the
- * definitions that come with Limpet. An alias has only the user's: its
- * arguments need not be those of the command of the same name. Returns
- * which files belong beside the offers: 0 all, 1 drawers only, 2 none. */
+/* Reads a definition file; the path is relative to the current directory.
+ * The spec keeps pointers into text. */
+static int definition(const char *path,char *text,XArgSpec *spec)
+{
+    LONG got=-1;
+    BPTR file=Open((CONST_STRPTR)path,MODE_OLDFILE);
+    if(!file) return 0;
+    got=Read(file,text,XARGS_DEFINITION_MAX+1);
+    Close(file);
+    return got>0 && got<=XARGS_DEFINITION_MAX && completion_args_parse(spec,text,(size_t)got);
+}
+
+/* The definition a program brings along: Completions/<name> in the drawer
+ * the Shell would load the program from. `typed` is the command as typed.
+ * The Shell looks in the current directory, then along its path, then in
+ * C:; the first place that has the program decides. */
+static int beside(const char *typed,const char *name,struct Process *reader,char *text,XArgSpec *spec)
+{
+    struct CommandLineInterface *cli=BADDR(reader->pr_CLI);
+    BPTR *path=cli?BADDR(cli->cli_CommandDir):NULL;
+    BPTR found=BNULL,old,parent;
+    char file[64];
+    unsigned entries=0;
+    int ok=0;
+    if(strchr(typed,':') || strchr(typed,'/')) {
+        old=CurrentDir(reader->pr_CurrentDir);
+        found=Lock((CONST_STRPTR)typed,SHARED_LOCK);
+        CurrentDir(old);
+    } else {
+        old=CurrentDir(reader->pr_CurrentDir);
+        found=Lock((CONST_STRPTR)name,SHARED_LOCK);
+        while(!found && path && ++entries<=32) {
+            CurrentDir(path[1]);
+            found=Lock((CONST_STRPTR)name,SHARED_LOCK);
+            path=BADDR(path[0]);
+        }
+        CurrentDir(old);
+        if(!found) {
+            strcpy(file,"C:"); strcat(file,name);
+            found=Lock((CONST_STRPTR)file,SHARED_LOCK);
+        }
+    }
+    if(!found) return 0;
+    parent=ParentDir(found);
+    UnLock(found);
+    if(!parent) return 0;
+    strcpy(file,"Completions/"); strcat(file,name);
+    old=CurrentDir(parent);
+    ok=definition(file,text,spec);
+    CurrentDir(old);
+    UnLock(parent);
+    return ok;
+}
+
+/* What the command's definition offers for an argument (completion_args.h).
+ * The definition is looked for in this order:
+ *   1. ENVARC:Limpet/Completions/<command>, the user's own;
+ *   2. Completions/<command> in the drawer of the program;
+ *   3. SYS:Packages/<command>/Completions/<command>, a package installed
+ *      by apkg in its usual place;
+ *   4. the definitions that come with Limpet.
+ * After "apkg run <id>" the arguments are those of the package's program:
+ * 1 and 3 with the id. An alias has 1 and 3 only: its arguments need not
+ * be those of the command of the same name. Returns which files belong
+ * beside the offers: 0 all, 1 drawers only, 2 none. */
 static int arguments(XCompletion *c,struct Process *reader)
 {
-    static const char drawer[]="ENVARC:Limpet/Completions/";
-    char name[40],path[sizeof drawer+sizeof name],text[XARGS_DEFINITION_MAX+1];
+    char name[40],typed[XLINE_CAPACITY],path[128],*text;
     XArgSpec spec;
     struct Node *var;
     const char *builtin;
-    size_t from,i;
-    LONG got=-1;
-    BPTR file;
-    int alias=0;
+    size_t from,i,run_from;
+    char id[40];
+    int alias=0,run=0,have=0,files=0;
     unsigned entries=0;
     if(c->command || !completion_args_command(c->expected,c->start,name,sizeof name,&from)) return 0;
-    for(i=0;name[i];++i)
-        if(name[i]=='#' || name[i]=='?' || name[i]=='"' || name[i]=='*' || (unsigned char)name[i]<32) return 0;
+    if(!completion_args_program(c->expected,c->start,typed,sizeof typed)) return 0;
+    for(i=0;typed[i];++i)
+        if(typed[i]=='#' || typed[i]=='?' || typed[i]=='"' || typed[i]=='*' || (unsigned char)typed[i]<32) return 0;
     for(var=(struct Node *)reader->pr_LocalVars.mlh_Head;var->ln_Succ;var=var->ln_Succ) {
         if(++entries>4096) break;
         if(var->ln_Type==LV_ALIAS && var->ln_Name && !stricmp((const char *)var->ln_Name,name)) { alias=1; break; }
     }
-    strcpy(path,drawer); strcat(path,name);
-    if((file=Open((CONST_STRPTR)path,MODE_OLDFILE))) {
-        got=Read(file,text,sizeof text);
-        Close(file);
+    if(!alias && completion_args_run(c->expected,from,c->start,name,id,sizeof id,&run_from)) {
+        run=1; from=run_from; strcpy(name,id);
     }
-    if(got>0 && (size_t)got<sizeof text && completion_args_parse(&spec,text,(size_t)got))
-        return completion_args_offer(c,&spec);
-    if(alias || !(builtin=completion_definition(name)) ||
-       !completion_args_parse(&spec,builtin,strlen(builtin))) return 0;
-    return completion_args_offer(c,&spec);
+    if(!(text=AllocVec(XARGS_DEFINITION_MAX+1,MEMF_ANY))) return 0;
+    strcpy(path,"ENVARC:Limpet/Completions/"); strcat(path,name);
+    have=definition(path,text,&spec);
+    if(!have && !alias && !run) have=beside(typed,name,reader,text,&spec);
+    if(!have) {
+        strcpy(path,"SYS:Packages/"); strcat(path,name); strcat(path,"/Completions/"); strcat(path,name);
+        have=definition(path,text,&spec);
+    }
+    if(!have && !alias && !run && (builtin=completion_definition(name)))
+        have=completion_args_parse(&spec,builtin,strlen(builtin));
+    if(have) files=completion_args_offer_from(c,&spec,from);
+    FreeVec(text);
+    return files;
 }
 
 int aros_completion_collect(XCompletion *c,struct Process *p)

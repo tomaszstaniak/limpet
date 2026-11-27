@@ -82,6 +82,87 @@ static int pool(XArgSpec *spec, const char *text, size_t n, unsigned char *at, u
     return *count != 0;
 }
 
+/* The next word of text[*at..end), blank-separated. */
+static int token(const char *text, size_t *at, size_t end, size_t *start, size_t *stop)
+{
+    size_t i = *at;
+    while (i < end && blank(text[i])) ++i;
+    *start = i;
+    while (i < end && !blank(text[i])) ++i;
+    *stop = *at = i;
+    return i > *start;
+}
+static int is(const char *text, size_t n, const char *word) { return strlen(word) == n && !memcmp(text, word, n); }
+
+/* An option line after the word "option": names that start with '-', then
+ * nothing, one of <value> <file> <dir>, or the words the value may be.
+ * *values is where the part after the names begins. */
+static int option_line(const char *text, size_t n, size_t *values)
+{
+    size_t at = 0, s, e, names = 0, words = 0, marks = 0;
+    *values = n;
+    while (token(text, &at, n, &s, &e)) {
+        size_t i;
+        if (text[s] == '-') {
+            if (words || marks) return 0;
+            if (e - s < 2 || e - s >= XARGS_OPTION_NAME) return 0;
+            for (i = s; i < e; ++i)
+                if (!name_char(text[i])) return 0;
+            ++names;
+            continue;
+        }
+        if (!names) return 0;
+        if (!words && !marks) *values = s;
+        if (text[s] == '<') {
+            if (!is(text + s, e - s, "<value>") && !is(text + s, e - s, "<file>") && !is(text + s, e - s, "<dir>")) return 0;
+            ++marks;
+        } else {
+            if (e - s >= XARGS_OPTION_NAME) return 0;
+            ++words;
+        }
+    }
+    return names && marks <= 1 && !(marks && words);
+}
+
+/* The option lines of a definition, one after another: the line after the
+ * word "option" and where its values begin. */
+static int option_next(const XArgSpec *spec, size_t *pos, const char **line, size_t *n, size_t *values)
+{
+    while (*pos < spec->length) {
+        size_t end = *pos, s, w;
+        while (end < spec->length && spec->text[end] != '\n') ++end;
+        s = *pos;
+        w = end;
+        *pos = end + 1;
+        if (w > s && spec->text[w - 1] == '\r') --w;
+        while (s < w && blank(spec->text[s])) ++s;
+        while (w > s && blank(spec->text[w - 1])) --w;
+        if (w - s < 7 || memcmp(spec->text + s, "option", 6) || !blank(spec->text[s + 6])) continue;
+        *line = spec->text + s + 6;
+        *n = w - s - 6;
+        if (!option_line(*line, *n, values)) continue;
+        return 1;
+    }
+    return 0;
+}
+
+/* The option a word names, exactly as spelled (-l is not -L). */
+static int option_find(const XArgSpec *spec, const char *word, size_t length, const char **values, size_t *values_length)
+{
+    size_t pos = 0, n, at_values;
+    const char *line;
+    while (option_next(spec, &pos, &line, &n, &at_values)) {
+        size_t at = 0, s, e;
+        while (at < at_values && token(line, &at, at_values, &s, &e))
+            if (e - s == length && !memcmp(line + s, word, length)) {
+                *values = line + at_values;
+                *values_length = n - at_values;
+                return 1;
+            }
+    }
+    return 0;
+}
+
 int completion_args_parse(XArgSpec *spec, const char *text, size_t length)
 {
     size_t pos = 0;
@@ -137,10 +218,16 @@ int completion_args_parse(XArgSpec *spec, const char *text, size_t length)
             a->kind = XARG_VALUES;
         } else if (LINE("first")) {
             if (spec->first_count || !pool(spec, text + end, w - end, &spec->first_at, &spec->first_count)) goto bad;
+        } else if (LINE("option")) {
+            size_t values;
+            if (!option_line(text + end, w - end, &values)) goto bad;
+            ++spec->options;
         } else goto bad;
 #undef LINE
     }
-    if (!have_template && !spec->first_count) goto bad;
+    if (!have_template && !spec->first_count && !spec->options) goto bad;
+    spec->text = text;
+    spec->length = length;
     return 1;
 bad:
     memset(spec, 0, sizeof *spec);
@@ -220,6 +307,8 @@ void completion_args_context(const XArgSpec *spec, const char *line, size_t from
 {
     size_t at = from, s, e;
     const XArg *pending = NULL;
+    const char *option = NULL;
+    size_t option_length = 0;
     unsigned words = 0;
     memset(out, 0, sizeof *out);
     while (next_word(line, &at, start, &s, &e)) {
@@ -228,6 +317,16 @@ void completion_args_context(const XArgSpec *spec, const char *line, size_t from
         ++words;
         if (line[s] == '<' || line[s] == '>') { --words; continue; }
         if (pending) { pending = NULL; continue; }       /* a keyword's value */
+        /* An option's value; a word that starts with '-' is the next
+         * option instead, the value was left out. */
+        if (option && line[s] != '-') { option = NULL; --words; continue; }
+        if (spec->options && line[s] == '-') {
+            /* An option is not one of the command's own words. One that
+             * takes a value takes the next word. */
+            --words;
+            if (!option_find(spec, line + s, e - s, &option, &option_length) || !option_length) option = NULL;
+            continue;
+        }
         if (line[s] != '"')
             for (i = 0; i < spec->count; ++i) {
                 const XArg *a = &spec->args[i];
@@ -247,6 +346,12 @@ void completion_args_context(const XArgSpec *spec, const char *line, size_t from
         out->kind = pending->kind;
         return;
     }
+    if (option) {
+        out->option = option;
+        out->option_length = option_length;
+        out->kind = is(option, option_length, "<dir>") ? XARG_DIR : is(option, option_length, "<file>") ? XARG_ANY : XARG_VALUES;
+        return;
+    }
     if (!words && spec->first_count) {
         out->first = 1;
         out->kind = XARG_VALUES;
@@ -260,13 +365,50 @@ void completion_args_context(const XArgSpec *spec, const char *line, size_t from
 
 int completion_args_offer(XCompletion *c, const XArgSpec *spec)
 {
-    char name[XARGS_NAME];
-    XArgContext context;
+    char name[XARGS_NAME * 2];
     size_t from;
-    unsigned i;
     if (c->command || !completion_args_command(c->expected, c->start, name, sizeof name, &from)) return 0;
+    return completion_args_offer_from(c, spec, from);
+}
+
+int completion_args_offer_from(XCompletion *c, const XArgSpec *spec, size_t from)
+{
+    XArgContext context;
+    unsigned i;
+    if (c->command || from > c->start) return 0;
     completion_args_context(spec, c->expected, from, c->start, &context);
     if (c->directory[0]) return context.kind == XARG_DIR ? 1 : 0;   /* a path is being typed */
+    if (spec->options && c->prefix[0] == '-' && !c->quoted) {
+        /* The options: their long spellings, or the short one of an
+         * option that has no long one. */
+        size_t pos = 0, n, values;
+        const char *line;
+        while (option_next(spec, &pos, &line, &n, &values)) {
+            size_t at, s, e;
+            int pass, added = 0;
+            for (pass = 0; pass < 2 && !added; ++pass)
+                for (at = 0; at < values && token(line, &at, values, &s, &e);) {
+                    char word[XARGS_OPTION_NAME];
+                    if (!pass && (e - s < 3 || line[s + 1] != '-')) continue;
+                    memcpy(word, line + s, e - s);
+                    word[e - s] = 0;
+                    completion_add_word(c, word);
+                    added = 1;
+                }
+        }
+        return 2;
+    }
+    if (context.option) {
+        size_t at = 0, s, e;
+        if (context.kind != XARG_VALUES) return context.kind == XARG_DIR ? 1 : 0;
+        while (context.option[0] != '<' && token(context.option, &at, context.option_length, &s, &e)) {
+            char word[XARGS_OPTION_NAME];
+            memcpy(word, context.option + s, e - s);
+            word[e - s] = 0;
+            completion_add_word(c, word);
+        }
+        return 2;
+    }
     if (context.first) {
         for (i = 0; i < spec->first_count; ++i) completion_add_word(c, spec->words[spec->first_at + i]);
         return 2;
@@ -282,4 +424,38 @@ int completion_args_offer(XCompletion *c, const XArgSpec *spec)
                 completion_add_word(c, spec->args[i].name);
     if (context.kind == XARG_VALUES) return context.names ? 0 : 2;
     return context.kind == XARG_DIR ? 1 : 0;
+}
+
+int completion_args_program(const char *line, size_t start, char *path, size_t size)
+{
+    char name[XARGS_NAME * 2];
+    size_t from, at, s, e, segment = 0, i;
+    int quote = 0;
+    if (!completion_args_command(line, start, name, sizeof name, &from)) return 0;
+    for (i = 0; i < start; ++i) {
+        char ch = line[i];
+        if (ch == '*' && i + 1 < start) { ++i; continue; }
+        if (ch == '"') quote = !quote;
+        else if (!quote && ch == '|') segment = i + 1;
+    }
+    at = segment;
+    if (!next_word(line, &at, start, &s, &e) || e - s >= size) return 0;
+    memcpy(path, line + s, e - s);
+    path[e - s] = 0;
+    return 1;
+}
+
+int completion_args_run(const char *line, size_t from, size_t start, const char *name,
+                        char *id, size_t size, size_t *id_from)
+{
+    size_t at = from, s, e, i;
+    if (!same(name, strlen(name), "apkg")) return 0;
+    if (!next_word(line, &at, start, &s, &e) || !same(line + s, e - s, "run")) return 0;
+    if (!next_word(line, &at, start, &s, &e) || line[s] == '-' || e - s >= size) return 0;
+    for (i = s; i < e; ++i)
+        if (!name_char(line[i])) return 0;
+    memcpy(id, line + s, e - s);
+    id[e - s] = 0;
+    *id_from = e;
+    return 1;
 }
