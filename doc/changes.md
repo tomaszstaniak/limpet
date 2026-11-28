@@ -3,6 +3,23 @@
 Changes of the terminal. The SDK has its own list in
 [sdk/CHANGES.md](../sdk/CHANGES.md).
 
+## 0.15.0 (2026-11-28)
+
+New:
+
+- **LimpetLearn**, a Shell command in Limpet's drawer: `LimpetLearn mytool`
+  runs `mytool --help` (or `Command ?` for an AmigaDOS command), reads the
+  options or the template from what the program prints and writes the
+  definition to `ENVARC:Limpet/Completions`. TAB completes the program's
+  options from then on. `SHOW` prints the definition without writing it.
+- **Options of subcommands.** In a definition, an `in build test` line
+  makes the `option` lines below it belong to those subcommands only.
+  `tools/completions/from-fish.py` writes such parts from a fish file.
+- `apkg --root DRAWER run <package>` is completed with the definition of
+  the package under that drawer.
+
+See [prompt-and-completion.md](prompt-and-completion.md).
+
 ## 0.14.0 (2026-11-27)
 
 New:

@@ -5,7 +5,9 @@
 
 Reads the plain `complete -c <command> ...` lines: -s and -l (the option's
 spellings), -a (the words its value may be), -r and -x (it takes a value),
--F and -f (the value is a file, or is not). Lines that call fish functions
+-F and -f (the value is a file, or is not), and -n with
+__fish_use_subcommand (the subcommands) or __fish_seen_subcommand_from
+(the options of those subcommands). Lines that call fish functions
 or other programs cannot be turned into a definition: their options are
 written with <value>, and the script says on stderr what it left out.
 The format is described in doc/prompt-and-completion.md."""
@@ -49,14 +51,17 @@ def values(text, dropped):
 def main():
     if len(sys.argv) != 2:
         raise SystemExit(__doc__)
-    lines, dropped, skipped = [], [], 0
+    first, dropped, skipped, unknown = [], [], 0, 0
+    parts = {(): []}        # the subcommands a part belongs to -> its option lines
     for words in statements(open(sys.argv[1], encoding="utf-8").read()):
-        names, value, takes, files = [], None, False, True
+        names, value, takes, files, condition = [], None, False, True, ""
         i = 1
         while i < len(words):
             w = words[i]
             arg = words[i + 1] if i + 1 < len(words) else ""
-            if w in ("-c", "--command", "-d", "--description", "-n", "--condition", "-w", "--wraps"):
+            if w in ("-n", "--condition"):
+                condition = arg; i += 2
+            elif w in ("-c", "--command", "-d", "--description", "-w", "--wraps"):
                 i += 2
             elif w in ("-s", "--short-option", "-o", "--old-option"):
                 names.append("-" + arg); i += 2
@@ -72,10 +77,21 @@ def main():
                 files = False; i += 1
             else:
                 i += 1
+        # The subcommands the line is for: "__fish_seen_subcommand_from a b".
+        part = ()
+        seen = re.fullmatch(r"\s*__fish_seen_subcommand_from\s+(.+?)\s*", condition)
+        if seen:
+            part = tuple(w for w in seen.group(1).split() if NAME.match(w))
+        elif condition and "__fish_use_subcommand" not in condition and "not __fish_seen_subcommand_from" not in condition:
+            unknown += 1
         good = [n for n in names if NAME.match(n)]
         dropped += [n for n in names if n not in good]
         if not good:
-            skipped += 1
+            # A line without an option, for the first word: the subcommands.
+            if value and not part and condition:
+                first += [w for w in value if w not in first]
+            else:
+                skipped += 1
             continue
         # Long spellings first: they are the ones TAB offers.
         good.sort(key=lambda n: not n.startswith("--"))
@@ -84,12 +100,17 @@ def main():
             line += " " + " ".join(value)
         elif takes:
             line += " <file>" if files and value is None and "-a" not in words else " <value>"
-        lines.append(line)
-    print("\n".join(lines))
+        parts.setdefault(part, []).append(line)
+    out = (["first " + " ".join(first)] if first else []) + parts.pop(())
+    for part, lines in parts.items():
+        out += ["in " + " ".join(part)] + lines
+    print("\n".join(out))
     if dropped:
         print("left out: " + " ".join(dropped), file=sys.stderr)
     if skipped:
         print("%d complete lines without an option" % skipped, file=sys.stderr)
+    if unknown:
+        print("%d lines with a condition this script does not know: their options are offered everywhere" % unknown, file=sys.stderr)
 
 
 main()

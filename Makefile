@@ -299,7 +299,7 @@ build/test_run_redirect: tests/test_run_redirect.c
 	@mkdir -p build
 	$(AROS_GCC) $(CFLAGS) -Wno-pointer-sign $< -o $@
 test: build/test_completion
-test: build/test_completion_args
+test: build/test_completion_args build/test_completion_learn
 package: build/test_completion_aros build/test_aros_completion
 package: build/test_shell_startup
 package: build/test_aros_endpoint
@@ -324,6 +324,9 @@ build/test_shell_startup: tests/test_shell_startup.c $(SESSION_SRC) $(SESSION_HE
 
 build/test_completion: tests/test_completion.c src/completion.c src/completion.h src/line_editor.c src/line_editor.h $(UNICODE_SRC) Makefile
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/completion.c src/line_editor.c $(UNICODE_SRC) -o $@
+
+build/test_completion_learn: tests/test_completion_learn.c src/completion_learn.c src/completion_learn.h src/completion_args.c src/completion_args.h src/completion.c src/completion.h src/line_editor.c src/line_editor.h $(UNICODE_SRC) Makefile
+	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/completion_learn.c src/completion_args.c src/completion.c src/line_editor.c $(UNICODE_SRC) -o $@
 
 build/test_completion_args: tests/test_completion_args.c src/completion_args.c src/completion_args.h src/completion_defs.c src/completion_defs.h src/completion.c src/completion.h src/line_editor.c src/line_editor.h $(UNICODE_SRC) Makefile
 	$(HOST_CC) -std=c99 -Wall -Wextra -Werror $(UNICODE_FLAGS) $< src/completion_args.c src/completion_defs.c src/completion.c src/line_editor.c $(UNICODE_SRC) -o $@
@@ -730,6 +733,7 @@ test: $(HOST_TEST) build/test_replay build/test_graphemes build/test_input_echo 
 	./build/test_line_editor
 	./build/test_completion
 	./build/test_completion_args
+	./build/test_completion_learn
 	./build/test_file_drop
 	./build/test_line_view
 	./build/test_alternate

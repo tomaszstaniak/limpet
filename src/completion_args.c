@@ -126,18 +126,46 @@ static int option_line(const char *text, size_t n, size_t *values)
 
 /* The option lines of a definition, one after another: the line after the
  * word "option" and where its values begin. */
-static int option_next(const XArgSpec *spec, size_t *pos, const char **line, size_t *n, size_t *values)
+/* Walks the option lines of a definition. A line "in a b" starts a part
+ * whose options belong to the subcommands a and b only; the lines before
+ * the first "in" belong to the program as a whole. */
+typedef struct {
+    size_t pos;
+    const char *scope;      /* the words of the current "in" line, or NULL */
+    size_t scope_length;
+} OptionWalk;
+
+static int in_scope(const OptionWalk *walk, const char *sub, size_t sub_length)
 {
-    while (*pos < spec->length) {
-        size_t end = *pos, s, w;
+    size_t at = 0, s, e;
+    if (!walk->scope) return 1;
+    if (!sub) return 0;
+    while (token(walk->scope, &at, walk->scope_length, &s, &e))
+        if (e - s == sub_length && !memcmp(walk->scope + s, sub, sub_length)) return 1;
+    return 0;
+}
+
+/* The next option line that applies after the subcommand `sub` (NULL: none
+ * typed yet): the line after the word "option" and where its values begin. */
+static int option_next(const XArgSpec *spec, OptionWalk *walk, const char *sub, size_t sub_length,
+                       const char **line, size_t *n, size_t *values)
+{
+    while (walk->pos < spec->length) {
+        size_t end = walk->pos, s, w;
         while (end < spec->length && spec->text[end] != '\n') ++end;
-        s = *pos;
+        s = walk->pos;
         w = end;
-        *pos = end + 1;
+        walk->pos = end + 1;
         if (w > s && spec->text[w - 1] == '\r') --w;
         while (s < w && blank(spec->text[s])) ++s;
         while (w > s && blank(spec->text[w - 1])) --w;
+        if (w - s >= 3 && !memcmp(spec->text + s, "in", 2) && blank(spec->text[s + 2])) {
+            walk->scope = spec->text + s + 2;
+            walk->scope_length = w - s - 2;
+            continue;
+        }
         if (w - s < 7 || memcmp(spec->text + s, "option", 6) || !blank(spec->text[s + 6])) continue;
+        if (!in_scope(walk, sub, sub_length)) continue;
         *line = spec->text + s + 6;
         *n = w - s - 6;
         if (!option_line(*line, *n, values)) continue;
@@ -147,11 +175,13 @@ static int option_next(const XArgSpec *spec, size_t *pos, const char **line, siz
 }
 
 /* The option a word names, exactly as spelled (-l is not -L). */
-static int option_find(const XArgSpec *spec, const char *word, size_t length, const char **values, size_t *values_length)
+static int option_find(const XArgSpec *spec, const char *sub, size_t sub_length, const char *word, size_t length,
+                       const char **values, size_t *values_length)
 {
-    size_t pos = 0, n, at_values;
+    OptionWalk walk = { 0, NULL, 0 };
+    size_t n, at_values;
     const char *line;
-    while (option_next(spec, &pos, &line, &n, &at_values)) {
+    while (option_next(spec, &walk, sub, sub_length, &line, &n, &at_values)) {
         size_t at = 0, s, e;
         while (at < at_values && token(line, &at, at_values, &s, &e))
             if (e - s == length && !memcmp(line + s, word, length)) {
@@ -166,7 +196,7 @@ static int option_find(const XArgSpec *spec, const char *word, size_t length, co
 int completion_args_parse(XArgSpec *spec, const char *text, size_t length)
 {
     size_t pos = 0;
-    int have_template = 0;
+    int have_template = 0, in_part = 0;
     memset(spec, 0, sizeof *spec);
     if (length > XARGS_DEFINITION_MAX) return 0;
     while (pos < length) {
@@ -182,6 +212,7 @@ int completion_args_parse(XArgSpec *spec, const char *text, size_t length)
         end = s;
         while (end < w && !blank(text[end])) ++end;
 #define LINE(word) (end - s == sizeof word - 1 && !memcmp(text + s, word, sizeof word - 1))
+        if (in_part && !LINE("option") && !LINE("in")) goto bad;   /* a part holds options only */
         if (LINE("template")) {
             size_t i;
             if (have_template) goto bad;
@@ -218,6 +249,16 @@ int completion_args_parse(XArgSpec *spec, const char *text, size_t length)
             a->kind = XARG_VALUES;
         } else if (LINE("first")) {
             if (spec->first_count || !pool(spec, text + end, w - end, &spec->first_at, &spec->first_count)) goto bad;
+        } else if (LINE("in")) {
+            /* The subcommands the option lines below belong to. */
+            size_t at = end, a, b, k, words = 0;
+            while (token(text, &at, w, &a, &b)) {
+                for (k = a; k < b; ++k)
+                    if (!name_char(text[k])) goto bad;
+                ++words;
+            }
+            if (!words) goto bad;
+            in_part = 1;
         } else if (LINE("option")) {
             size_t values;
             if (!option_line(text + end, w - end, &values)) goto bad;
@@ -324,9 +365,10 @@ void completion_args_context(const XArgSpec *spec, const char *line, size_t from
             /* An option is not one of the command's own words. One that
              * takes a value takes the next word. */
             --words;
-            if (!option_find(spec, line + s, e - s, &option, &option_length) || !option_length) option = NULL;
+            if (!option_find(spec, out->sub, out->sub_length, line + s, e - s, &option, &option_length) || !option_length) option = NULL;
             continue;
         }
+        if (!out->sub && line[s] != '"') { out->sub = line + s; out->sub_length = e - s; }
         if (line[s] != '"')
             for (i = 0; i < spec->count; ++i) {
                 const XArg *a = &spec->args[i];
@@ -381,9 +423,10 @@ int completion_args_offer_from(XCompletion *c, const XArgSpec *spec, size_t from
     if (spec->options && c->prefix[0] == '-' && !c->quoted) {
         /* The options: their long spellings, or the short one of an
          * option that has no long one. */
-        size_t pos = 0, n, values;
+        OptionWalk walk = { 0, NULL, 0 };
+        size_t n, values;
         const char *line;
-        while (option_next(spec, &pos, &line, &n, &values)) {
+        while (option_next(spec, &walk, context.sub, context.sub_length, &line, &n, &values)) {
             size_t at, s, e;
             int pass, added = 0;
             for (pass = 0; pass < 2 && !added; ++pass)
@@ -446,11 +489,20 @@ int completion_args_program(const char *line, size_t start, char *path, size_t s
 }
 
 int completion_args_run(const char *line, size_t from, size_t start, const char *name,
-                        char *id, size_t size, size_t *id_from)
+                        char *id, size_t size, size_t *id_from, char *root, size_t root_size)
 {
     size_t at = from, s, e, i;
+    root[0] = 0;
     if (!same(name, strlen(name), "apkg")) return 0;
-    if (!next_word(line, &at, start, &s, &e) || !same(line + s, e - s, "run")) return 0;
+    if (!next_word(line, &at, start, &s, &e)) return 0;
+    if (e - s == 6 && !memcmp(line + s, "--root", 6)) {
+        /* apkg --root DRAWER run ...: the package is under that drawer. */
+        if (!next_word(line, &at, start, &s, &e) || line[s] == '"' || line[s] == '-' || e - s >= root_size) return 0;
+        memcpy(root, line + s, e - s);
+        root[e - s] = 0;
+        if (!next_word(line, &at, start, &s, &e)) return 0;
+    }
+    if (!same(line + s, e - s, "run")) return 0;
     if (!next_word(line, &at, start, &s, &e) || line[s] == '-' || e - s >= size) return 0;
     for (i = s; i < e; ++i)
         if (!name_char(line[i])) return 0;

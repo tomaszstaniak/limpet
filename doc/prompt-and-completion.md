@@ -69,7 +69,8 @@ the first it finds:
 
 After `apkg run <package>`, TAB completes the arguments of the package's
 program: `apkg run eza --so` and TAB gives `--sort`. Places 1 and 3 are
-used, with the package's name.
+used, with the package's name. With `apkg --root Work:Apps run eza`, place
+3 is that drawer: `Work:Apps/eza/Completions/eza`.
 
 The packages of eza (0.23.5 revision 3) and Fastfetch (2.70.0 revision 6)
 bring their definitions. `apkg install eza` is all it takes.
@@ -78,6 +79,49 @@ The keywords of the AmigaDOS commands were read from the commands
 themselves on mainline AROS and on AROS One 1.3. A few mainline commands
 have keywords that ABIv11 does not; those are not offered on either
 system.
+
+## Learning a command: LimpetLearn
+
+For a program that brings no definition, `LimpetLearn` in Limpet's drawer
+writes one from what the program says about itself:
+
+    LimpetLearn mytool
+
+It runs `mytool --help`, reads the options from the text and writes
+`ENVARC:Limpet/Completions/mytool`. TAB uses the file at once. For an
+AmigaDOS command it runs `Command ?` instead and writes the template the
+command prints:
+
+    LimpetLearn Work:C/MyCopy
+
+LimpetLearn chooses between the two by looking into the program file for
+the text `--help`; `HELP` or `TEMPLATE` after the name decides it for you.
+It always says which line it runs.
+
+| Argument | Meaning |
+| --- | --- |
+| `COMMAND` | the command, as you would type it, without arguments |
+| `HELP` | run it with `--help` |
+| `TEMPLATE` | run it with `?` |
+| `SHOW` | print the definition, write nothing |
+| `REPLACE` | write over a definition that is already there |
+| `TO file` | write to another file |
+
+What to know before you use it:
+
+- LimpetLearn starts the command. That is why it is a command of its own
+  and not something TAB does. A program that does not know `--help` may
+  take it for a file name; a command asked with `?` prints its template
+  and is then given one empty argument, which most commands refuse or find
+  nothing under. Learn commands you know, not ones that format, delete or
+  restart.
+- What it learns is as good as the help text. Option names are usually
+  complete. The words a value may be are found when the text lists them
+  (`[possible values: a, b]`, `<a|b|c>`, `{a,b,c}`); otherwise the option
+  gets `<value>`, or `<file>` or `<dir>` when its value is named so.
+  Subcommands are not learned.
+- The file is yours afterwards: edit it, add `dirs` or `values` lines, or
+  delete it.
 
 ## Your own definitions
 
@@ -109,7 +153,24 @@ For a program with Unix-style options:
 | `option NAME ... <value>` | the option takes a value that TAB cannot guess |
 | `option NAME ... <file>`, `<dir>` | the value is a file, or a drawer |
 | `option NAME ... word ...` | the value is one of the words |
+| `in word ...` | the `option` lines below belong to these subcommands only |
 | `# ...` | a comment |
+
+For a program with subcommands, the options before the first `in` line
+belong to every subcommand, the ones after it to the subcommands it names:
+
+    # ENVARC:Limpet/Completions/mytool
+    first build test run
+    option --verbose
+    in build run
+    option --release
+    option --target arm x86
+    in test
+    option --nocapture
+
+After `mytool build --`, TAB offers `--release`, `--target` and
+`--verbose`; after `mytool test --`, `--nocapture` and `--verbose`. Only
+`option` lines may follow an `in` line.
 
 Option names are compared with case (`-l` is not `-L`). TAB offers an
 option's long spellings; the short one only when the option has no long
@@ -143,14 +204,15 @@ has a converter:
 
     python3 tools/completions/from-fish.py mytool.fish >Completions/mytool
 
-It takes the plain `complete -c` lines: the options and the words their
-values may be. What a fish file computes by running the program cannot be
-turned into a definition; such values become `<value>`.
+It takes the plain `complete -c` lines: the options, the words their
+values may be, the subcommands and the options of each subcommand. What a
+fish file computes by running the program cannot be turned into a
+definition; such values become `<value>`.
 
 ## Limits
 
-- Limpet does not find templates or options on its own. It never runs a
-  command with `?` or `--help` and does not read program files for them.
+- TAB itself never runs a command and does not read program files. A
+  command is only run by `LimpetLearn`, when you ask.
 - Descriptions of the keywords and options are not shown.
 - Keywords are offered in the form the template has (`TO`), also when you
   typed lower case.
@@ -158,10 +220,7 @@ turned into a definition; such values become `<value>`.
   command line that mixes keywords and plain words in unusual ways can
   make Limpet offer only drawers where a file is meant, or the other way
   round. What TAB leaves out can still be typed.
-- Options that belong to one subcommand only (`tool build --release`)
-  cannot be described: a definition's options are offered after every
-  subcommand.
+- One level of subcommands: `tool remote add --` gets the options of
+  `remote`.
 - Several short options in one word (`-la`) are not looked into; an option
   among them that takes a value is not seen.
-- A package installed with `apkg --root` elsewhere than `SYS:Packages` is
-  found through the Shell's path only.

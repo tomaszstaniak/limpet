@@ -55,7 +55,7 @@ package_target() {  # $1 = target
         *-abiv1-*) libset=__aros_libset_StdCBase helperset=__aros_libset_StdCBase;;
     esac
     [[ -f $root/tools/release/README-$t.txt ]] || { print -u2 "unknown target $t"; exit 1; }
-    for f in $b/Limpet $b/LimpetPrefs $b/limpet-console $b/limpet-handler $b/limpet-handler-remove $b/LimpetCON; do
+    for f in $b/Limpet $b/LimpetPrefs $b/limpet-console $b/limpet-handler $b/limpet-handler-remove $b/LimpetCON $b/LimpetLearn; do
         file -b $f | grep -q "ELF 64-bit.*$want" ||
             { print -u2 "$f is not an ELF for $t: $(file -b $f)"; exit 1; }
     done
@@ -64,7 +64,7 @@ package_target() {  # $1 = target
     for f in $b/Limpet $b/limpet-console; do
         nm $f | grep " $libset\$" >/dev/null || { print -u2 "$f has no $libset: not built for $t"; exit 1; }
     done
-    for f in $b/limpet-handler-remove $b/LimpetCON $b/LimpetPrefs; do
+    for f in $b/limpet-handler-remove $b/LimpetCON $b/LimpetPrefs $b/LimpetLearn; do
         nm $f | grep " $helperset\$" >/dev/null || { print -u2 "$f has no $helperset: not built for $t"; exit 1; }
     done
     # Every binary must be the one make target built for this target: this
@@ -75,12 +75,15 @@ package_target() {  # $1 = target
         { print -u2 "$b: a binary differs from what make target built for $t"; exit 1; }
     check_version $b/Limpet
     check_version $b/LimpetPrefs LimpetPrefs
+    check_version $b/LimpetLearn LimpetLearn
     local d=$out/stage-$t/Limpet; common $d
     cp $b/Limpet $d/Limpet
     cp $root/assets/icon/Limpet.info.png $d/Limpet.info
     # Project > Preferences starts it; the icon lets Workbench start it too.
     cp $b/LimpetPrefs $d/LimpetPrefs
     cp $root/assets/icon/Limpet.info.png $d/LimpetPrefs.info
+    # A Shell command: writes a TAB completion definition for a program.
+    cp $b/LimpetLearn $d/LimpetLearn
     # The SSH programs, built by tools/build-ssh.sh for the same target and
     # version, with the licence texts of what is linked into them.
     local sb=$b/ssh program

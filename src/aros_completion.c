@@ -128,7 +128,8 @@ static int beside(const char *typed,const char *name,struct Process *reader,char
  *   1. ENVARC:Limpet/Completions/<command>, the user's own;
  *   2. Completions/<command> in the drawer of the program;
  *   3. SYS:Packages/<command>/Completions/<command>, a package installed
- *      by apkg in its usual place;
+ *      by apkg in its usual place (after "apkg --root DRAWER run", under
+ *      that drawer);
  *   4. the definitions that come with Limpet.
  * After "apkg run <id>" the arguments are those of the package's program:
  * 1 and 3 with the id. An alias has 1 and 3 only: its arguments need not
@@ -136,7 +137,7 @@ static int beside(const char *typed,const char *name,struct Process *reader,char
  * beside the offers: 0 all, 1 drawers only, 2 none. */
 static int arguments(XCompletion *c,struct Process *reader)
 {
-    char name[40],typed[XLINE_CAPACITY],path[128],*text;
+    char name[40],typed[XLINE_CAPACITY],path[256],root[108],*text;
     XArgSpec spec;
     struct Node *var;
     const char *builtin;
@@ -152,7 +153,8 @@ static int arguments(XCompletion *c,struct Process *reader)
         if(++entries>4096) break;
         if(var->ln_Type==LV_ALIAS && var->ln_Name && !stricmp((const char *)var->ln_Name,name)) { alias=1; break; }
     }
-    if(!alias && completion_args_run(c->expected,from,c->start,name,id,sizeof id,&run_from)) {
+    root[0]=0;
+    if(!alias && completion_args_run(c->expected,from,c->start,name,id,sizeof id,&run_from,root,sizeof root)) {
         run=1; from=run_from; strcpy(name,id);
     }
     if(!(text=AllocVec(XARGS_DEFINITION_MAX+1,MEMF_ANY))) return 0;
@@ -160,8 +162,16 @@ static int arguments(XCompletion *c,struct Process *reader)
     have=definition(path,text,&spec);
     if(!have && !alias && !run) have=beside(typed,name,reader,text,&spec);
     if(!have) {
-        strcpy(path,"SYS:Packages/"); strcat(path,name); strcat(path,"/Completions/"); strcat(path,name);
+        /* apkg's usual place, or the drawer named with apkg --root, which
+         * may be relative to the Shell's current directory. */
+        BPTR old=CurrentDir(reader->pr_CurrentDir);
+        size_t n;
+        strcpy(path,root[0]?root:"SYS:Packages");
+        n=strlen(path);
+        if(path[n-1]!=':' && path[n-1]!='/') strcat(path,"/");
+        strcat(path,name); strcat(path,"/Completions/"); strcat(path,name);
         have=definition(path,text,&spec);
+        CurrentDir(old);
     }
     if(!have && !alias && !run && (builtin=completion_definition(name)))
         have=completion_args_parse(&spec,builtin,strlen(builtin));

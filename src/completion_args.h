@@ -13,6 +13,8 @@
  *     option -l --long                       an option of a Unix-style program
  *     option --colour always auto never      an option with one of these words
  *     option -I --ignore <value>             ... with a value; <file>, <dir>
+ *     in build test                          the options below belong to
+ *     option --release                       these subcommands only
  *
  * Lines starting with # and blank lines are skipped. "first" is for
  * programs without a template whose first word is a subcommand. An option
@@ -49,7 +51,7 @@ typedef struct {
 } XArgSpec;
 
 /* Reads a definition. Returns 1, or 0 for a text that is not a definition
- * (too long, a line that is none of the five, a name that is not in the
+ * (too long, a line that is none of the six, a name that is not in the
  * template, too many entries); *spec is then empty. */
 int completion_args_parse(XArgSpec *spec, const char *text, size_t length);
 
@@ -67,6 +69,8 @@ typedef struct {
     int names;           /* keyword names may be offered */
     const XArg *value_of; /* the argument whose value this is, or NULL */
     int first;           /* the first word of a program with "first" words */
+    const char *sub;     /* the first plain word after the command: its */
+    size_t sub_length;   /* subcommand, for the options of an "in" part */
     const char *option;  /* the word is the value of an option: what the */
     size_t option_length; /* option's line says after its names */
     unsigned used[XARGS_MAX / 32 + 1];
@@ -90,7 +94,8 @@ int completion_args_program(const char *line, size_t start, char *path, size_t s
 /* "apkg run <id> ...": the arguments belong to the package's program, not
  * to apkg. With `name` the line's command and `from` where its arguments
  * begin, returns 1 and the id and where its arguments begin when the words
- * before `start` are exactly "run" and a package id. */
+ * before `start` are exactly "run" and a package id, with "--root DRAWER"
+ * allowed before them; root is then that drawer, otherwise empty. */
 int completion_args_run(const char *line, size_t from, size_t start, const char *name,
-                        char *id, size_t size, size_t *id_from);
+                        char *id, size_t size, size_t *id_from, char *root, size_t root_size);
 #endif

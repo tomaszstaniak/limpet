@@ -23,6 +23,24 @@ Author: Tomasz Staniak, https://tomaszstaniak.com
 Project: https://github.com/tomaszstaniak/limpet
 
 
+New in 0.15.0
+-------------
+
+LimpetLearn, a Shell command in this drawer, teaches TAB the options of a
+program that brings no completion list:
+
+    LimpetLearn mytool
+
+It runs "mytool --help" (or "Command ?" for an AmigaDOS command), reads
+the options or the template from what the program prints and writes
+ENVARC:Limpet/Completions/mytool. TAB completes the program's options
+from then on. "LimpetLearn mytool SHOW" prints what it would write.
+LimpetLearn starts the command, so use it for commands you know.
+
+In a definition, a line "in build test" makes the option lines below it
+belong to those subcommands only. "apkg --root DRAWER run package" is
+completed like "apkg run package".
+
 New in 0.14.0
 -------------
 

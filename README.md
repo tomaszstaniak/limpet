@@ -23,7 +23,7 @@ Image: NASA, ESA, CSA, STScI.
 
 ## Download
 
-- [Limpet 0.14.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.14.0)
+- [Limpet 0.15.0](https://github.com/tomaszstaniak/limpet/releases/tag/v0.15.0)
   for AROS ABIv11, x86_64 (AROS One and similar), for mainline AROS,
   x86_64, and a test build for AROS on the Raspberry Pi (AArch64). The
   mainline and Pi archives need a nightly build of 2026-11-24 or later. The
@@ -59,7 +59,8 @@ Limpet includes:
 - scrollback, output search and Ctrl-R command-history search;
 - TAB completion of commands, paths and, for known commands, their
   keywords, options and drawer arguments; programs and apkg packages can
-  bring their own definitions, as eza and Fastfetch do; a
+  bring their own definitions, as eza and Fastfetch do, and `LimpetLearn`
+  writes one from a program's `--help`; a
   [prompt](doc/prompt-and-completion.md) with the current drawer and the
   last return code;
 - selection that stays while other rows change, and copy and paste through
@@ -110,13 +111,13 @@ Each system has its own archive on the
 
 | System | Archive | apkg |
 | --- | --- | --- |
-| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.14.0-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
-| mainline AROS (ABIv1), x86_64 | `Limpet-0.14.0-aros-x86_64-abiv1-pc.zip` (nightly 2026-11-24 or later) | `apkg install limpet` |
-| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.14.0-aros-aarch64-abiv1-raspi.zip` (nightly 2026-11-24 or later) | `apkg install limpet` |
+| AROS One and other ABIv11 systems, x86_64 | `Limpet-0.15.0-aros-x86_64-abiv11-pc.zip` | `apkg install limpet` |
+| mainline AROS (ABIv1), x86_64 | `Limpet-0.15.0-aros-x86_64-abiv1-pc.zip` (nightly 2026-11-24 or later) | `apkg install limpet` |
+| AROS on the Raspberry Pi (ABIv1, AArch64), test build | `Limpet-0.15.0-aros-aarch64-abiv1-raspi.zip` (nightly 2026-11-24 or later) | `apkg install limpet` |
 
 By hand on AROS One:
 
-    UnZip Limpet-0.14.0-aros-x86_64-abiv11-pc.zip -d SYS:Utilities
+    UnZip Limpet-0.15.0-aros-x86_64-abiv11-pc.zip -d SYS:Utilities
 
 Mainline AROS and the Pi system do not come with UnZip. Unpack the archive
 on another computer (or with an UnZip you installed) and copy the `Limpet`

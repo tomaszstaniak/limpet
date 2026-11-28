@@ -171,6 +171,19 @@ int main(void)
     assert(tab("apkg --root ") == 1);
     assert(tab("apkg --p") == 2 && offered("--plain") && c.count == 1);
     assert(tab("apkg install ") == 0);
+    /* Options of one subcommand. */
+    define("first build test run\noption --verbose\nin build run\noption --release\noption --target arm x86\nin test\noption --nocapture\n");
+    assert(spec.options == 4);
+    assert(tab("cargo --") == 2 && c.count == 1 && offered("--verbose"));
+    assert(tab("cargo build --") == 2 && c.count == 3 && offered("--release") && offered("--verbose") && !offered("--nocapture"));
+    assert(tab("cargo --verbose test --") == 2 && c.count == 2 && offered("--nocapture"));
+    assert(tab("cargo run --target ") == 2 && c.count == 2 && offered("arm"));
+    assert(tab("cargo test --target ") == 0);           /* not an option of test: a plain word follows */
+    assert(tab("cargo ") == 2 && c.count == 3);
+    assert(refused("in\noption --a\n"));
+    assert(refused("option --a\nin build\nfirst build\n"));   /* a part holds options only */
+    assert(refused("in bu/ild\noption --a\n"));
+
     /* A long definition is one: the limit is 16 KB. */
     {
         static char big[XARGS_DEFINITION_MAX];
@@ -181,17 +194,24 @@ int main(void)
 
     /* The program as typed, and a package started through apkg. */
     {
-        char path[64], id[32];
+        char path[64], id[32], root[64];
         size_t at;
         assert(completion_args_program("Work:Tools/eza -l ", 18, path, sizeof path) && !strcmp(path, "Work:Tools/eza"));
         assert(completion_args_program("List | eza ", 11, path, sizeof path) && !strcmp(path, "eza"));
         assert(!completion_args_program("eza", 0, path, sizeof path));
         assert(completion_args_command("apkg run eza --l", 13, name, sizeof name, &from));
-        assert(completion_args_run("apkg run eza --l", from, 13, name, id, sizeof id, &at) && !strcmp(id, "eza") && at == 12);
-        assert(!completion_args_run("apkg run ez", from, 9, name, id, sizeof id, &at));     /* the id is being typed */
-        assert(!completion_args_run("apkg run --check eza ", from, 21, name, id, sizeof id, &at));
-        assert(!completion_args_run("apkg show eza ", from, 14, name, id, sizeof id, &at));
-        assert(!completion_args_run("Copy run eza ", 4, 13, "Copy", id, sizeof id, &at));
+        assert(completion_args_run("apkg run eza --l", from, 13, name, id, sizeof id, &at, root, sizeof root) && !strcmp(id, "eza") && at == 12);
+        assert(!completion_args_run("apkg run ez", from, 9, name, id, sizeof id, &at, root, sizeof root));     /* the id is being typed */
+        assert(!completion_args_run("apkg run --check eza ", from, 21, name, id, sizeof id, &at, root, sizeof root));
+        assert(!completion_args_run("apkg show eza ", from, 14, name, id, sizeof id, &at, root, sizeof root));
+        assert(!completion_args_run("Copy run eza ", 4, 13, "Copy", id, sizeof id, &at, root, sizeof root));
+        assert(!root[0]);
+        assert(completion_args_command("apkg --root RAM:pk run eza --l", 27, name, sizeof name, &from));
+        assert(completion_args_run("apkg --root RAM:pk run eza --l", from, 27, name, id, sizeof id, &at, root, sizeof root));
+        assert(!strcmp(id, "eza") && !strcmp(root, "RAM:pk") && at == 26);
+        assert(completion_args_run("apkg --root=Work:P run eza ", 4, 27, "apkg", id, sizeof id, &at, root, sizeof root) && !strcmp(root, "Work:P"));
+        assert(!completion_args_run("apkg --plain run eza ", 4, 21, "apkg", id, sizeof id, &at, root, sizeof root));
+        assert(completion_args_run("apkg run eza --l", 4, 13, "apkg", id, sizeof id, &at, root, sizeof root) && at == 12);
         define("option -l --long\n");
         memset(&e, 0, sizeof e);
         assert(line_editor_insert(&e, "apkg run eza --l", 16) && completion_prepare(&c, &e));
