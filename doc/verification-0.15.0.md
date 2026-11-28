@@ -39,6 +39,31 @@ common one, `tool test --` those of `test`, `tool run --target ` the
 target's words. On AROS One 1.3, `apkg --root RAM:LP run eza --so`
 completed `--sort` and its values from `RAM:LP/eza/Completions/eza`.
 
+## Installation and upgrade through apkg
+
+After the catalogue update, with apkg 0.8.4:
+
+- Mainline x86_64, nightly 2026-11-24, apkg's default root: limpet 0.14.0
+  and eza had been installed from the public catalogue into
+  `SYS:Packages`, with `prompt=colour` in `ENVARC:Limpet/Shell.conf` and a
+  definition of the user's in `ENVARC:Limpet/Completions`. In the 0.14.0
+  window, `apkg run eza --so` completed `--sort` from
+  `SYS:Packages/eza/Completions/eza`. `apkg upgrade limpet` installed
+  0.15.0; `apkg verify limpet` passed; the settings file and the
+  definition were kept and the coloured prompt came up. `LimpetLearn Wait`
+  and `LimpetLearn eza REPLACE` from the installed package wrote their
+  files and TAB completed from them. Both packages were removed again.
+- AROS One 1.3, root in `RAM:`: limpet 0.15.0 and eza installed from the
+  public catalogue; `LimpetLearn Wait SHOW` and `LimpetLearn eza` ran from
+  the installed package; TAB in the installed Limpet completed `eza --so`
+  from the learned definition.
+
+Not run through apkg for this release: the Raspberry Pi.
+
+Seen on mainline: `apkg remove limpet` moved the emptied package drawer to
+`SYS:Packages/tmp` because something still held it after the Limpet window
+was closed; a later apkg operation or a restart clears it.
+
 ## Not checked
 
 - LimpetLearn with programs other than eza and Fastfetch and the system's
